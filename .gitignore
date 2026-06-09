@@ -122,3 +122,4 @@ infra/redis/data/
 
 *.pid
 ```
+/.metadata/
