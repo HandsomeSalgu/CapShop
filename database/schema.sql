@@ -32,8 +32,14 @@ SET FOREIGN_KEY_CHECKS = 1;
 CREATE TABLE users (
     user_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NULL,
+
+    provider VARCHAR(20) NOT NULL DEFAULT 'LOCAL',
+    provider_id VARCHAR(100) NULL,
+
     nickname VARCHAR(50) NOT NULL,
+    profile_image_url TEXT NULL,
+
     role VARCHAR(20) NOT NULL DEFAULT 'USER',
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -42,7 +48,9 @@ CREATE TABLE users (
 
     INDEX idx_users_email (email),
     INDEX idx_users_role (role),
-    INDEX idx_users_status (status)
+    INDEX idx_users_status (status),
+
+    UNIQUE INDEX uk_users_provider_provider_id (provider, provider_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
