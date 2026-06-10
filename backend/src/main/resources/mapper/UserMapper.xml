@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.UserMapper">
+
+    <resultMap id="UserResultMap" type="com.syncshopper.domain.user.User">
+        <id property="userId" column="user_id"/>
+        <result property="email" column="email"/>
+        <result property="password" column="password"/>
+        <result property="provider" column="provider"/>
+        <result property="providerId" column="provider_id"/>
+        <result property="nickname" column="nickname"/>
+        <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="role" column="role"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="lastLoginAt" column="last_login_at"/>
+    </resultMap>
+
+    <insert id="insertUser" parameterType="com.syncshopper.domain.user.User" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO users (
+            email, password, provider, provider_id, nickname, profile_image_url,
+            role, status, created_at, updated_at, last_login_at
+        ) VALUES (
+            #{email}, #{password}, #{provider}, #{providerId}, #{nickname}, #{profileImageUrl},
+            #{role}, #{status}, NOW(), NOW(), #{lastLoginAt}
+        )
+    </insert>
+
+    <select id="findById" parameterType="long" resultMap="UserResultMap">
+        SELECT * FROM users WHERE user_id = #{userId}
+    </select>
+
+    <select id="findByEmail" parameterType="string" resultMap="UserResultMap">
+        SELECT * FROM users WHERE email = #{email} LIMIT 1
+    </select>
+
+    <select id="findByProviderAndProviderId" resultMap="UserResultMap">
+        SELECT * FROM users
+        WHERE provider = #{provider}
+          AND provider_id = #{providerId}
+        LIMIT 1
+    </select>
+
+    <select id="existsByEmail" parameterType="string" resultType="int">
+        SELECT COUNT(1) FROM users WHERE email = #{email}
+    </select>
+
+    <update id="updateLastLoginAt" parameterType="long">
+        UPDATE users
+        SET last_login_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateOAuthUser" parameterType="com.syncshopper.domain.user.User">
+        UPDATE users
+        SET nickname = #{nickname},
+            profile_image_url = #{profileImageUrl},
+            last_login_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+</mapper>
