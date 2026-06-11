@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.CategoryMapper">
+
+    <resultMap id="CategoryResultMap" type="com.syncshopper.domain.product.Category">
+        <id property="categoryId" column="category_id"/>
+        <result property="name" column="name"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="visibleYn" column="visible_yn"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findVisibleCategories" resultMap="CategoryResultMap">
+        SELECT category_id, name, parent_id, visible_yn, created_at
+        FROM categories
+        WHERE visible_yn = 'Y'
+        ORDER BY parent_id ASC, category_id ASC
+    </select>
+
+</mapper>

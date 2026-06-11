@@ -21,6 +21,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "User not found."),
 
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "Product not found."),
+    INVALID_SORT_TYPE(HttpStatus.BAD_REQUEST, "Invalid sort type."),
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "Post not found."),
 
     AI_SERVER_ERROR(HttpStatus.BAD_GATEWAY, "AI server request failed."),

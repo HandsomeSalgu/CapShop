@@ -21,6 +21,7 @@ DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS user_preferences;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS wishlist;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -341,6 +342,41 @@ CREATE TABLE affiliate_clicks (
 
 
 -- =========================================================
+-- 11. products.description and wishlists 추가
+-- 구매하러 가기 버튼 클릭 로그
+-- =========================================================
+
+
+ALTER TABLE products
+ADD COLUMN description TEXT NULL AFTER affiliate_url;
+
+CREATE TABLE wishlists (
+    wishlist_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uk_wishlists_user_product (user_id, product_id),
+
+    INDEX idx_wishlists_user_id (user_id),
+    INDEX idx_wishlists_product_id (product_id),
+
+    CONSTRAINT fk_wishlists_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_wishlists_product
+        FOREIGN KEY (product_id)
+        REFERENCES products(product_id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+
+-- =========================================================
 -- Initial Category Data
 -- =========================================================
 
@@ -354,6 +390,46 @@ VALUES
 ('식품', NULL, 'Y'),
 ('취미/키덜트', NULL, 'Y'),
 ('자동차용품', NULL, 'Y');
+
+
+INSERT INTO products
+(product_id, title, brand, category_id, category_name, price, image_url, affiliate_url, description, source, review_count, rating, visible_yn, created_at, updated_at)
+VALUES
+(1, 'Nike Air Force 1', 'Nike', 1, '패션', 129000,
+ 'https://example.com/nike-air-force.jpg',
+ 'https://example.com/buy/nike-air-force',
+ '클래식한 디자인의 Nike Air Force 1 스니커즈입니다.',
+ 'MOCK', 120, 4.8, 'Y', NOW(), NOW()),
+
+(2, 'Adidas Samba OG', 'Adidas', 1, '패션', 139000,
+ 'https://example.com/adidas-samba.jpg',
+ 'https://example.com/buy/adidas-samba',
+ '데일리 코디에 어울리는 Adidas Samba OG 스니커즈입니다.',
+ 'MOCK', 95, 4.6, 'Y', NOW(), NOW()),
+
+(3, 'Apple AirPods Pro 2', 'Apple', 3, '전자기기', 329000,
+ 'https://example.com/airpods-pro.jpg',
+ 'https://example.com/buy/airpods-pro',
+ '노이즈 캔슬링을 지원하는 Apple AirPods Pro 2입니다.',
+ 'MOCK', 310, 4.9, 'Y', NOW(), NOW()),
+
+(4, 'Dyson Supersonic Hair Dryer', 'Dyson', 2, '뷰티', 499000,
+ 'https://example.com/dyson-hair-dryer.jpg',
+ 'https://example.com/buy/dyson-hair-dryer',
+ '빠른 건조와 스타일링을 지원하는 Dyson 헤어드라이어입니다.',
+ 'MOCK', 180, 4.7, 'Y', NOW(), NOW()),
+
+(5, 'Sony WH-1000XM5', 'Sony', 3, '전자기기', 459000,
+ 'https://example.com/sony-wh1000xm5.jpg',
+ 'https://example.com/buy/sony-wh1000xm5',
+ '고성능 노이즈 캔슬링 무선 헤드폰입니다.',
+ 'MOCK', 260, 4.8, 'Y', NOW(), NOW()),
+
+(6, 'New Balance 530', 'New Balance', 1, '패션', 119000,
+ 'https://example.com/new-balance-530.jpg',
+ 'https://example.com/buy/new-balance-530',
+ '편안한 착화감의 New Balance 530 운동화입니다.',
+ 'MOCK', 140, 4.5, 'Y', NOW(), NOW());
 
 
 -- =========================================================
