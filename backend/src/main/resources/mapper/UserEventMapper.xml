@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.UserEventMapper">
+
+    <resultMap id="UserEventResultMap" type="com.syncshopper.domain.user.UserEvent">
+        <id property="eventId" column="event_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="productId" column="product_id"/>
+        <result property="eventType" column="event_type"/>
+        <result property="sourcePage" column="source_page"/>
+        <result property="targetUrl" column="target_url"/>
+        <result property="metadataJson" column="metadata_json"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insertUserEvent"
+            parameterType="com.syncshopper.domain.user.UserEvent"
+            useGeneratedKeys="true"
+            keyProperty="eventId">
+        INSERT INTO user_events (
+            user_id,
+            product_id,
+            event_type,
+            source_page,
+            target_url,
+            metadata_json
+        )
+        VALUES (
+            #{userId},
+            #{productId},
+            #{eventType},
+            #{sourcePage},
+            #{targetUrl},
+            #{metadataJson}
+        )
+    </insert>
+
+    <select id="findById" parameterType="long" resultMap="UserEventResultMap">
+        SELECT
+            event_id,
+            user_id,
+            product_id,
+            event_type,
+            source_page,
+            target_url,
+            metadata_json,
+            created_at
+        FROM user_events
+        WHERE event_id = #{eventId}
+        LIMIT 1
+    </select>
+
+</mapper>
