@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -23,8 +22,6 @@ public class User {
     private String providerId;
     private String nickname;
     private String profileImageUrl;
-    private String phone;
-    private LocalDate birthDate;
     private UserRole role;
     private UserStatus status;
     private LocalDateTime createdAt;

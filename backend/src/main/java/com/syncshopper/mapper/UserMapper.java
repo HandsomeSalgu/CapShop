@@ -20,8 +20,4 @@ public interface UserMapper {
     int updateLastLoginAt(Long userId);
 
     int updateOAuthUser(User user);
-
-    int updateProfile(User user);
-
-    int updatePassword(@Param("userId") Long userId, @Param("password") String password);
 }

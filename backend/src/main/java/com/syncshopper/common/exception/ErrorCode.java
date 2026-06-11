@@ -19,9 +19,6 @@ public enum ErrorCode {
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "Token is invalid."),
     TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "Token is expired."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "User not found."),
-    CURRENT_PASSWORD_NOT_MATCHED(HttpStatus.BAD_REQUEST, "Current password does not match."),
-    PASSWORD_CONFIRM_NOT_MATCHED(HttpStatus.BAD_REQUEST, "New password and confirmation do not match."),
-    OAUTH_USER_PASSWORD_CHANGE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "OAuth users cannot change password."),
 
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "Product not found."),
     INVALID_SORT_TYPE(HttpStatus.BAD_REQUEST, "Invalid sort type."),
