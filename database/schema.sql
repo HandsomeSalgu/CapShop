@@ -21,7 +21,7 @@ DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS user_preferences;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS wishlist;
+DROP TABLE IF EXISTS wishlists;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -349,6 +349,13 @@ CREATE TABLE affiliate_clicks (
 
 ALTER TABLE products
 ADD COLUMN description TEXT NULL AFTER affiliate_url;
+
+ALTER TABLE users
+ADD COLUMN phone VARCHAR(20) NULL AFTER profile_image_url;
+
+ALTER TABLE users
+ADD COLUMN birth_date DATE NULL AFTER phone;
+
 
 CREATE TABLE wishlists (
     wishlist_id BIGINT AUTO_INCREMENT PRIMARY KEY,
