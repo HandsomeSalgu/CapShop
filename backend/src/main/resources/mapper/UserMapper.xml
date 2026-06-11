@@ -13,6 +13,8 @@
         <result property="providerId" column="provider_id"/>
         <result property="nickname" column="nickname"/>
         <result property="profileImageUrl" column="profile_image_url"/>
+        <result property="phone" column="phone"/>
+        <result property="birthDate" column="birth_date"/>
         <result property="role" column="role"/>
         <result property="status" column="status"/>
         <result property="createdAt" column="created_at"/>
@@ -61,6 +63,23 @@
         SET nickname = #{nickname},
             profile_image_url = #{profileImageUrl},
             last_login_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateProfile" parameterType="com.syncshopper.domain.user.User">
+        UPDATE users
+        SET nickname = #{nickname},
+            phone = #{phone},
+            birth_date = #{birthDate},
+            profile_image_url = #{profileImageUrl},
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE users
+        SET password = #{password},
             updated_at = NOW()
         WHERE user_id = #{userId}
     </update>
