@@ -1,0 +1,52 @@
+/* --- 변수 및 기본 설정 --- */
+:root {
+  --primary-color: #111111;
+  --text-color: #333333;
+  --text-muted: #777777;
+  --bg-body: #ffffff;
+  --bg-light: #f4f5f7;
+  /* 상품 플레이스홀더 배경 */
+  --bg-banner: #f8f6f3;
+  /* 메인 배너 배경 (우측 디자인 참고) */
+  --border-color: #e5e5e5;
+  --accent-color: #c49a6c;
+  /* 우측 디자인의 골드/브라운 포인트 컬러 */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Jost', 'Noto Sans KR', sans-serif;
+  color: var(--text-color);
+  background-color: var(--bg-body);
+  line-height: 1.6;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.3s;
+}
+
+a:hover {
+  color: var(--accent-color);
+}
+
+ul {
+  list-style: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}

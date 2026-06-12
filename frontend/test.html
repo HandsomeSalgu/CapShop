@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>쇼핑몰 메인 화면 시안</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- 변수 및 기본 설정 --- */
+        :root {
+            --primary-color: #111111;
+            --text-color: #333333;
+            --text-muted: #777777;
+            --bg-body: #ffffff;
+            --bg-light: #f4f5f7;
+            /* 상품 플레이스홀더 배경 */
+            --bg-banner: #f8f6f3;
+            /* 메인 배너 배경 (우측 디자인 참고) */
+            --border-color: #e5e5e5;
+            --accent-color: #c49a6c;
+            /* 우측 디자인의 골드/브라운 포인트 컬러 */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Jost', 'Noto Sans KR', sans-serif;
+            color: var(--text-color);
+            background-color: var(--bg-body);
+            line-height: 1.6;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: color 0.3s;
+        }
+
+        a:hover {
+            color: var(--accent-color);
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        button {
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* --- 1~5. 헤더 및 GNB 영역 --- */
+        header {
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+        }
+
+        .welcome-msg {
+            flex: 1;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .logo {
+            flex: 1;
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary-color);
+            letter-spacing: -1px;
+        }
+
+        .header-utils {
+            flex: 1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 25px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .header-utils span {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.3s;
+        }
+
+        .header-utils span:hover {
+            color: var(--accent-color);
+        }
+
+        .gnb {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 15px 0;
+        }
+
+        .gnb a {
+            font-size: 15px;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .gnb a::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -5px;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+            transition: width 0.3s;
+        }
+
+        .gnb a:hover::after {
+            width: 100%;
+        }
+
+        /* --- 배너 영역 --- */
+        .banner {
+            background-color: var(--bg-banner);
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 100px;
+            font-size: 60px;
+            font-weight: 600;
+            color: #d1cbc1;
+            letter-spacing: 10px;
+        }
+
+        /* --- 공통 섹션 스타일 --- */
+        .section {
+            margin-bottom: 120px;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .section-header h2 {
+            font-size: 30px;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .section-header p {
+            font-size: 15px;
+            color: var(--text-muted);
+        }
+
+        .more-btn {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--primary-color);
+            padding-bottom: 2px;
+        }
+
+        /* --- 상품 카드 스타일 --- */
+        .product-card {
+            cursor: pointer;
+        }
+
+        .img-placeholder {
+            background-color: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #bbb;
+            font-size: 18px;
+            transition: background-color 0.3s, transform 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .product-card:hover .img-placeholder {
+            background-color: #e8e9eb;
+            transform: translateY(-5px);
+        }
+
+        .product-info {
+            text-align: center;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        .product-price {
+            font-size: 15px;
+            color: var(--text-muted);
+        }
+
+        /* --- 6. AI 추천 상품 리스트 (3열 구조) --- */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .grid-3 .img-placeholder {
+            aspect-ratio: 1;
+        }
+
+        /* --- 7. 현재 제일 핫한 상품 (1좌, 3우 비대칭 구조) --- */
+        .grid-hot {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .hot-left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hot-left .product-card {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hot-left .img-placeholder {
+            flex-grow: 1;
+            min-height: 500px;
+            margin-bottom: 20px;
+        }
+
+        .hot-right {
+            display: grid;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .hot-right .img-placeholder {
+            aspect-ratio: 2/1;
+            margin-bottom: 15px;
+        }
+
+        /* --- 8. 하단바(푸터) - 다크 테마 적용 --- */
+        footer {
+            background-color: #111111;
+            color: #ffffff;
+            padding: 80px 0 40px;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 50px;
+            margin-bottom: 60px;
+            border-bottom: 1px solid #333333;
+            padding-bottom: 60px;
+        }
+
+        .footer-logo {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .footer-desc {
+            font-size: 14px;
+            color: #999999;
+            margin-bottom: 30px;
+            line-height: 1.8;
+            max-width: 90%;
+        }
+
+        /* 왼쪽 설계도의 체크박스 구조를 디자인적으로 해석 */
+        .footer-checks label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #cccccc;
+            cursor: pointer;
+        }
+
+        .footer-checks input {
+            margin-right: 8px;
+            accent-color: var(--accent-color);
+        }
+
+        .footer-col h4 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 25px;
+            color: #ffffff;
+        }
+
+        .footer-col ul li {
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #999999;
+        }
+
+        .footer-col ul li a:hover {
+            color: #ffffff;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #777777;
+        }
+
+        .socials {
+            display: flex;
+            gap: 15px;
+        }
+
+        .socials a {
+            color: #777777;
+            font-size: 18px;
+        }
+
+        .socials a:hover {
+            color: #ffffff;
+        }
+
+        /* --- 검색창 모달 (요구사항 2번) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            padding: 50px;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            text-align: center;
+            border-radius: 4px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 28px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999999;
+        }
+
+        .modal-close:hover {
+            color: var(--primary-color);
+        }
+
+        .modal-content h3 {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 30px;
+        }
+
+        .search-form {
+            display: flex;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 5px;
+        }
+
+        .search-form input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 18px;
+            padding: 10px;
+            font-family: inherit;
+        }
+
+        .search-form button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            padding: 0 10px;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="container">
+            <div class="header-top">
+                <div class="welcome-msg">환영 문구가 들어갑니다.</div>
+                <div class="logo">로고</div>
+                <div class="header-utils">
+                    <span id="search-btn"><i class="fa-solid fa-magnifying-glass"></i> 검색</span>
+                    <span><i class="fa-solid fa-cart-shopping"></i> 장바구니 (0)</span>
+                    <span><i class="fa-regular fa-user"></i> 로그인/마이페이지</span>
+                </div>
+            </div>
+            <nav class="gnb">
+                <a href="#">베스트 상품리스트</a>
+                <a href="#">AI 추천 상품리스트</a>
+                <a href="#">전체 카테고리</a>
+                <a href="#">크롬 익스텐션 설치</a>
+                <a href="#">공지사항/FAQ</a>
+                <a href="#">이벤트</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="banner">
+        배 너
+    </div>
+
+    <main class="container">
+        <section class="section">
+            <div class="section-header">
+                <h2>AI 추천 상품 리스트</h2>
+                <p>AI가 사용자 정보를 일부 수집해 추천하는 서비스입니다.</p>
+                <a href="#" class="more-btn">더보기</a>
+            </div>
+            <div class="grid-3">
+                <div class="product-card">
+                    <div class="img-placeholder">상품 1</div>
+                    <div class="product-info">
+                        <div class="product-name">AI 추천 상품 1</div>
+                        <div class="product-price">₩ 120,000</div>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="img-placeholder">상품 2</div>
+                    <div class="product-info">
+                        <div class="product-name">AI 추천 상품 2</div>
+                        <div class="product-price">₩ 85,000</div>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="img-placeholder">상품 3</div>
+                    <div class="product-info">
+                        <div class="product-name">AI 추천 상품 3</div>
+                        <div class="product-price">₩ 230,000</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>현재 제일 핫한 상품 리스트</h2>
+                <p>카테고리 별 4위까지 가장 핫한 랭킹 상품 노출</p>
+                <a href="#" class="more-btn">더보기</a>
+            </div>
+            <div class="grid-hot">
+                <div class="hot-left">
+                    <div class="product-card">
+                        <div class="img-placeholder">상품 1</div>
+                        <div class="product-info">
+                            <div class="product-name">베스트 랭킹 1위 상품</div>
+                            <div class="product-price">₩ 890,000</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hot-right">
+                    <div class="product-card">
+                        <div class="img-placeholder">상품 2</div>
+                        <div class="product-info">
+                            <div class="product-name">베스트 랭킹 2위 상품</div>
+                            <div class="product-price">₩ 65,000</div>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                        <div class="img-placeholder">상품 3</div>
+                        <div class="product-info">
+                            <div class="product-name">베스트 랭킹 3위 상품</div>
+                            <div class="product-price">₩ 42,000</div>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                        <div class="img-placeholder">상품 4</div>
+                        <div class="product-info">
+                            <div class="product-name">베스트 랭킹 4위 상품</div>
+                            <div class="product-price">₩ 55,000</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <div class="footer-logo">로고</div>
+                    <p class="footer-desc">홈페이지에 대한 설명이 적혀있습니다. 당사는 모던하고 감각적인 디자인의 프리미엄 상품을 제공합니다.</p>
+                    <div class="footer-checks">
+                        <label><input type="checkbox" checked disabled> 주소: 서울특별시 강남구</label>
+                        <label><input type="checkbox" checked disabled> 이메일: contact@domain.com</label>
+                        <label><input type="checkbox" checked disabled> 핸드폰 번호: 010-1234-5678</label>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>정보</h4>
+                    <ul>
+                        <li><a href="#">회사 소개 문장</a></li>
+                        <li><a href="#">이용약관 문장</a></li>
+                        <li><a href="#">개인정보처리방침 문장</a></li>
+                        <li><a href="#">채용 정보 문장</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>고객 서비스</h4>
+                    <ul>
+                        <li><a href="#">고객센터 문의 문장</a></li>
+                        <li><a href="#">배송 안내 문장</a></li>
+                        <li><a href="#">반품 및 교환 안내 문장</a></li>
+                        <li><a href="#">공지사항 / FAQ 문장</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>카피라이터 Copyright © 2026 로고 All rights reserved.</p>
+                <div class="socials">
+                    <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#"><i class="fa-brands fa-twitter"></i></a>
+                    <a href="#"><i class="fa-brands fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="search-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <h3>원하는 상품을 검색할 수 있습니다.</h3>
+            <div class="search-form">
+                <input type="text" placeholder="검색어를 입력해주세요...">
+                <button type="button"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const searchBtn = document.getElementById('search-btn');
+        const searchModal = document.getElementById('search-modal');
+        const modalClose = document.getElementById('modal-close');
+
+        // 검색 버튼 클릭 시 모달 열기
+        searchBtn.addEventListener('click', () => {
+            searchModal.classList.add('active');
+            searchModal.querySelector('input').focus();
+        });
+
+        // X 버튼 클릭 시 모달 닫기
+        modalClose.addEventListener('click', () => {
+            searchModal.classList.remove('active');
+        });
+
+        // 모달창 바깥(어두운 배경) 클릭 시 닫기
+        searchModal.addEventListener('click', (e) => {
+            if (e.target === searchModal) {
+                searchModal.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+
+</html>
