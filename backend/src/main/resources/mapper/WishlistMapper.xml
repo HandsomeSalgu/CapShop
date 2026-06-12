@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.WishlistMapper">
+
+    <select id="findByUserIdAndProductId" resultType="com.syncshopper.domain.user.Wishlist">
+        SELECT
+            wishlist_id AS wishlistId,
+            user_id AS userId,
+            product_id AS productId,
+            created_at AS createdAt
+        FROM wishlists
+        WHERE user_id = #{userId}
+          AND product_id = #{productId}
+        LIMIT 1
+    </select>
+
+    <insert id="insertWishlist"
+            parameterType="com.syncshopper.domain.user.Wishlist"
+            useGeneratedKeys="true"
+            keyProperty="wishlistId">
+        INSERT INTO wishlists (
+            user_id,
+            product_id
+        )
+        VALUES (
+            #{userId},
+            #{productId}
+        )
+    </insert>
+
+    <delete id="deleteWishlist">
+        DELETE FROM wishlists
+        WHERE user_id = #{userId}
+          AND product_id = #{productId}
+    </delete>
+
+    <select id="findWishlistProducts" resultType="com.syncshopper.dto.response.WishlistProductResponse">
+        SELECT
+            w.wishlist_id AS wishlistId,
+            p.product_id AS productId,
+            p.title AS title,
+            p.brand AS brand,
+            p.category_name AS categoryName,
+            p.price AS price,
+            p.image_url AS imageUrl,
+            p.review_count AS reviewCount,
+            p.rating AS rating,
+            w.created_at AS wishedAt
+        FROM wishlists w
+        INNER JOIN products p
+            ON w.product_id = p.product_id
+        WHERE w.user_id = #{userId}
+          AND p.visible_yn = 'Y'
+        ORDER BY w.created_at DESC, w.wishlist_id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countWishlistProducts" resultType="long">
+        SELECT COUNT(1)
+        FROM wishlists w
+        INNER JOIN products p
+            ON w.product_id = p.product_id
+        WHERE w.user_id = #{userId}
+          AND p.visible_yn = 'Y'
+    </select>
+
+</mapper>

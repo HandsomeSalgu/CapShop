@@ -1,5 +1,9 @@
 package com.syncshopper.domain.user;
 
 public enum UserEventType {
-    PRODUCT_DETAIL_VIEW
+    PRODUCT_DETAIL_VIEW,
+    PRODUCT_CLICK,
+    AFFILIATE_CLICK,
+    WISHLIST_ADD,
+    WISHLIST_REMOVE
 }
