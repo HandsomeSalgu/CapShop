@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.RecommendationMapper">
+
+    <insert id="insertRecommendation"
+            parameterType="com.syncshopper.domain.recommendation.Recommendation"
+            useGeneratedKeys="true"
+            keyProperty="recommendationId">
+        INSERT INTO recommendations (
+            user_id,
+            product_id,
+            detection_id,
+            rank_no,
+            score,
+            reason,
+            recommendation_type
+        )
+        VALUES (
+            #{userId},
+            #{productId},
+            #{detectionId},
+            #{rankNo},
+            #{score},
+            #{reason},
+            #{recommendationType}
+        )
+    </insert>
+
+    <select id="findLatestRecommendations" resultType="com.syncshopper.dto.response.RecommendationProductResponse">
+        SELECT
+            r.recommendation_id AS recommendationId,
+            p.product_id AS productId,
+            p.title AS title,
+            p.brand AS brand,
+            p.category_name AS categoryName,
+            p.price AS price,
+            p.image_url AS imageUrl,
+            p.review_count AS reviewCount,
+            p.rating AS rating,
+            r.rank_no AS rankNo,
+            r.score AS score,
+            r.reason AS reason,
+            r.recommendation_type AS recommendationType,
+            r.created_at AS createdAt
+        FROM recommendations r
+        INNER JOIN products p
+            ON r.product_id = p.product_id
+        WHERE r.user_id = #{userId}
+          AND p.visible_yn = 'Y'
+        ORDER BY r.created_at DESC, r.rank_no ASC, r.recommendation_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findRecommendationHistory" resultType="com.syncshopper.dto.response.RecommendationHistoryResponse">
+        SELECT
+            r.recommendation_id AS recommendationId,
+            p.product_id AS productId,
+            p.title AS title,
+            p.brand AS brand,
+            p.category_name AS categoryName,
+            p.price AS price,
+            p.image_url AS imageUrl,
+            r.rank_no AS rankNo,
+            r.score AS score,
+            r.reason AS reason,
+            r.recommendation_type AS recommendationType,
+            r.created_at AS createdAt
+        FROM recommendations r
+        INNER JOIN products p
+            ON r.product_id = p.product_id
+        WHERE r.user_id = #{userId}
+          AND p.visible_yn = 'Y'
+        ORDER BY r.created_at DESC, r.rank_no ASC, r.recommendation_id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countRecommendationHistory" resultType="long">
+        SELECT COUNT(1)
+        FROM recommendations r
+        INNER JOIN products p
+            ON r.product_id = p.product_id
+        WHERE r.user_id = #{userId}
+          AND p.visible_yn = 'Y'
+    </select>
+
+    <select id="findRuleBasedCandidates" resultType="com.syncshopper.domain.recommendation.RecommendationCandidate">
+        SELECT
+            p.product_id AS productId,
+            p.title AS title,
+            p.brand AS brand,
+            p.category_name AS categoryName,
+            p.price AS price,
+            p.image_url AS imageUrl,
+            p.review_count AS reviewCount,
+            p.rating AS rating,
+            (
+                COALESCE(p.rating, 0) * 10
+                + COALESCE(p.review_count, 0) * 0.05
+                + CASE WHEN category_signal.category_name IS NOT NULL THEN category_signal.weight ELSE 0 END
+                + CASE WHEN brand_signal.brand IS NOT NULL THEN brand_signal.weight ELSE 0 END
+                + CASE WHEN wishlist_signal.category_id IS NOT NULL THEN 8 ELSE 0 END
+            ) AS score,
+            CASE
+                WHEN category_signal.category_name IS NOT NULL
+                    THEN CONCAT('Recommended from your recent interest in ', p.category_name, '.')
+                WHEN brand_signal.brand IS NOT NULL
+                    THEN CONCAT('Recommended from your recent interest in ', p.brand, '.')
+                WHEN wishlist_signal.category_id IS NOT NULL
+                    THEN 'Recommended from products similar to your wishlist.'
+                ELSE 'Recommended from your activity and product popularity.'
+            END AS reason
+        FROM products p
+        LEFT JOIN (
+            SELECT
+                ep.category_name,
+                SUM(
+                    CASE ue.event_type
+                        WHEN 'PRODUCT_DETAIL_VIEW' THEN 3
+                        WHEN 'PRODUCT_CLICK' THEN 5
+                        WHEN 'WISHLIST_ADD' THEN 8
+                        WHEN 'AFFILIATE_CLICK' THEN 10
+                        ELSE 0
+                    END
+                ) AS weight
+            FROM user_events ue
+            INNER JOIN products ep
+                ON ue.product_id = ep.product_id
+            WHERE ue.user_id = #{userId}
+              AND ue.event_type IN ('PRODUCT_DETAIL_VIEW', 'PRODUCT_CLICK', 'WISHLIST_ADD', 'AFFILIATE_CLICK')
+              AND ep.category_name IS NOT NULL
+            GROUP BY ep.category_name
+        ) category_signal
+            ON p.category_name = category_signal.category_name
+        LEFT JOIN (
+            SELECT
+                ep.brand,
+                SUM(
+                    CASE ue.event_type
+                        WHEN 'PRODUCT_DETAIL_VIEW' THEN 3
+                        WHEN 'PRODUCT_CLICK' THEN 5
+                        WHEN 'WISHLIST_ADD' THEN 8
+                        WHEN 'AFFILIATE_CLICK' THEN 10
+                        ELSE 0
+                    END
+                ) AS weight
+            FROM user_events ue
+            INNER JOIN products ep
+                ON ue.product_id = ep.product_id
+            WHERE ue.user_id = #{userId}
+              AND ue.event_type IN ('PRODUCT_DETAIL_VIEW', 'PRODUCT_CLICK', 'WISHLIST_ADD', 'AFFILIATE_CLICK')
+              AND ep.brand IS NOT NULL
+            GROUP BY ep.brand
+        ) brand_signal
+            ON p.brand = brand_signal.brand
+        LEFT JOIN (
+            SELECT DISTINCT wp.category_id
+            FROM wishlists w
+            INNER JOIN products wp
+                ON w.product_id = wp.product_id
+            WHERE w.user_id = #{userId}
+              AND wp.category_id IS NOT NULL
+        ) wishlist_signal
+            ON p.category_id = wishlist_signal.category_id
+        WHERE p.visible_yn = 'Y'
+          AND (
+              category_signal.category_name IS NOT NULL
+              OR brand_signal.brand IS NOT NULL
+              OR wishlist_signal.category_id IS NOT NULL
+          )
+        ORDER BY score DESC, p.review_count DESC, p.rating DESC, p.product_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findFallbackCandidates" resultType="com.syncshopper.domain.recommendation.RecommendationCandidate">
+        SELECT
+            p.product_id AS productId,
+            p.title AS title,
+            p.brand AS brand,
+            p.category_name AS categoryName,
+            p.price AS price,
+            p.image_url AS imageUrl,
+            p.review_count AS reviewCount,
+            p.rating AS rating,
+            (
+                COALESCE(p.rating, 0) * 10
+                + COALESCE(p.review_count, 0) * 0.05
+            ) AS score,
+            'Recommended from popular products.' AS reason
+        FROM products p
+        WHERE p.visible_yn = 'Y'
+        ORDER BY score DESC, p.review_count DESC, p.rating DESC, p.product_id DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>
