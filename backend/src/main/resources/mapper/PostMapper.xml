@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.PostMapper">
+
+    <resultMap id="PostResultMap" type="com.syncshopper.domain.post.Post">
+        <id property="postId" column="post_id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="postType" column="post_type"/>
+        <result property="visibleYn" column="visible_yn"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="PostColumns">
+        post_id, title, content, post_type, visible_yn, created_by, created_at, updated_at
+    </sql>
+
+    <sql id="PostSearchWhere">
+        <where>
+            visible_yn = 'Y'
+            <if test="postType != null">
+                AND post_type = #{postType}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    title LIKE CONCAT('%', #{keyword}, '%')
+                    OR content LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+    </sql>
+
+    <select id="findPosts" parameterType="com.syncshopper.dto.request.PostSearchCondition" resultMap="PostResultMap">
+        SELECT
+        <include refid="PostColumns"/>
+        FROM posts
+        <include refid="PostSearchWhere"/>
+        ORDER BY created_at DESC, post_id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPosts" parameterType="com.syncshopper.dto.request.PostSearchCondition" resultType="long">
+        SELECT COUNT(1)
+        FROM posts
+        <include refid="PostSearchWhere"/>
+    </select>
+
+    <select id="findVisiblePostById" parameterType="long" resultMap="PostResultMap">
+        SELECT
+        <include refid="PostColumns"/>
+        FROM posts
+        WHERE post_id = #{postId}
+          AND visible_yn = 'Y'
+        LIMIT 1
+    </select>
+
+</mapper>
