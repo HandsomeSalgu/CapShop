@@ -3,8 +3,12 @@ package com.syncshopper.controller;
 import com.syncshopper.common.exception.CustomException;
 import com.syncshopper.common.exception.ErrorCode;
 import com.syncshopper.common.response.ApiResponse;
+import com.syncshopper.dto.request.AffiliateClickRequest;
+import com.syncshopper.dto.request.ProductClickEventRequest;
 import com.syncshopper.dto.request.ProductDetailViewEventRequest;
+import com.syncshopper.dto.response.AffiliateClickResponse;
 import com.syncshopper.dto.response.UserEventResponse;
+import com.syncshopper.service.AffiliateClickService;
 import com.syncshopper.service.UserEventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserEventController {
 
     private final UserEventService userEventService;
+    private final AffiliateClickService affiliateClickService;
 
     @Operation(summary = "Save product detail view event")
     @PostMapping("/product-detail-view")
@@ -33,6 +38,28 @@ public class UserEventController {
         return ApiResponse.success(
                 "Product detail view event saved.",
                 userEventService.createProductDetailViewEvent(currentUserId(), request)
+        );
+    }
+
+    @Operation(summary = "Save product click event")
+    @PostMapping("/product-click")
+    public ApiResponse<UserEventResponse> createProductClickEvent(
+            @Valid @RequestBody ProductClickEventRequest request
+    ) {
+        return ApiResponse.success(
+                "Product click event saved.",
+                userEventService.createProductClickEvent(currentUserId(), request)
+        );
+    }
+
+    @Operation(summary = "Save affiliate click event")
+    @PostMapping("/affiliate-click")
+    public ApiResponse<AffiliateClickResponse> createAffiliateClick(
+            @Valid @RequestBody AffiliateClickRequest request
+    ) {
+        return ApiResponse.success(
+                "Affiliate click event saved.",
+                affiliateClickService.createAffiliateClick(currentUserId(), request)
         );
     }
 

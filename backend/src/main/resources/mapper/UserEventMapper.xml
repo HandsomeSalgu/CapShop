@@ -53,4 +53,49 @@
         LIMIT 1
     </select>
 
+    <select id="findViewHistory" resultType="com.syncshopper.dto.response.ViewHistoryResponse">
+        SELECT
+            p.product_id AS productId,
+            p.title AS title,
+            p.brand AS brand,
+            p.category_name AS categoryName,
+            p.price AS price,
+            p.image_url AS imageUrl,
+            p.review_count AS reviewCount,
+            p.rating AS rating,
+            h.viewed_at AS viewedAt,
+            h.view_count AS viewCount
+        FROM (
+            SELECT
+                product_id,
+                MAX(created_at) AS viewed_at,
+                COUNT(1) AS view_count
+            FROM user_events
+            WHERE user_id = #{userId}
+              AND event_type = 'PRODUCT_DETAIL_VIEW'
+              AND product_id IS NOT NULL
+            GROUP BY product_id
+        ) h
+        INNER JOIN products p
+            ON h.product_id = p.product_id
+        WHERE p.visible_yn = 'Y'
+        ORDER BY h.viewed_at DESC, p.product_id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countViewHistory" resultType="long">
+        SELECT COUNT(1)
+        FROM (
+            SELECT product_id
+            FROM user_events
+            WHERE user_id = #{userId}
+              AND event_type = 'PRODUCT_DETAIL_VIEW'
+              AND product_id IS NOT NULL
+            GROUP BY product_id
+        ) h
+        INNER JOIN products p
+            ON h.product_id = p.product_id
+        WHERE p.visible_yn = 'Y'
+    </select>
+
 </mapper>
