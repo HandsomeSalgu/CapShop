@@ -64,3 +64,13 @@ app:
     fastapi-base-url: http://localhost:8000
     analyze-path: /api/ai/analyze-frame
     timeout-ms: 5000
+  naver:
+    shopping:
+      client-id: ${NAVER_CLIENT_ID}
+      client-secret: ${NAVER_CLIENT_SECRET}
+      base-url: https://openapi.naver.com
+      search-path: /v1/search/shop.json
+      display: 10
+      start: 1
+      sort: sim
+      exclude: used:rental:cbshop

@@ -29,6 +29,8 @@ public enum ErrorCode {
     DETECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Detection result not found."),
     AI_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI analysis failed."),
 
+    INVALID_COMMERCE_QUERY(HttpStatus.BAD_REQUEST, "Search query is required."),
+    NAVER_SHOPPING_API_FAILED(HttpStatus.BAD_GATEWAY, "Naver Shopping API request failed."),
     AI_SERVER_ERROR(HttpStatus.BAD_GATEWAY, "AI server request failed."),
     COMMERCE_API_ERROR(HttpStatus.BAD_GATEWAY, "Commerce API request failed.");
 

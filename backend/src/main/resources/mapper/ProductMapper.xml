@@ -85,6 +85,47 @@
         LIMIT 1
     </select>
 
+    <select id="findBySourceAndAffiliateUrl" resultMap="ProductResultMap">
+        SELECT
+        <include refid="ProductColumns"/>
+        FROM products
+        WHERE source = #{source}
+          AND affiliate_url = #{affiliateUrl}
+        LIMIT 1
+    </select>
+
+    <insert id="insertCommerceProduct"
+            parameterType="com.syncshopper.domain.product.Product"
+            useGeneratedKeys="true"
+            keyProperty="productId">
+        INSERT INTO products (
+            title,
+            brand,
+            category_name,
+            price,
+            image_url,
+            affiliate_url,
+            description,
+            source,
+            review_count,
+            rating,
+            visible_yn
+        )
+        VALUES (
+            #{title},
+            #{brand},
+            #{categoryName},
+            #{price},
+            #{imageUrl},
+            #{affiliateUrl},
+            #{description},
+            #{source},
+            #{reviewCount},
+            #{rating},
+            #{visibleYn}
+        )
+    </insert>
+
     <select id="findBestProducts" resultMap="ProductResultMap">
         SELECT
         <include refid="ProductColumns"/>
