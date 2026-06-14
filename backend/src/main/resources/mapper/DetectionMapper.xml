@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.DetectionMapper">
+
+    <resultMap id="DetectionResultMap" type="com.syncshopper.domain.detection.Detection">
+        <id property="detectionId" column="detection_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="videoId" column="video_id"/>
+        <result property="timestampSec" column="timestamp_sec"/>
+        <result property="imageHash" column="image_hash"/>
+        <result property="subtitleSummary" column="subtitle_summary"/>
+        <result property="targetName" column="target_name"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="brand" column="brand"/>
+        <result property="modelName" column="model_name"/>
+        <result property="confidence" column="confidence"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insertDetection"
+            parameterType="com.syncshopper.domain.detection.Detection"
+            useGeneratedKeys="true"
+            keyProperty="detectionId">
+        INSERT INTO detections (
+            user_id,
+            video_id,
+            timestamp_sec,
+            image_hash,
+            subtitle_summary,
+            status
+        )
+        VALUES (
+            #{userId},
+            #{videoId},
+            #{timestampSec},
+            #{imageHash},
+            #{subtitleSummary},
+            #{status}
+        )
+    </insert>
+
+    <update id="updateDetectionResult"
+            parameterType="com.syncshopper.domain.detection.Detection">
+        UPDATE detections
+        SET target_name = #{targetName},
+            category_name = #{categoryName},
+            brand = #{brand},
+            model_name = #{modelName},
+            confidence = #{confidence},
+            status = #{status}
+        WHERE detection_id = #{detectionId}
+    </update>
+
+    <update id="updateDetectionFailed">
+        UPDATE detections
+        SET status = #{status}
+        WHERE detection_id = #{detectionId}
+    </update>
+
+    <select id="findByIdAndUserId" resultMap="DetectionResultMap">
+        SELECT
+            detection_id,
+            user_id,
+            video_id,
+            timestamp_sec,
+            image_hash,
+            subtitle_summary,
+            target_name,
+            category_name,
+            brand,
+            model_name,
+            confidence,
+            status,
+            created_at
+        FROM detections
+        WHERE detection_id = #{detectionId}
+          AND user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <select id="findMyDetections" resultType="com.syncshopper.dto.response.DetectionHistoryResponse">
+        SELECT
+            detection_id AS detectionId,
+            video_id AS videoId,
+            timestamp_sec AS timestampSec,
+            target_name AS targetName,
+            category_name AS categoryName,
+            brand AS brand,
+            confidence AS confidence,
+            status AS status,
+            created_at AS createdAt
+        FROM detections
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, detection_id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countMyDetections" resultType="long">
+        SELECT COUNT(*)
+        FROM detections
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

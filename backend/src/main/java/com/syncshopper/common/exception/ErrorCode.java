@@ -26,6 +26,8 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "Product not found."),
     INVALID_SORT_TYPE(HttpStatus.BAD_REQUEST, "Invalid sort type."),
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "Post not found."),
+    DETECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Detection result not found."),
+    AI_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI analysis failed."),
 
     AI_SERVER_ERROR(HttpStatus.BAD_GATEWAY, "AI server request failed."),
     COMMERCE_API_ERROR(HttpStatus.BAD_GATEWAY, "Commerce API request failed.");

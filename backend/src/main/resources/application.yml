@@ -59,3 +59,8 @@ app:
     access-token-expiration: 3600000
   oauth2:
     authorized-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth/callback}
+  ai:
+    mock-enabled: true
+    fastapi-base-url: http://localhost:8000
+    analyze-path: /api/ai/analyze-frame
+    timeout-ms: 5000

@@ -46,7 +46,9 @@ class AuthControllerTest {
                                 {
                                   "email": "user@example.com",
                                   "password": "password1234",
-                                  "nickname": "hwarang"
+                                  "nickname": "hwarang",
+                                  "phone": "01012345678",
+                                  "birthDate": "2000-01-01"
                                 }
                                 """))
                 .andExpect(status().isOk());
@@ -58,5 +60,7 @@ class AuthControllerTest {
         assertThat(captor.getValue().getEmail()).isEqualTo("user@example.com");
         assertThat(captor.getValue().getPassword()).isEqualTo("password1234");
         assertThat(captor.getValue().getNickname()).isEqualTo("hwarang");
+        assertThat(captor.getValue().getPhone()).isEqualTo("01012345678");
+        assertThat(captor.getValue().getBirthDate().toString()).isEqualTo("2000-01-01");
     }
 }
