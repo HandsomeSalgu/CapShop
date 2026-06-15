@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @RequiredArgsConstructor
 @Service
@@ -27,12 +28,17 @@ public class UserProfileService {
     @Transactional
     public UserProfileResponse updateMyProfile(Long userId, UserProfileUpdateRequest request) {
         User user = findUser(userId);
-        user.setNickname(request.getNickname());
-        user.setPhone(request.getPhone());
-        user.setBirthDate(request.getBirthDate());
-        user.setProfileImageUrl(request.getProfileImageUrl());
 
-        if (request.getNewPassword() != null && !request.getNewPassword().isEmpty()) {
+        User updateUser = User.builder()
+                .userId(userId)
+                .nickname(request.getNickname())
+                .phone(blankToNull(request.getPhone()))
+                .birthDate(request.getBirthDate())
+                .profileImageUrl(blankToNull(request.getProfileImageUrl()))
+                .build();
+
+        if (isPasswordChangeRequested(request)) {
+            validatePasswordChangeFields(request);
             if (user.getProvider() != AuthProvider.LOCAL || user.getPassword() == null) {
                 throw new CustomException(ErrorCode.OAUTH_USER_PASSWORD_CHANGE_NOT_ALLOWED);
             }
@@ -42,10 +48,10 @@ public class UserProfileService {
             if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
                 throw new CustomException(ErrorCode.PASSWORD_CONFIRM_NOT_MATCHED);
             }
-            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            updateUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
         }
 
-        userMapper.updateProfile(user);
+        userMapper.updateProfile(updateUser);
 
         return UserProfileResponse.from(findUser(userId));
     }
@@ -72,5 +78,23 @@ public class UserProfileService {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
         return user;
+    }
+
+    private boolean isPasswordChangeRequested(UserProfileUpdateRequest request) {
+        return StringUtils.hasLength(request.getCurrentPassword())
+                || StringUtils.hasLength(request.getNewPassword())
+                || StringUtils.hasLength(request.getConfirmNewPassword());
+    }
+
+    private void validatePasswordChangeFields(UserProfileUpdateRequest request) {
+        if (!StringUtils.hasText(request.getCurrentPassword())
+                || !StringUtils.hasText(request.getNewPassword())
+                || !StringUtils.hasText(request.getConfirmNewPassword())) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+    }
+
+    private String blankToNull(String value) {
+        return StringUtils.hasText(value) ? value : null;
     }
 }
