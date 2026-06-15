@@ -59,7 +59,7 @@ const alertPreparing = () => {
       <nav class="gnb">
         <a href="#">베스트 상품리스트</a>
         <a href="#">AI 추천 상품리스트</a>
-        <a href="#">전체 카테고리</a>
+        <RouterLink to="/category">전체 카테고리</RouterLink>
         <a href="#">크롬 익스텐션 설치</a>
         <a href="#">공지사항/FAQ</a>
         <a href="#">이벤트</a>
