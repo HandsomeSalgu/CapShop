@@ -37,8 +37,6 @@ public class UserProfileUpdateRequest {
     @Schema(description = "Profile image URL", example = "https://example.com/profile.jpg")
     private String profileImageUrl;
 
-    @Schema(description = "Current password (optional, required only for password change)", example = "password1234")
-    private String currentPassword;
 
     @Size(min = 8, max = 30, message = "New password must be between 8 and 30 characters.")
     @Schema(description = "New password (optional)", example = "newPassword1234")

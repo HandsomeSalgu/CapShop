@@ -21,7 +21,7 @@ const alertPreparing = () => {
 
 const goToMyPage = () => {
   isDropdownOpen.value = false
-  router.push('/mypage/profile')
+  router.push('/mypage/password-check')
 }
 </script>
 

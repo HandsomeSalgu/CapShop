@@ -30,12 +30,24 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/mypage/profile'
+          redirect: '/mypage/password-check'
+        },
+        {
+          path: 'password-check',
+          name: 'passwordCheck',
+          component: () => import('../views/mypage/PasswordCheckView.vue'),
         },
         {
           path: 'profile',
           name: 'profileEdit',
           component: () => import('../views/mypage/ProfileEditView.vue'),
+          beforeEnter: (to, from, next) => {
+            if (sessionStorage.getItem('passwordVerified') === 'true') {
+              next()
+            } else {
+              next('/mypage/password-check')
+            }
+          }
         }
       ]
     }

@@ -1,7 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
+
+onBeforeRouteLeave((to, from) => {
+  sessionStorage.removeItem('passwordVerified')
+})
 
 const router = useRouter()
 
@@ -12,8 +16,6 @@ const phone = ref('')
 const birthYear = ref('')
 const birthMonth = ref('')
 const birthDay = ref('')
-
-const currentPassword = ref('')
 
 const password = ref('')
 const passwordMsg = ref('')
@@ -89,10 +91,6 @@ onMounted(() => {
 
 const submitEdit = async () => {
   if (password.value) {
-    if (!currentPassword.value) {
-      formErrorMsg.value = '비밀번호를 변경하시려면 현재 비밀번호를 입력해주세요.'
-      return
-    }
     if (passwordMsgType.value !== 'success') {
       formErrorMsg.value = '새 비밀번호를 올바르게 입력해주세요.'
       return
@@ -116,7 +114,6 @@ const submitEdit = async () => {
     nickname: name.value,
     phone: phone.value,
     birthDate: birthDateStr,
-    currentPassword: currentPassword.value || null,
     newPassword: password.value || null,
     confirmNewPassword: passwordConfirm.value || null
   }
@@ -130,11 +127,7 @@ const submitEdit = async () => {
     })
     formErrorMsg.value = ''
     alert('회원정보가 성공적으로 수정되었습니다.')
-    currentPassword.value = ''
-    password.value = ''
-    passwordConfirm.value = ''
-    passwordMsg.value = ''
-    passwordConfirmMsg.value = ''
+    router.push('/')
   } catch (error) {
     if (error.response && error.response.data && error.response.data.message) {
       formErrorMsg.value = error.response.data.message
@@ -163,13 +156,6 @@ const cancelEdit = () => {
         <label>이메일</label>
       </div>
       <input type="text" :value="email" disabled class="form-input readonly-input">
-    </div>
-
-    <div class="form-group">
-      <div class="label-row">
-        <label>현재 비밀번호</label>
-      </div>
-      <input type="password" v-model="currentPassword" placeholder="현재 비밀번호 입력" class="form-input">
     </div>
 
     <div class="form-group">

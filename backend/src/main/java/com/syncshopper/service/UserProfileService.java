@@ -37,13 +37,9 @@ public class UserProfileService {
                 .profileImageUrl(blankToNull(request.getProfileImageUrl()))
                 .build();
 
-        if (isPasswordChangeRequested(request)) {
-            validatePasswordChangeFields(request);
+        if (StringUtils.hasText(request.getNewPassword())) {
             if (user.getProvider() != AuthProvider.LOCAL || user.getPassword() == null) {
                 throw new CustomException(ErrorCode.OAUTH_USER_PASSWORD_CHANGE_NOT_ALLOWED);
-            }
-            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-                throw new CustomException(ErrorCode.CURRENT_PASSWORD_NOT_MATCHED);
             }
             if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
                 throw new CustomException(ErrorCode.PASSWORD_CONFIRM_NOT_MATCHED);
@@ -72,6 +68,13 @@ public class UserProfileService {
         userMapper.updatePassword(userId, passwordEncoder.encode(request.getNewPassword()));
     }
 
+    public boolean verifyPassword(Long userId, String password) {
+        User user = findUser(userId);
+        if (user.getProvider() != AuthProvider.LOCAL || user.getPassword() == null) {
+            throw new CustomException(ErrorCode.OAUTH_USER_PASSWORD_CHANGE_NOT_ALLOWED);
+        }
+        return passwordEncoder.matches(password, user.getPassword());
+    }
     private User findUser(Long userId) {
         User user = userMapper.findById(userId);
         if (user == null) {
@@ -80,19 +83,7 @@ public class UserProfileService {
         return user;
     }
 
-    private boolean isPasswordChangeRequested(UserProfileUpdateRequest request) {
-        return StringUtils.hasLength(request.getCurrentPassword())
-                || StringUtils.hasLength(request.getNewPassword())
-                || StringUtils.hasLength(request.getConfirmNewPassword());
-    }
 
-    private void validatePasswordChangeFields(UserProfileUpdateRequest request) {
-        if (!StringUtils.hasText(request.getCurrentPassword())
-                || !StringUtils.hasText(request.getNewPassword())
-                || !StringUtils.hasText(request.getConfirmNewPassword())) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-    }
 
     private String blankToNull(String value) {
         return StringUtils.hasText(value) ? value : null;
