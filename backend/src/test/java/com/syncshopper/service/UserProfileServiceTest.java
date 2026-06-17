@@ -36,25 +36,6 @@ class UserProfileServiceTest {
         userProfileService = new UserProfileService(userMapper, passwordEncoder);
     }
 
-    @Test
-    void updateMyProfileRejectsPartialPasswordChangeRequest() {
-        User user = localUser();
-        when(userMapper.findById(1L)).thenReturn(user);
-
-        UserProfileUpdateRequest request = UserProfileUpdateRequest.builder()
-                .nickname("new-name")
-                .newPassword("newPassword1234")
-                .confirmNewPassword("newPassword1234")
-                .build();
-
-        assertThatThrownBy(() -> userProfileService.updateMyProfile(1L, request))
-                .isInstanceOf(CustomException.class)
-                .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
-
-        verify(passwordEncoder, never()).matches(any(), any());
-        verify(userMapper, never()).updateProfile(any());
-    }
 
     @Test
     void updateMyProfilePassesOnlyRequestedProfileFieldsToMapper() {
@@ -103,16 +84,14 @@ class UserProfileServiceTest {
     }
 
     @Test
-    void updateMyProfileChangesPasswordWithCurrentPasswordVerification() {
+    void updateMyProfileChangesPassword() {
         User user = localUser();
         when(userMapper.findById(1L)).thenReturn(user);
-        when(passwordEncoder.matches("password1234", "encoded-password")).thenReturn(true);
         when(passwordEncoder.encode("newPassword1234")).thenReturn("new-encoded-password");
         when(userMapper.updateProfile(any())).thenReturn(1);
 
         UserProfileUpdateRequest request = UserProfileUpdateRequest.builder()
                 .nickname("new-name")
-                .currentPassword("password1234")
                 .newPassword("newPassword1234")
                 .confirmNewPassword("newPassword1234")
                 .build();

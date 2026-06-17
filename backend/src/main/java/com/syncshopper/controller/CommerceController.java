@@ -26,11 +26,12 @@ public class CommerceController {
     public ApiResponse<List<CommerceProductResponse>> searchProducts(
             @RequestParam String query,
             @RequestParam(required = false) Integer display,
+            @RequestParam(required = false, defaultValue = "1") Integer start,
             @RequestParam(required = false) String sort
     ) {
         return ApiResponse.success(
                 "Commerce product search succeeded.",
-                commerceService.searchProducts(query, display, sort)
+                commerceService.searchProducts(query, display, start, sort)
         );
     }
 

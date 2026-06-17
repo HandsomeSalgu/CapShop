@@ -1,102 +1,143 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { categories } from '@/data/categories'
 import AppBanner from '@/components/common/AppBanner.vue'
+import { commerceApi } from '@/api/commerce'
 
 // State for active category selections
 const selectedMainCategory = ref(categories[0])
 const selectedSubCategory = ref(null)
-const selectedItems = ref([]) // For the detailed filter
-
-// Price filter state
-const minPrice = ref(null)
-const maxPrice = ref(null)
+const selectedKeyword = ref(null) // 단일 선택용
+const customSearchQuery = ref('') // 자유 검색어
 
 // Sort & View state
-const sortOption = ref('popular')
+const sortOption = ref('sim') // sim, date, asc, dsc
 const viewType = ref('grid') // 'grid' or 'list'
 
-// Pagination state
-const currentPage = ref(1)
-const itemsPerPage = 12
+// Products state
+const products = ref([])
+const isLoading = ref(false)
+const error = ref(null)
 
-// Mock Products Generator
-const generateMockProducts = () => {
-  const products = []
-  for (let i = 1; i <= 50; i++) {
-    products.push({
-      id: i,
-      title: `프리미엄 상품 테스트 ${i}`,
-      price: Math.floor(Math.random() * 900 + 100) * 100, // 10,000 ~ 100,000
-      imageUrl: `https://picsum.photos/seed/${i}/400/400`,
-      brand: `브랜드 ${Math.floor(i % 5) + 1}`,
-      isNew: i % 3 === 0
-    })
-  }
-  return products
-}
-
-const allProducts = ref(generateMockProducts())
-
-// Computed properties for UI
-const filteredProducts = computed(() => {
-  // In a real app, filtering happens here based on selected categories/price
-  let filtered = [...allProducts.value]
-  
-  if (minPrice.value) {
-    filtered = filtered.filter(p => p.price >= minPrice.value)
-  }
-  if (maxPrice.value) {
-    filtered = filtered.filter(p => p.price <= maxPrice.value)
-  }
-  
-  // Sort
-  if (sortOption.value === 'price-high') {
-    filtered.sort((a, b) => b.price - a.price)
-  } else if (sortOption.value === 'price-low') {
-    filtered.sort((a, b) => a.price - b.price)
-  } else if (sortOption.value === 'newest') {
-    filtered.sort((a, b) => b.isNew - a.isNew) // Simplistic
-  }
-  
-  return filtered
-})
-
-const paginatedProducts = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filteredProducts.value.slice(start, end)
-})
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredProducts.value.length / itemsPerPage)
-})
+// Infinite Scroll state
+const currentStart = ref(1)
+const isFinished = ref(false)
+const loadMoreTrigger = ref(null)
 
 // Handlers
+const fetchProducts = async (isLoadMore = false) => {
+  // Determine the search query
+  let query = ''
+  if (customSearchQuery.value) {
+    query = customSearchQuery.value
+  } else if (selectedKeyword.value) {
+    query = selectedKeyword.value
+  } else if (selectedSubCategory.value) {
+    // 소분류 선택 시, 첫 번째 키워드를 기본으로 사용
+    query = selectedSubCategory.value.items[0] || selectedSubCategory.value.name
+  } else if (selectedMainCategory.value) {
+    query = selectedMainCategory.value.name
+  }
+
+  if (!query) return
+  if (isFinished.value && isLoadMore) return
+
+  try {
+    isLoading.value = true
+    error.value = null
+    // 네이버 쇼핑 API 호출 (검색어, 가져올 개수, 시작위치, 정렬 옵션)
+    const result = await commerceApi.searchProducts(query, 10, currentStart.value, sortOption.value)
+    
+    if (result.length === 0) {
+      isFinished.value = true
+      return
+    }
+
+    if (isLoadMore) {
+      products.value = [...products.value, ...result]
+    } else {
+      products.value = result
+    }
+  } catch (e) {
+    console.error(e)
+    if (!isLoadMore) {
+      error.value = '상품을 불러오는데 실패했습니다.'
+      products.value = []
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const resetAndFetch = () => {
+  products.value = []
+  currentStart.value = 1
+  isFinished.value = false
+  fetchProducts()
+}
+
 const selectMainCategory = (category) => {
+  if (selectedMainCategory.value?.id === category.id && !customSearchQuery.value) return
+  customSearchQuery.value = ''
   selectedMainCategory.value = category
   selectedSubCategory.value = null
-  selectedItems.value = []
-  currentPage.value = 1
+  selectedKeyword.value = null
+  resetAndFetch()
 }
 
 const selectSubCategory = (sub) => {
+  if (selectedSubCategory.value?.id === sub.id && !customSearchQuery.value) return
+  customSearchQuery.value = ''
   selectedSubCategory.value = sub
-  selectedItems.value = []
-  currentPage.value = 1
+  selectedKeyword.value = null
+  resetAndFetch()
 }
 
-const toggleItemFilter = (item) => {
-  const index = selectedItems.value.indexOf(item)
-  if (index > -1) {
-    selectedItems.value.splice(index, 1)
-  } else {
-    selectedItems.value.push(item)
-  }
-  currentPage.value = 1
+const selectKeyword = (keyword) => {
+  if (selectedKeyword.value === keyword && !customSearchQuery.value) return
+  customSearchQuery.value = ''
+  selectedKeyword.value = keyword
+  resetAndFetch()
 }
+
+const handleCustomSearch = (e) => {
+  const val = e.target.value.trim()
+  if (!val) return
+  
+  customSearchQuery.value = val
+  selectedMainCategory.value = null
+  selectedSubCategory.value = null
+  selectedKeyword.value = null
+  resetAndFetch()
+}
+
+// Watchers
+watch(sortOption, () => {
+  resetAndFetch()
+})
+
+onMounted(() => {
+  // 초기 로드 시 상품 가져오기
+  resetAndFetch()
+
+  // IntersectionObserver 설정
+  const observer = new IntersectionObserver((entries) => {
+    const entry = entries[0]
+    if (entry.isIntersecting && !isLoading.value && !isFinished.value && products.value.length > 0) {
+      currentStart.value += 10
+      fetchProducts(true)
+    }
+  }, {
+    rootMargin: '100px'
+  })
+
+  if (loadMoreTrigger.value) {
+    observer.observe(loadMoreTrigger.value)
+  }
+})
 
 const formatPrice = (price) => {
+  if (!price) return '가격 정보 없음'
   return price.toLocaleString('ko-KR') + '원'
 }
 </script>
@@ -111,7 +152,7 @@ const formatPrice = (price) => {
       <aside class="sidebar">
         <!-- 1. 카테고리 필터 -->
         <div class="filter-group">
-          <h3 class="filter-title">1. 카테고리 제목</h3>
+          <h3 class="filter-title">카테고리</h3>
           <ul class="main-category-list">
             <li 
               v-for="cat in categories" 
@@ -136,41 +177,25 @@ const formatPrice = (price) => {
           </div>
         </div>
 
-        <!-- 2. 가격 필터 -->
-        <div class="filter-group">
-          <h3 class="filter-title">2. 가격 필터</h3>
-          <div class="price-inputs">
-            <input type="number" v-model="minPrice" placeholder="최소 금액" />
-            <span>~</span>
-            <input type="number" v-model="maxPrice" placeholder="최대 금액" />
-          </div>
-        </div>
-
-        <!-- 7. 브랜드 선택 및 부가 필터 -->
+        <!-- 2. 상세 키워드 칩 (Chip) -->
         <div class="filter-group detail-filter">
-          <h3 class="filter-title">7. 브랜드 선택</h3>
+          <h3 class="filter-title">상세 키워드</h3>
           
           <div class="additional-filters">
-            <h4 class="sub-title">상세 속성 필터</h4>
-            <div class="filter-items-wrapper">
+            <div class="chip-wrapper">
               <template v-if="selectedSubCategory">
-                <label 
+                <button 
                   v-for="(item, idx) in selectedSubCategory.items" 
                   :key="idx" 
-                  class="checkbox-label"
+                  class="keyword-chip"
+                  :class="{ active: (!selectedKeyword && idx === 0) || selectedKeyword === item }"
+                  @click="selectKeyword(item)"
                 >
-                  <input 
-                    type="checkbox" 
-                    :value="item"
-                    :checked="selectedItems.includes(item)"
-                    @change="toggleItemFilter(item)"
-                  />
-                  <span class="custom-checkbox"></span>
-                  <span class="label-text">{{ item }}</span>
-                </label>
+                  {{ item }}
+                </button>
               </template>
               <template v-else-if="selectedMainCategory">
-                <p class="empty-filter-msg">중분류를 선택하시면 상세 속성을 필터링 할 수 있습니다.</p>
+                <p class="empty-filter-msg">소분류를 선택하시면 상세 키워드를 볼 수 있습니다.</p>
               </template>
             </div>
           </div>
@@ -181,19 +206,27 @@ const formatPrice = (price) => {
       <section class="main-content">
         <!-- Header: Page Indicator, Sort, View Type -->
         <div class="content-header">
-          <!-- 3. 페이지 표시 -->
+          <!-- 3. 검색된 상품 표시 및 커스텀 검색 -->
           <div class="page-indicator">
-            총 <strong>{{ filteredProducts.length }}</strong>개의 상품 
-            <span>(페이지 {{ currentPage }}/{{ Math.max(1, totalPages) }})</span>
+            <div class="custom-search-container">
+              <input 
+                type="text" 
+                class="custom-search-input"
+                placeholder="원하시는 상품을 검색해보세요" 
+                :value="customSearchQuery || selectedKeyword || selectedSubCategory?.items?.[0] || selectedMainCategory?.name || ''"
+                @keyup.enter="handleCustomSearch"
+              />
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            </div>
           </div>
 
           <div class="controls">
-            <!-- 4. 정렬 옵션 -->
+            <!-- 4. 정렬 옵션 (네이버 API 기준) -->
             <select v-model="sortOption" class="sort-select">
-              <option value="popular">인기순</option>
-              <option value="newest">최신순</option>
-              <option value="price-low">가격 낮은 순</option>
-              <option value="price-high">가격 높은 순</option>
+              <option value="sim">정확도순</option>
+              <option value="date">최신순</option>
+              <option value="asc">가격 낮은 순</option>
+              <option value="dsc">가격 높은 순</option>
             </select>
 
             <!-- 5. 뷰 타입 전환 -->
@@ -216,55 +249,48 @@ const formatPrice = (price) => {
           </div>
         </div>
 
+        <!-- 초기 로딩 상태 (상품이 없을 때만) -->
+        <div v-if="isLoading && products.length === 0" class="loading-state">
+          <div class="spinner"></div>
+          <p>상품을 불러오는 중입니다...</p>
+        </div>
+
+        <!-- 에러 상태 -->
+        <div v-else-if="error && products.length === 0" class="error-state">
+          {{ error }}
+        </div>
+
         <!-- 6. 상품 리스트 영역 -->
-        <div 
+        <div v-else
           class="product-list" 
           :class="viewType === 'grid' ? 'grid-view' : 'list-view'"
         >
-          <div v-for="product in paginatedProducts" :key="product.id" class="product-card">
+          <div v-for="product in products" :key="product.externalProductId || product.productId" class="product-card">
             <div class="image-wrapper">
               <img :src="product.imageUrl" :alt="product.title" loading="lazy" />
-              <span v-if="product.isNew" class="badge-new">NEW</span>
             </div>
             <div class="product-info">
-              <div class="brand">{{ product.brand }}</div>
+              <div class="brand">{{ product.brand || product.mallName || '쇼핑몰' }}</div>
               <h4 class="title">{{ product.title }}</h4>
               <div class="price">{{ formatPrice(product.price) }}</div>
             </div>
           </div>
         </div>
 
-        <div v-if="paginatedProducts.length === 0" class="empty-state">
-          조건에 맞는 상품이 없습니다.
+        <!-- Intersection Observer Trigger -->
+        <div ref="loadMoreTrigger" class="load-more-trigger"></div>
+
+        <div v-if="isLoading && products.length > 0" class="loading-more">
+          <div class="spinner small"></div>
+          <p>더 불러오는 중...</p>
         </div>
 
-        <!-- 8. 페이지 버튼 (페이지네이션) -->
-        <div class="pagination" v-if="totalPages > 1">
-          <button 
-            class="page-btn" 
-            :disabled="currentPage === 1"
-            @click="currentPage--"
-          >
-            <i class="fa-solid fa-chevron-left"></i>
-          </button>
-          
-          <button 
-            v-for="page in totalPages" 
-            :key="page"
-            class="page-num"
-            :class="{ active: currentPage === page }"
-            @click="currentPage = page"
-          >
-            {{ page }}
-          </button>
+        <div v-if="isFinished && products.length > 0" class="finished-state">
+          더 이상 상품이 없습니다.
+        </div>
 
-          <button 
-            class="page-btn" 
-            :disabled="currentPage === totalPages"
-            @click="currentPage++"
-          >
-            <i class="fa-solid fa-chevron-right"></i>
-          </button>
+        <div v-if="!isLoading && !error && products.length === 0" class="empty-state">
+          조건에 맞는 상품이 없습니다.
         </div>
       </section>
     </div>
@@ -374,90 +400,41 @@ const formatPrice = (price) => {
   font-weight: 500;
 }
 
-/* Price Filter */
-.price-inputs {
+/* Chips Filter */
+.chip-wrapper {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.price-inputs input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+.keyword-chip {
+  padding: 6px 14px;
+  background: #f1f3f5;
+  border: 1px solid #e9ecef;
+  border-radius: 20px;
   font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s;
   outline: none;
-  transition: border-color 0.2s;
 }
 
-.price-inputs input:focus {
+.keyword-chip:hover {
+  background: #e2e6ea;
+  color: #333;
+}
+
+.keyword-chip.active {
+  background: #3498db;
   border-color: #3498db;
-}
-
-/* Detailed Filters */
-.sub-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #444;
-  margin-bottom: 12px;
-}
-
-.filter-items-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  color: white;
+  font-weight: 500;
 }
 
 .empty-filter-msg {
   font-size: 12px;
   color: #999;
   line-height: 1.5;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 13px;
-  color: #555;
-  user-select: none;
-}
-
-.checkbox-label input {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.custom-checkbox {
-  width: 18px;
-  height: 18px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-right: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  background-color: white;
-}
-
-.checkbox-label input:checked ~ .custom-checkbox {
-  background-color: #3498db;
-  border-color: #3498db;
-}
-
-.checkbox-label input:checked ~ .custom-checkbox::after {
-  content: '\f00c';
-  font-family: 'Font Awesome 6 Free';
-  font-weight: 900;
-  color: white;
-  font-size: 10px;
-}
-
-.checkbox-label:hover .custom-checkbox {
-  border-color: #3498db;
 }
 
 /* Main Content Area */
@@ -479,19 +456,38 @@ const formatPrice = (price) => {
 }
 
 .page-indicator {
-  font-size: 14px;
-  color: #555;
+  flex: 1;
+  margin-right: 20px;
 }
 
-.page-indicator strong {
-  color: #3498db;
-  font-size: 16px;
+.custom-search-container {
+  position: relative;
+  max-width: 400px;
 }
 
-.page-indicator span {
+.custom-search-input {
+  width: 100%;
+  padding: 10px 40px 10px 16px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 15px;
+  color: #333;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.custom-search-input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #999;
-  font-size: 13px;
-  margin-left: 5px;
+  pointer-events: none;
 }
 
 .controls {
@@ -581,19 +577,6 @@ const formatPrice = (price) => {
   transform: scale(1.05);
 }
 
-.badge-new {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: #e74c3c;
-  color: white;
-  font-size: 11px;
-  font-weight: bold;
-  padding: 4px 8px;
-  border-radius: 4px;
-  z-index: 1;
-}
-
 .product-info {
   padding: 16px;
   display: flex;
@@ -671,8 +654,8 @@ const formatPrice = (price) => {
   margin-top: 10px;
 }
 
-/* Empty State */
-.empty-state {
+/* Empty/Loading/Error State */
+.empty-state, .error-state, .loading-state {
   text-align: center;
   padding: 60px 0;
   color: #888;
@@ -681,45 +664,52 @@ const formatPrice = (price) => {
   font-size: 15px;
 }
 
-/* Pagination */
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 40px;
+.error-state {
+  color: #e74c3c;
 }
 
-.page-btn, .page-num {
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 6px;
-  width: 36px;
-  height: 36px;
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 무한 스크롤용 */
+.load-more-trigger {
+  height: 20px;
+  margin-top: 20px;
+}
+
+.loading-more {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 20px 0;
+  color: #888;
   font-size: 14px;
-  color: #555;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
-.page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f9f9f9;
+.spinner.small {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+  margin-bottom: 8px;
 }
 
-.page-btn:not(:disabled):hover, .page-num:hover {
-  border-color: #3498db;
-  color: #3498db;
-}
-
-.page-num.active {
-  background: #3498db;
-  border-color: #3498db;
-  color: white;
-  font-weight: bold;
+.finished-state {
+  text-align: center;
+  padding: 30px 0;
+  color: #aaa;
+  font-size: 14px;
 }
 </style>

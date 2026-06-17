@@ -18,12 +18,13 @@ public class NaverShoppingClient {
     private final RestClient.Builder restClientBuilder;
     private final NaverShoppingProperties properties;
 
-    public NaverShoppingSearchResponse search(String query, Integer display, String sort) {
+    public NaverShoppingSearchResponse search(String query, Integer display, Integer start, String sort) {
         if (query == null || query.isBlank()) {
             throw new CustomException(ErrorCode.INVALID_COMMERCE_QUERY);
         }
 
         int normalizedDisplay = normalizeDisplay(display);
+        int normalizedStart = normalizeStart(start);
         String normalizedSort = sort == null || sort.isBlank() ? properties.getSort() : sort;
 
         try {
@@ -35,7 +36,7 @@ public class NaverShoppingClient {
                             .path(properties.getSearchPath())
                             .queryParam("query", query)
                             .queryParam("display", normalizedDisplay)
-                            .queryParam("start", properties.getStart())
+                            .queryParam("start", normalizedStart)
                             .queryParam("sort", normalizedSort)
                             .queryParam("exclude", properties.getExclude())
                             .build())
@@ -54,5 +55,12 @@ public class NaverShoppingClient {
             return 1;
         }
         return Math.min(normalizedDisplay, MAX_DISPLAY);
+    }
+
+    private int normalizeStart(Integer start) {
+        if (start == null || start < 1) {
+            return properties.getStart();
+        }
+        return Math.min(start, 1000);
     }
 }

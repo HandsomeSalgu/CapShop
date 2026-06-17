@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
 import java.util.List;
+import org.springframework.cache.annotation.Cacheable;
 
 @RequiredArgsConstructor
 @Service
@@ -22,20 +23,22 @@ public class CommerceService {
     private final NaverShoppingClient naverShoppingClient;
     private final ProductUpsertService productUpsertService;
 
+    @Cacheable(value = "commerceSearch", key = "#query + '_' + #display + '_' + #start + '_' + #sort")
     @Transactional
-    public List<CommerceProductResponse> searchProducts(String query, Integer display, String sort) {
+    public List<CommerceProductResponse> searchProducts(String query, Integer display, Integer start, String sort) {
         validateQuery(query);
 
-        NaverShoppingSearchResponse response = naverShoppingClient.search(query, display, sort);
+        NaverShoppingSearchResponse response = naverShoppingClient.search(query, display, start, sort);
         return mapAndUpsert(response).stream()
                 .toList();
     }
 
+    @Cacheable(value = "commerceTop3", key = "#query")
     @Transactional
     public List<CommerceProductResponse> getTop3Products(String query) {
         validateQuery(query);
 
-        NaverShoppingSearchResponse response = naverShoppingClient.search(query, null, null);
+        NaverShoppingSearchResponse response = naverShoppingClient.search(query, null, null, null);
         if (response == null || response.getItems() == null) {
             return List.of();
         }
