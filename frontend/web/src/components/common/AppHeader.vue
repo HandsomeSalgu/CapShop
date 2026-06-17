@@ -21,7 +21,7 @@ const alertPreparing = () => {
 
 const goToMyPage = () => {
   isDropdownOpen.value = false
-  router.push('/mypage/password-check')
+  router.push('/mypage/profile')
 }
 </script>
 
@@ -30,7 +30,7 @@ const goToMyPage = () => {
     <div class="container">
       <div class="header-top">
         <div class="welcome-msg">환영 문구가 들어갑니다.</div>
-        <div class="logo">로고</div>
+        <RouterLink to="/" class="logo" style="text-decoration: none;">로고</RouterLink>
         <div class="header-utils">
           <span @click="emit('open-search')" id="search-btn">
             <i class="fa-solid fa-magnifying-glass"></i> 검색
