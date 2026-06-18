@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { categories } from '@/data/categories'
 import AppBanner from '@/components/common/AppBanner.vue'
 import { commerceApi } from '@/api/commerce'
@@ -140,6 +141,19 @@ const formatPrice = (price) => {
   if (!price) return '가격 정보 없음'
   return price.toLocaleString('ko-KR') + '원'
 }
+
+const router = useRouter()
+const goToDetail = (product) => {
+  const productId = product.externalProductId || product.productId
+  if (!productId) return
+  
+  router.push({
+    path: `/product/${productId}`,
+    state: {
+      productData: JSON.stringify(product)
+    }
+  })
+}
 </script>
 
 <template>
@@ -265,7 +279,7 @@ const formatPrice = (price) => {
           class="product-list" 
           :class="viewType === 'grid' ? 'grid-view' : 'list-view'"
         >
-          <div v-for="product in products" :key="product.externalProductId || product.productId" class="product-card">
+          <div v-for="product in products" :key="product.externalProductId || product.productId" class="product-card" @click="goToDetail(product)">
             <div class="image-wrapper">
               <img :src="product.imageUrl" :alt="product.title" loading="lazy" />
             </div>
