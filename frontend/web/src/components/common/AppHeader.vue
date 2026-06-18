@@ -66,7 +66,7 @@ const goToMyPage = () => {
         <a href="#">AI 추천 상품리스트</a>
         <RouterLink to="/category">전체 카테고리</RouterLink>
         <a href="#">크롬 익스텐션 설치</a>
-        <a href="#">공지사항/FAQ</a>
+        <RouterLink to="/board">공지사항/FAQ</RouterLink>
         <a href="#">이벤트</a>
       </nav>
     </div>

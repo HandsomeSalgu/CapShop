@@ -30,6 +30,11 @@ const router = createRouter({
       component: () => import('../views/ProductDetailView.vue'),
     },
     {
+      path: '/board',
+      name: 'board',
+      component: () => import('../views/BoardView.vue'),
+    },
+    {
       path: '/mypage',
       component: () => import('../views/MyPageView.vue'),
       children: [
