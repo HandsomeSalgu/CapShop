@@ -1,19 +1,91 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const router = useRouter()
 const boardList = ref([])
 const searchQuery = ref('')
 const currentPage = ref(1)
 const totalPages = ref(1)
+const activeDropdown = ref(null)
+
+const getDropdownDirection = (index) => {
+  if (boardList.value.length > 2 && index >= boardList.value.length - 2) {
+    return 'up'
+  }
+  return 'down'
+}
+
+const toggleDropdown = (id, event) => {
+  event.stopPropagation()
+  if (activeDropdown.value === id) {
+    activeDropdown.value = null
+  } else {
+    activeDropdown.value = id
+  }
+}
+
+const closeDropdown = (event) => {
+  if (!event.target.closest('.options-menu')) {
+    activeDropdown.value = null
+  }
+}
+
+const editPost = (id) => {
+  router.push({ path: `/admin/board/edit/${id}` })
+  activeDropdown.value = null
+}
+
+const deletePost = async (id) => {
+  if (confirm('정말로 삭제하시겠습니까?')) {
+    try {
+      const token = localStorage.getItem('accessToken')
+      await axios.delete(`/api/admin/posts/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      alert('삭제되었습니다.')
+      fetchPosts(currentPage.value)
+    } catch (error) {
+      console.error('Failed to delete post:', error)
+      alert('삭제 중 오류가 발생했습니다.')
+    }
+  }
+  activeDropdown.value = null
+}
+
+const restorePost = async (id) => {
+  if (confirm('정말로 복구하시겠습니까?')) {
+    try {
+      const token = localStorage.getItem('accessToken')
+      await axios.patch(`/api/admin/posts/${id}/restore`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      alert('복구되었습니다.')
+      fetchPosts(currentPage.value)
+    } catch (error) {
+      console.error('Failed to restore post:', error)
+      alert('복구 중 오류가 발생했습니다.')
+    }
+  }
+  activeDropdown.value = null
+}
 
 const fetchPosts = async (page = 1) => {
   try {
-    const response = await axios.get('/api/posts', {
+    const token = localStorage.getItem('accessToken')
+    const response = await axios.get('/api/admin/posts', {
       params: {
         page: page,
         size: 10,
         keyword: searchQuery.value
+      },
+      headers: {
+        Authorization: `Bearer ${token}`
       }
     })
     
@@ -65,6 +137,11 @@ const changePage = (page) => {
 
 onMounted(() => {
   fetchPosts()
+  document.addEventListener('click', closeDropdown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeDropdown)
 })
 
 </script>
@@ -109,10 +186,11 @@ onMounted(() => {
                 <th width="10%">Username</th>
                 <th width="10%" class="sortable">Status <i class="fa-solid fa-caret-down"></i></th>
                 <th width="10%" class="sortable">Category <i class="fa-solid fa-caret-down"></i></th>
+                <th width="5%"></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in boardList" :key="item.id" class="table-row">
+              <tr v-for="(item, index) in boardList" :key="item.id" class="table-row">
                 <td class="text-center font-weight-bold text-muted">#{{ item.id }}</td>
                 <td class="text-muted">{{ item.date }}</td>
                 <td class="font-weight-bold text-dark">{{ item.title }}</td>
@@ -132,6 +210,28 @@ onMounted(() => {
                   }">
                     {{ item.category }}
                   </span>
+                </td>
+                <td class="options-cell" @click.stop>
+                  <div class="options-menu">
+                    <button class="btn-icon" @click.stop="toggleDropdown(item.id, $event)">
+                      <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                    <div class="dropdown-menu" :class="getDropdownDirection(index)" v-show="activeDropdown === item.id">
+                      <template v-if="item.status === '정상'">
+                        <a href="#" class="dropdown-item" @click.prevent="editPost(item.id)">
+                          <i class="fa-solid fa-pen"></i> 수정
+                        </a>
+                        <a href="#" class="dropdown-item text-danger" @click.prevent="deletePost(item.id)">
+                          <i class="fa-solid fa-trash"></i> 삭제
+                        </a>
+                      </template>
+                      <template v-else>
+                        <a href="#" class="dropdown-item text-success" @click.prevent="restorePost(item.id)">
+                          <i class="fa-solid fa-arrow-rotate-left"></i> 복구
+                        </a>
+                      </template>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -372,6 +472,85 @@ onMounted(() => {
 .bg-notice { background-color: #eef2ff; color: #4361ee; }
 .bg-event { background-color: #fff0f6; color: #eb2f96; }
 .bg-faq { background-color: #f6ffed; color: #52c41a; }
+
+/* Options Menu */
+.options-cell {
+  position: relative;
+  text-align: right;
+  padding-right: 40px !important;
+}
+
+.options-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: #888;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f2f2f2;
+  min-width: 120px;
+  z-index: 10;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-menu.down {
+  top: 100%;
+  margin-top: 4px;
+}
+
+.dropdown-menu.up {
+  bottom: 100%;
+  margin-bottom: 4px;
+}
+
+.dropdown-item {
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #555;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fe;
+  color: #3b4cb8;
+}
+
+.dropdown-item.text-danger {
+  color: #e74c3c;
+}
+
+.dropdown-item.text-danger:hover {
+  background-color: #fff0f0;
+}
 
 /* Pagination */
 .card-footer {

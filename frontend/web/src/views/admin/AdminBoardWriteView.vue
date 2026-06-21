@@ -1,17 +1,51 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
+const route = useRoute()
+
+const isEditMode = computed(() => !!route.params.id)
 
 const postData = ref({
   title: '',
   postType: 'NOTICE',
-  content: ''
+  content: '',
+  visibleYn: 'Y'
 })
 
 const isSubmitting = ref(false)
+const isLoading = ref(false)
+
+onMounted(async () => {
+  if (isEditMode.value) {
+    isLoading.value = true
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await axios.get(`/api/admin/posts/${route.params.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      if (response.data && response.data.data) {
+        const data = response.data.data
+        postData.value = {
+          title: data.title,
+          postType: data.postType,
+          content: data.content,
+          visibleYn: data.visibleYn
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch post details:', error)
+      alert('게시글 정보를 불러오는 데 실패했습니다.')
+      router.push('/admin/board')
+    } finally {
+      isLoading.value = false
+    }
+  }
+})
 
 const submitPost = async () => {
   if (!postData.value.title.trim()) {
@@ -26,20 +60,31 @@ const submitPost = async () => {
   isSubmitting.value = true
   try {
     const token = localStorage.getItem('accessToken')
-    const response = await axios.post('/api/admin/posts', postData.value, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+    let response
+    
+    if (isEditMode.value) {
+      response = await axios.put(`/api/admin/posts/${route.params.id}`, postData.value, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+    } else {
+      response = await axios.post('/api/admin/posts', postData.value, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+    }
+    
     if (response.data && response.data.success) {
-      alert('게시글이 성공적으로 등록되었습니다.')
+      alert(isEditMode.value ? '게시글이 성공적으로 수정되었습니다.' : '게시글이 성공적으로 등록되었습니다.')
       router.push('/admin/board')
     } else {
-      alert('게시글 등록에 실패했습니다.')
+      alert(isEditMode.value ? '게시글 수정에 실패했습니다.' : '게시글 등록에 실패했습니다.')
     }
   } catch (error) {
-    console.error('Failed to create post:', error)
-    alert('게시글 등록 중 오류가 발생했습니다.')
+    console.error(isEditMode.value ? 'Failed to update post:' : 'Failed to create post:', error)
+    alert(isEditMode.value ? '게시글 수정 중 오류가 발생했습니다.' : '게시글 등록 중 오류가 발생했습니다.')
   } finally {
     isSubmitting.value = false
   }
@@ -55,11 +100,11 @@ const cancel = () => {
 <template>
   <div class="admin-board-write">
     <div class="page-header">
-      <h1 class="page-title">글 작성</h1>
+      <h1 class="page-title">{{ isEditMode ? '글 수정' : '글 작성' }}</h1>
     </div>
 
     <div class="card shadow-sm">
-      <div class="card-body">
+      <div class="card-body" v-if="!isLoading">
         <form @submit.prevent="submitPost" class="write-form">
           <div class="form-group">
             <label for="postType" class="form-label">카테고리 <span class="required">*</span></label>
@@ -96,7 +141,8 @@ const cancel = () => {
           <div class="form-actions">
             <button type="button" class="btn-cancel" @click="cancel" :disabled="isSubmitting">취소</button>
             <button type="submit" class="btn-primary" :disabled="isSubmitting">
-              {{ isSubmitting ? '등록 중...' : '등록하기' }}
+              <span v-if="isSubmitting">처리 중...</span>
+              <span v-else>{{ isEditMode ? '수정하기' : '등록하기' }}</span>
             </button>
           </div>
         </form>

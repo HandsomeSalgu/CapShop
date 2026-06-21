@@ -30,4 +30,7 @@ public class PostSearchCondition {
 
     @Schema(hidden = true)
     private Integer offset;
+
+    @Schema(hidden = true)
+    private Boolean includeHidden;
 }

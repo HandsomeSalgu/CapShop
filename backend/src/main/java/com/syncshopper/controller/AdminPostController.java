@@ -23,6 +23,22 @@ public class AdminPostController {
 
     private final PostService postService;
 
+    @Operation(summary = "Get all posts (Admin)")
+    @GetMapping
+    public ApiResponse<com.syncshopper.dto.response.PageResponse<com.syncshopper.dto.response.PostListResponse>> getAllPosts(
+            @ModelAttribute com.syncshopper.dto.request.PostSearchCondition condition
+    ) {
+        return ApiResponse.success("Posts fetched.", postService.getAllPosts(condition));
+    }
+
+    @Operation(summary = "Get post detail (Admin)")
+    @GetMapping("/{postId}")
+    public ApiResponse<PostDetailResponse> getAdminPostDetail(
+            @PathVariable Long postId
+    ) {
+        return ApiResponse.success("Post detail fetched.", postService.getAdminPostDetail(postId));
+    }
+
     @Operation(summary = "Create post")
     @PostMapping
     public ApiResponse<PostDetailResponse> createPost(
@@ -47,6 +63,15 @@ public class AdminPostController {
     ) {
         postService.deletePost(currentUserId(), postId);
         return ApiResponse.success("Post deleted.");
+    }
+
+    @Operation(summary = "Restore post")
+    @PatchMapping("/{postId}/restore")
+    public ApiResponse<Void> restorePost(
+            @PathVariable Long postId
+    ) {
+        postService.restorePost(currentUserId(), postId);
+        return ApiResponse.success("Post restored.");
     }
 
     private Long currentUserId() {
