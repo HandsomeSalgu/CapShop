@@ -33,6 +33,24 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             throws IOException, ServletException {
         OAuth2User principal = (OAuth2User) authentication.getPrincipal();
 
+        if (principal.getAttributes().containsKey("isNew") && (boolean) principal.getAttribute("isNew")) {
+            String email = principal.getAttribute("email");
+            String nickname = principal.getAttribute("nickname");
+            String provider = principal.getAttribute("provider");
+            String providerId = principal.getAttribute("providerId");
+            String profileImageUrl = principal.getAttribute("profileImageUrl");
+
+            String signupToken = jwtTokenProvider.createSignupToken(email, nickname, provider, providerId, profileImageUrl);
+
+            // Redirect to frontend signup page
+            String redirectUri = UriComponentsBuilder.fromUriString("http://localhost:5173/signup")
+                    .queryParam("signupToken", signupToken)
+                    .build()
+                    .toUriString();
+            response.sendRedirect(redirectUri);
+            return;
+        }
+
         User user = User.builder()
                 .userId(asLong(principal.getAttribute("userId")))
                 .email(principal.getAttribute("email"))

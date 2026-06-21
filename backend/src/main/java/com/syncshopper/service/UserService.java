@@ -37,15 +37,20 @@ public class UserService {
         return user;
     }
 
+
+
     @Transactional
-    public User createOAuthUser(String email, AuthProvider provider, String providerId, String nickname,
-            String profileImageUrl) {
+    public User createSocialUserWithDetails(String email, String encodedPassword, AuthProvider provider, String providerId, 
+            String nickname, String profileImageUrl, String phone, LocalDate birthDate) {
         User user = User.builder()
                 .email(email)
+                .password(encodedPassword)
                 .provider(provider)
                 .providerId(providerId)
                 .nickname(nickname)
                 .profileImageUrl(profileImageUrl)
+                .phone(phone)
+                .birthDate(birthDate)
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
                 .build();

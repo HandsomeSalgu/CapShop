@@ -10,6 +10,7 @@ import com.syncshopper.dto.request.SignupRequest;
 import com.syncshopper.dto.response.LoginResponse;
 import com.syncshopper.dto.response.UserResponse;
 import com.syncshopper.security.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,6 +32,31 @@ public class AuthService {
 
     @Transactional
     public UserResponse signup(SignupRequest request) {
+        if (request.getSignupToken() != null && !request.getSignupToken().isEmpty()) {
+            Claims claims = jwtTokenProvider.parseSignupToken(request.getSignupToken());
+            String email = claims.get("email", String.class);
+            String providerStr = claims.get("provider", String.class);
+            String providerId = claims.get("providerId", String.class);
+            String profileImageUrl = claims.get("profileImageUrl", String.class);
+
+            if (userService.existsByEmail(email)) {
+                throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+            }
+
+            String encodedPassword = passwordEncoder.encode(request.getPassword());
+            User user = userService.createSocialUserWithDetails(
+                    email,
+                    encodedPassword,
+                    AuthProvider.valueOf(providerStr),
+                    providerId,
+                    request.getNickname(),
+                    profileImageUrl,
+                    request.getPhone(),
+                    request.getBirthDate()
+            );
+            return UserResponse.from(user);
+        }
+
         if (userService.existsByEmail(request.getEmail())) {
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }

@@ -41,38 +41,46 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             throw oauthException(ErrorCode.INVALID_LOGIN);
         }
 
+        Map<String, Object> attributes = new HashMap<>(oauth2User.getAttributes());
+
         User user = userService.findByProviderAndProviderId(provider, userInfo.getProviderId());
         if (user != null) {
             user = userService.updateOAuthUser(user, userInfo.getNickname(), userInfo.getProfileImageUrl());
+            
+            if (user.getStatus() != UserStatus.ACTIVE) {
+                throw oauthException(ErrorCode.INACTIVE_USER);
+            }
+            
+            attributes.put("isNew", false);
+            attributes.put("userId", user.getUserId());
+            attributes.put("email", user.getEmail());
+            attributes.put("role", user.getRole().name());
+            attributes.put("provider", user.getProvider().name());
+
+            return new DefaultOAuth2User(
+                    List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+                    attributes,
+                    "userId"
+            );
         } else {
             User emailUser = userService.findByEmail(userInfo.getEmail());
             if (emailUser != null) {
                 throw oauthException(ErrorCode.OAUTH_EMAIL_CONFLICT);
             }
-            user = userService.createOAuthUser(
-                    userInfo.getEmail(),
-                    provider,
-                    userInfo.getProviderId(),
-                    userInfo.getNickname(),
-                    userInfo.getProfileImageUrl()
+            
+            attributes.put("isNew", true);
+            attributes.put("email", userInfo.getEmail());
+            attributes.put("nickname", userInfo.getNickname());
+            attributes.put("provider", provider.name());
+            attributes.put("providerId", userInfo.getProviderId());
+            attributes.put("profileImageUrl", userInfo.getProfileImageUrl());
+
+            return new DefaultOAuth2User(
+                    List.of(new SimpleGrantedAuthority("ROLE_GUEST")),
+                    attributes,
+                    "email"
             );
         }
-
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            throw oauthException(ErrorCode.INACTIVE_USER);
-        }
-
-        Map<String, Object> attributes = new HashMap<>(oauth2User.getAttributes());
-        attributes.put("userId", user.getUserId());
-        attributes.put("email", user.getEmail());
-        attributes.put("role", user.getRole().name());
-        attributes.put("provider", user.getProvider().name());
-
-        return new DefaultOAuth2User(
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
-                attributes,
-                "userId"
-        );
     }
 
     private OAuth2UserInfo createUserInfo(AuthProvider provider, Map<String, Object> attributes) {

@@ -47,4 +47,7 @@ public class SignupRequest {
     @Schema(description = "Birth Date", example = "2000-01-01", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "생년월일은 필수입니다.")
     private LocalDate birthDate;
+
+    @Schema(description = "Social Signup Token", example = "eyJhbGciOiJIUzI1...", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private String signupToken;
 }

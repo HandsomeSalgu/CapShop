@@ -1,10 +1,34 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
+const route = useRoute()
 const step = ref(1)
+
+const signupToken = ref('')
+const isSocialSignup = ref(false)
+
+onMounted(() => {
+  if (route.query.signupToken) {
+    signupToken.value = route.query.signupToken
+    try {
+      const payloadBase64 = signupToken.value.split('.')[1]
+      // Use atob to decode base64, then decodeURIComponent to handle UTF-8 characters properly
+      const payloadString = decodeURIComponent(escape(atob(payloadBase64)))
+      const payload = JSON.parse(payloadString)
+      
+      email.value = payload.email || ''
+      name.value = payload.nickname || ''
+      isEmailVerified.value = true
+      isSocialSignup.value = true
+      emailSuccessMsg.value = '소셜 인증된 이메일입니다.'
+    } catch (e) {
+      console.error('Invalid signupToken', e)
+    }
+  }
+})
 
 // --- Step 1: Terms ---
 const termsService = ref(false)
@@ -133,13 +157,19 @@ const submitSignup = async () => {
   const birthDateStr = `${birthYear.value}-${paddedMonth}-${paddedDay}`
 
   try {
-    await axios.post('/api/auth/signup', {
+    const payload = {
       email: email.value,
       password: password.value,
       nickname: name.value,
       phone: phone.value,
       birthDate: birthDateStr
-    })
+    }
+    
+    if (signupToken.value) {
+      payload.signupToken = signupToken.value
+    }
+
+    await axios.post('/api/auth/signup', payload)
     step.value = 3
   } catch (error) {
     if (error.response && error.response.data && error.response.data.message) {
@@ -225,8 +255,8 @@ const goLogin = () => {
           <span v-if="emailSuccessMsg" class="msg-success">{{ emailSuccessMsg }}</span>
         </div>
         <div class="input-with-btn">
-          <input type="text" v-model="email" placeholder="아이디 입력(6~20자)" class="form-input" @input="isEmailVerified = false">
-          <button type="button" class="btn-check" @click="checkEmail">이메일 확인</button>
+          <input type="text" v-model="email" placeholder="아이디 입력(6~20자)" class="form-input" @input="isEmailVerified = false" :readonly="isSocialSignup">
+          <button type="button" class="btn-check" @click="checkEmail" :disabled="isSocialSignup">이메일 확인</button>
         </div>
       </div>
 

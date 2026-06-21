@@ -41,6 +41,23 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    public String createSignupToken(String email, String nickname, String provider, String providerId, String profileImageUrl) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + 1000 * 60 * 30); // 30 mins
+
+        return Jwts.builder()
+                .subject("SIGNUP")
+                .claim("email", email)
+                .claim("nickname", nickname)
+                .claim("provider", provider)
+                .claim("providerId", providerId)
+                .claim("profileImageUrl", profileImageUrl)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(secretKey, Jwts.SIG.HS256)
+                .compact();
+    }
+
     public boolean validateToken(String token) {
         parseClaims(token);
         return true;
@@ -56,6 +73,10 @@ public class JwtTokenProvider {
 
     public long getAccessTokenExpiration() {
         return accessTokenExpiration;
+    }
+
+    public Claims parseSignupToken(String token) {
+        return parseClaims(token);
     }
 
     private Claims parseClaims(String token) {
