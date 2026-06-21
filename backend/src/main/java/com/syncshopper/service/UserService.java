@@ -90,4 +90,17 @@ public class UserService {
         userMapper.updateOAuthUser(user);
         return findById(user.getUserId());
     }
+
+    public User findByNicknameAndPhone(String nickname, String phone) {
+        return userMapper.findByNicknameAndPhone(nickname, phone);
+    }
+
+    public User findByEmailAndNicknameAndPhone(String email, String nickname, String phone) {
+        return userMapper.findByEmailAndNicknameAndPhone(email, nickname, phone);
+    }
+
+    @Transactional
+    public void updatePassword(Long userId, String encodedPassword) {
+        userMapper.updatePassword(userId, encodedPassword);
+    }
 }

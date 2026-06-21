@@ -35,4 +35,8 @@ public interface UserMapper {
     int updateUserStatus(@Param("userId") Long userId, @Param("status") String status);
 
     int updateUserRole(@Param("userId") Long userId, @Param("role") String role);
+
+    User findByNicknameAndPhone(@Param("nickname") String nickname, @Param("phone") String phone);
+
+    User findByEmailAndNicknameAndPhone(@Param("email") String email, @Param("nickname") String nickname, @Param("phone") String phone);
 }

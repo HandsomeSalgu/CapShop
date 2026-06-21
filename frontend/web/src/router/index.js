@@ -25,6 +25,11 @@ const router = createRouter({
       component: () => import('../views/OAuthCallbackView.vue'),
     },
     {
+      path: '/find-account',
+      name: 'findAccount',
+      component: () => import('../views/FindAccountView.vue'),
+    },
+    {
       path: '/best',
       name: 'best',
       component: () => import('../views/BestProductsView.vue'),

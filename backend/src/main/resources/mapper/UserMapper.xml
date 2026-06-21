@@ -133,4 +133,19 @@
         WHERE user_id = #{userId}
     </update>
 
+    <select id="findByNicknameAndPhone" resultMap="UserResultMap">
+        SELECT * FROM users
+        WHERE nickname = #{nickname}
+          AND phone = #{phone}
+        LIMIT 1
+    </select>
+
+    <select id="findByEmailAndNicknameAndPhone" resultMap="UserResultMap">
+        SELECT * FROM users
+        WHERE email = #{email}
+          AND nickname = #{nickname}
+          AND phone = #{phone}
+        LIMIT 1
+    </select>
+
 </mapper>

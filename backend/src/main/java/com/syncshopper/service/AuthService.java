@@ -23,11 +23,13 @@ public class AuthService {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final EmailVerificationService emailVerificationService;
 
-    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
+    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, EmailVerificationService emailVerificationService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional
@@ -105,5 +107,30 @@ public class AuthService {
 
     public boolean checkEmailAvailability(String email) {
         return !userService.existsByEmail(email);
+    }
+
+    public String findEmail(com.syncshopper.dto.request.FindEmailRequest request) {
+        User user = userService.findByNicknameAndPhone(request.getNickname(), request.getPhone());
+        if (user == null) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+        return user.getEmail();
+    }
+
+    @Transactional
+    public void findPassword(com.syncshopper.dto.request.FindPasswordRequest request) {
+        User user = userService.findByEmailAndNicknameAndPhone(request.getEmail(), request.getNickname(), request.getPhone());
+        if (user == null) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        // 임시 비밀번호 생성 (8자리 영문자+숫자 랜덤)
+        String tempPassword = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8) + "!";
+        
+        // 비밀번호 업데이트
+        userService.updatePassword(user.getUserId(), passwordEncoder.encode(tempPassword));
+
+        // 이메일 전송
+        emailVerificationService.sendTemporaryPassword(user.getEmail(), tempPassword);
     }
 }

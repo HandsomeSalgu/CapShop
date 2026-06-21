@@ -40,6 +40,16 @@ public class EmailVerificationService {
         verificationMap.put(email, new VerificationInfo(code, expireAt));
     }
 
+    public void sendTemporaryPassword(String email, String tempPassword) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(email);
+        message.setSubject("[SyncShopper] 임시 비밀번호 발급 안내");
+        message.setText("안녕하세요.\n\n요청하신 임시 비밀번호는 [" + tempPassword + "] 입니다.\n로그인 후 반드시 비밀번호를 변경해 주세요.");
+        
+        mailSender.send(message);
+    }
+
     public boolean verifyCode(String email, String code) {
         VerificationInfo info = verificationMap.get(email);
         if (info == null) {

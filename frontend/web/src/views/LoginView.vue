@@ -42,9 +42,6 @@ const loginWithKakao = () => {
   window.location.href = 'http://localhost:8080/oauth2/authorization/kakao';
 }
 
-const alertPreparing = () => {
-  alert('준비 중입니다')
-}
 </script>
 
 <template>
@@ -92,7 +89,7 @@ const alertPreparing = () => {
       </div>
 
       <div class="login-links">
-        <a href="#" @click.prevent="alertPreparing">아이디/비밀번호 찾기</a>
+        <a href="#" @click.prevent="router.push('/find-account')">이메일/비밀번호 찾기</a>
         <span class="separator">|</span>
         <a href="#" @click.prevent="router.push('/signup')">일반 회원가입</a>
       </div>

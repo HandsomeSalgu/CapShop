@@ -97,4 +97,18 @@ public class AuthController {
         }
         return ApiResponse.success("이메일 인증이 완료되었습니다.", true);
     }
+
+    @Operation(summary = "Find email by nickname and phone")
+    @PostMapping("/find-email")
+    public ApiResponse<String> findEmail(@Valid @RequestBody com.syncshopper.dto.request.FindEmailRequest request) {
+        String email = authService.findEmail(request);
+        return ApiResponse.success("이메일을 성공적으로 찾았습니다.", email);
+    }
+
+    @Operation(summary = "Find password and send temporary password")
+    @PostMapping("/find-password")
+    public ApiResponse<Void> findPassword(@Valid @RequestBody com.syncshopper.dto.request.FindPasswordRequest request) {
+        authService.findPassword(request);
+        return ApiResponse.success("임시 비밀번호가 이메일로 발송되었습니다.");
+    }
 }
