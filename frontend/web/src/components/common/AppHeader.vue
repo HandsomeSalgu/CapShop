@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import logoImage from '@/assets/logo.png'
@@ -8,6 +8,45 @@ const emit = defineEmits(['open-search'])
 const authStore = useAuthStore()
 const router = useRouter()
 const isDropdownOpen = ref(false)
+
+const isSticky = ref(false)
+const gnbRef = ref(null)
+const gnbWrapperHeight = ref('auto')
+const headerTopHeight = ref(0)
+
+const calculateHeaderHeight = () => {
+  const headerTop = document.querySelector('.header-top')
+  if (headerTop) {
+    headerTopHeight.value = headerTop.offsetHeight + 50 // header padding-top 50px
+  } else {
+    headerTopHeight.value = 125
+  }
+}
+
+const handleScroll = () => {
+  if (window.scrollY > headerTopHeight.value) {
+    if (!isSticky.value) {
+      gnbWrapperHeight.value = gnbRef.value ? `${gnbRef.value.offsetHeight}px` : 'auto'
+      isSticky.value = true
+    }
+  } else {
+    if (isSticky.value) {
+      isSticky.value = false
+      gnbWrapperHeight.value = 'auto'
+    }
+  }
+}
+
+onMounted(() => {
+  calculateHeaderHeight()
+  window.addEventListener('resize', calculateHeaderHeight)
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', calculateHeaderHeight)
+  window.removeEventListener('scroll', handleScroll)
+})
 
 const handleLogout = () => {
   authStore.logout()
@@ -72,14 +111,16 @@ const goToAdminPage = () => {
           </template>
         </div>
       </div>
-      <nav class="gnb">
-        <RouterLink to="/best">베스트 상품리스트</RouterLink>
-        <RouterLink to="/ai-recommend">AI 추천 상품리스트</RouterLink>
-        <RouterLink to="/category">전체 카테고리</RouterLink>
-        <a href="#">크롬 익스텐션 설치</a>
-        <RouterLink to="/board">공지사항/FAQ</RouterLink>
-        <a href="#">이벤트</a>
-      </nav>
+      <div class="gnb-wrapper" :style="{ height: gnbWrapperHeight }">
+        <nav class="gnb" :class="{ sticky: isSticky }" ref="gnbRef">
+          <RouterLink to="/best">베스트 상품리스트</RouterLink>
+          <RouterLink to="/ai-recommend">AI 추천 상품리스트</RouterLink>
+          <RouterLink to="/category">전체 카테고리</RouterLink>
+          <a href="#">크롬 익스텐션 설치</a>
+          <RouterLink to="/board">공지사항/FAQ</RouterLink>
+          <a href="#">이벤트</a>
+        </nav>
+      </div>
     </div>
   </header>
 </template>
@@ -165,6 +206,24 @@ header {
 
 .gnb a:hover::after {
   width: 100%;
+}
+
+.gnb.sticky {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  animation: slideDown 0.3s ease-out;
+  padding: 30px 0;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
 }
 
 .profile-container {
