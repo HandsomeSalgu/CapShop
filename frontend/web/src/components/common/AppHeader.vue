@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import logoImage from '@/assets/logo.png'
 
 const emit = defineEmits(['open-search'])
 const authStore = useAuthStore()
@@ -36,8 +37,10 @@ const goToAdminPage = () => {
   <header>
     <div class="container">
       <div class="header-top">
-        <div class="welcome-msg">환영 문구가 들어갑니다.</div>
-        <RouterLink to="/" class="logo" style="text-decoration: none;">로고</RouterLink>
+        <div class="welcome-msg">CapShop에 오신 것을 환영합니다!</div>
+        <RouterLink to="/" class="logo" style="text-decoration: none;">
+          <img :src="logoImage" alt="CapShop Logo" />
+        </RouterLink>
         <div class="header-utils">
           <span @click="emit('open-search')" id="search-btn">
             <i class="fa-solid fa-magnifying-glass"></i> 검색
@@ -84,7 +87,7 @@ const goToAdminPage = () => {
 <style scoped>
 header {
   border-bottom: 1px solid var(--border-color);
-  padding-top: 15px;
+  padding-top: 40px;
 }
 
 .header-top {
@@ -103,10 +106,14 @@ header {
 .logo {
   flex: 1;
   text-align: center;
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--primary-color);
-  letter-spacing: -1px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo img {
+  max-height: 50px;
+  object-fit: contain;
 }
 
 .header-utils {
