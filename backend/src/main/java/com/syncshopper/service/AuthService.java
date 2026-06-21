@@ -52,8 +52,7 @@ public class AuthService {
                     request.getNickname(),
                     profileImageUrl,
                     request.getPhone(),
-                    request.getBirthDate()
-            );
+                    request.getBirthDate());
             return UserResponse.from(user);
         }
 
@@ -63,12 +62,11 @@ public class AuthService {
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         User user = userService.createLocalUser(
-                request.getEmail(), 
-                encodedPassword, 
+                request.getEmail(),
+                encodedPassword,
                 request.getNickname(),
                 request.getPhone(),
-                request.getBirthDate()
-        );
+                request.getBirthDate());
         return UserResponse.from(user);
     }
 
