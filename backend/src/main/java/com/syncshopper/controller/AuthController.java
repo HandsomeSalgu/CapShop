@@ -41,7 +41,9 @@ public class AuthController {
                                     {
                                       "email": "user@example.com",
                                       "password": "password1234",
-                                      "nickname": "hwarang"
+                                      "nickname": "hwarang",
+                                      "phone": "01012345678",
+                                      "birthDate": "2000-01-01"
                                     }
                                     """)
                     )

@@ -2,17 +2,23 @@ package com.syncshopper.service;
 
 import com.syncshopper.common.exception.CustomException;
 import com.syncshopper.common.exception.ErrorCode;
+import com.syncshopper.dto.response.AiCommerceQueryResponse;
 import com.syncshopper.dto.response.CommerceProductResponse;
 import com.syncshopper.dto.response.NaverShoppingItemResponse;
 import com.syncshopper.dto.response.NaverShoppingSearchResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.cache.annotation.Cacheable;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class CommerceService {
@@ -50,6 +56,47 @@ public class CommerceService {
                 .toList();
     }
 
+    public List<CommerceProductResponse> searchTop3(AiCommerceQueryResponse queryResponse) {
+        if (queryResponse == null || queryResponse.getPrimaryQuery() == null || queryResponse.getPrimaryQuery().isBlank()) {
+            return List.of();
+        }
+
+        List<String> queries = new ArrayList<>();
+        queries.add(queryResponse.getPrimaryQuery());
+        if (queryResponse.getFallbackQueries() != null) {
+            queries.addAll(queryResponse.getFallbackQueries());
+        }
+
+        log.info("Commerce Top3 query candidates: {}", queries);
+
+        Map<String, CommerceProductResponse> productsByKey = new LinkedHashMap<>();
+        for (String query : queries.stream().filter(value -> value != null && !value.isBlank()).distinct().toList()) {
+            NaverShoppingSearchResponse response = naverShoppingClient.search(query, null, null, null);
+            int itemCount = response == null || response.getItems() == null ? 0 : response.getItems().size();
+            log.info("Naver shopping search query='{}' itemCount={}", query, itemCount);
+            if (response == null || response.getItems() == null) {
+                continue;
+            }
+
+            for (NaverShoppingItemResponse item : response.getItems()) {
+                CommerceProductResponse product = toCommerceProductResponse(item);
+                productsByKey.putIfAbsent(deduplicateKey(product), product);
+            }
+
+            if (productsByKey.size() >= TOP3_LIMIT) {
+                break;
+            }
+        }
+
+        List<CommerceProductResponse> products = productsByKey.values().stream()
+                .limit(TOP3_LIMIT)
+                .map(this::upsertSafely)
+                .filter(product -> product != null)
+                .toList();
+        log.info("Commerce Top3 final productCount={}", products.size());
+        return products;
+    }
+
     private List<CommerceProductResponse> mapAndUpsert(NaverShoppingSearchResponse response) {
         if (response == null || response.getItems() == null) {
             return List.of();
@@ -66,13 +113,52 @@ public class CommerceService {
                 .title(cleanHtml(item.getTitle()))
                 .brand(resolveBrand(item))
                 .mallName(cleanHtml(item.getMallName()))
-                .categoryName(cleanHtml(item.getCategory1()))
+                .categoryName(resolveCategory(item))
                 .price(parsePrice(item.getLprice()))
                 .imageUrl(item.getImage())
                 .affiliateUrl(item.getLink())
                 .source(NAVER_SOURCE)
                 .externalProductId(item.getProductId())
                 .build();
+    }
+
+    private CommerceProductResponse upsertSafely(CommerceProductResponse product) {
+        try {
+            product.setProductId(productUpsertService.upsertCommerceProduct(product));
+            return product;
+        } catch (RuntimeException e) {
+            log.warn(
+                    "Failed to upsert commerce product. title={} externalProductId={}",
+                    product.getTitle(),
+                    product.getExternalProductId(),
+                    e
+            );
+            return null;
+        }
+    }
+
+    private String deduplicateKey(CommerceProductResponse product) {
+        if (product.getAffiliateUrl() != null && !product.getAffiliateUrl().isBlank()) {
+            return "link:" + product.getAffiliateUrl();
+        }
+        if (product.getExternalProductId() != null && !product.getExternalProductId().isBlank()) {
+            return "external:" + product.getExternalProductId();
+        }
+        return "fallback:" + product.getTitle() + "|" + product.getMallName() + "|" + product.getPrice();
+    }
+
+    private String resolveCategory(NaverShoppingItemResponse item) {
+        String category3 = cleanHtml(item.getCategory3());
+        if (category3 != null && !category3.isBlank()) {
+            return category3;
+        }
+
+        String category2 = cleanHtml(item.getCategory2());
+        if (category2 != null && !category2.isBlank()) {
+            return category2;
+        }
+
+        return cleanHtml(item.getCategory1());
     }
 
     private void validateQuery(String query) {

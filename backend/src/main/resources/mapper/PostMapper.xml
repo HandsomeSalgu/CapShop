@@ -22,7 +22,9 @@
 
     <sql id="PostSearchWhere">
         <where>
-            visible_yn = 'Y'
+            <if test="includeHidden == null or !includeHidden">
+                visible_yn = 'Y'
+            </if>
             <if test="postType != null">
                 AND post_type = #{postType}
             </if>
@@ -56,6 +58,14 @@
         FROM posts
         WHERE post_id = #{postId}
           AND visible_yn = 'Y'
+        LIMIT 1
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="PostResultMap">
+        SELECT
+        <include refid="PostColumns"/>
+        FROM posts
+        WHERE post_id = #{postId}
         LIMIT 1
     </select>
 

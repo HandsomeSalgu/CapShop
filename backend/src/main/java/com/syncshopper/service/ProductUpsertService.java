@@ -17,29 +17,37 @@ public class ProductUpsertService {
 
     @Transactional
     public Long upsertCommerceProduct(CommerceProductResponse response) {
-        Product existingProduct = productMapper.findBySourceAndAffiliateUrl(
+        Product existingProduct = productMapper.findBySourceAndExternalProductId(
                 response.getSource(),
-                response.getAffiliateUrl()
+                response.getExternalProductId()
         );
         if (existingProduct != null) {
+            Product product = toProduct(response);
+            product.setProductId(existingProduct.getProductId());
+            productMapper.updateCommerceProduct(product);
             return existingProduct.getProductId();
         }
 
-        Product product = Product.builder()
+        Product product = toProduct(response);
+        productMapper.insertCommerceProduct(product);
+        return product.getProductId();
+    }
+
+    private Product toProduct(CommerceProductResponse response) {
+        return Product.builder()
                 .title(response.getTitle())
                 .brand(response.getBrand())
                 .categoryName(response.getCategoryName())
                 .price(response.getPrice())
                 .imageUrl(response.getImageUrl())
                 .affiliateUrl(response.getAffiliateUrl())
+                .mallName(response.getMallName())
                 .description(COMMERCE_PRODUCT_DESCRIPTION)
                 .source(response.getSource())
+                .externalProductId(response.getExternalProductId())
                 .reviewCount(0)
                 .rating(null)
                 .visibleYn("Y")
                 .build();
-
-        productMapper.insertCommerceProduct(product);
-        return product.getProductId();
     }
 }

@@ -60,17 +60,18 @@ app:
   oauth2:
     authorized-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth/callback}
   ai:
-    mock-enabled: true
+    mock-enabled: false
     fastapi-base-url: http://localhost:8000
     analyze-path: /api/ai/analyze-frame
+    commerce-query-path: /api/ai/generate-commerce-query
     timeout-ms: 5000
   naver:
     shopping:
-      client-id: ${NAVER_CLIENT_ID}
-      client-secret: ${NAVER_CLIENT_SECRET}
+      client-id: ${NAVER_SHOPPING_CLIENT_ID:${NAVER_CLIENT_ID:}}
+      client-secret: ${NAVER_SHOPPING_CLIENT_SECRET:${NAVER_CLIENT_SECRET:}}
       base-url: https://openapi.naver.com
       search-path: /v1/search/shop.json
-      display: 10
+      display: 5
       start: 1
       sort: sim
       exclude: used:rental:cbshop

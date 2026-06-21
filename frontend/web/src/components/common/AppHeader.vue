@@ -1,12 +1,55 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import logoImage from '@/assets/logo.png'
 
 const emit = defineEmits(['open-search'])
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const isDropdownOpen = ref(false)
+
+const isHomePage = computed(() => route.path === '/')
+
+const isSticky = ref(false)
+const gnbRef = ref(null)
+const gnbWrapperHeight = ref('auto')
+const headerTopHeight = ref(0)
+
+const calculateHeaderHeight = () => {
+  const headerTop = document.querySelector('.header-top')
+  if (headerTop) {
+    headerTopHeight.value = headerTop.offsetHeight + 50 // header padding-top 50px
+  } else {
+    headerTopHeight.value = 125
+  }
+}
+
+const handleScroll = () => {
+  if (window.scrollY > headerTopHeight.value) {
+    if (!isSticky.value) {
+      gnbWrapperHeight.value = gnbRef.value ? `${gnbRef.value.offsetHeight}px` : 'auto'
+      isSticky.value = true
+    }
+  } else {
+    if (isSticky.value) {
+      isSticky.value = false
+      gnbWrapperHeight.value = 'auto'
+    }
+  }
+}
+
+onMounted(() => {
+  calculateHeaderHeight()
+  window.addEventListener('resize', calculateHeaderHeight)
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', calculateHeaderHeight)
+  window.removeEventListener('scroll', handleScroll)
+})
 
 const handleLogout = () => {
   authStore.logout()
@@ -33,11 +76,13 @@ const goToAdminPage = () => {
 </script>
 
 <template>
-  <header>
+  <header :class="{ 'absolute-header': isHomePage }">
     <div class="container">
       <div class="header-top">
-        <div class="welcome-msg">환영 문구가 들어갑니다.</div>
-        <RouterLink to="/" class="logo" style="text-decoration: none;">로고</RouterLink>
+        <div class="welcome-msg">스크린샷으로 찾는 똑같은 상품 추천</div>
+        <RouterLink to="/" class="logo" style="text-decoration: none;">
+          <img :src="logoImage" alt="CapShop Logo" />
+        </RouterLink>
         <div class="header-utils">
           <span @click="emit('open-search')" id="search-btn">
             <i class="fa-solid fa-magnifying-glass"></i> 검색
@@ -69,14 +114,16 @@ const goToAdminPage = () => {
           </template>
         </div>
       </div>
-      <nav class="gnb">
-        <RouterLink to="/best">베스트 상품리스트</RouterLink>
-        <RouterLink to="/ai-recommend">AI 추천 상품리스트</RouterLink>
-        <RouterLink to="/category">전체 카테고리</RouterLink>
-        <a href="#">크롬 익스텐션 설치</a>
-        <RouterLink to="/board">공지사항/FAQ</RouterLink>
-        <a href="#">이벤트</a>
-      </nav>
+      <div class="gnb-wrapper" :style="{ height: gnbWrapperHeight }">
+        <nav class="gnb" :class="{ sticky: isSticky }" ref="gnbRef">
+          <RouterLink to="/best">베스트 상품리스트</RouterLink>
+          <RouterLink to="/ai-recommend">AI 추천 상품리스트</RouterLink>
+          <RouterLink to="/category">전체 카테고리</RouterLink>
+          <a href="#">크롬 익스텐션 설치</a>
+          <RouterLink to="/board">공지사항/FAQ</RouterLink>
+          <a href="#">이벤트</a>
+        </nav>
+      </div>
     </div>
   </header>
 </template>
@@ -84,14 +131,24 @@ const goToAdminPage = () => {
 <style scoped>
 header {
   border-bottom: 1px solid var(--border-color);
-  padding-top: 15px;
+  padding-top: 50px;
+}
+
+header.absolute-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  border-bottom: none;
+  background-color: transparent;
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 15px;
+  padding-bottom: 40px;
 }
 
 .welcome-msg {
@@ -103,10 +160,14 @@ header {
 .logo {
   flex: 1;
   text-align: center;
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--primary-color);
-  letter-spacing: -1px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo img {
+  max-height: 35px;
+  object-fit: contain;
 }
 
 .header-utils {
@@ -135,12 +196,12 @@ header {
 .gnb {
   display: flex;
   justify-content: center;
-  gap: 40px;
-  padding: 15px 0;
+  gap: 55px;
+  padding: 20px 0;
 }
 
 .gnb a {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   position: relative;
 }
@@ -158,6 +219,24 @@ header {
 
 .gnb a:hover::after {
   width: 100%;
+}
+
+.gnb.sticky {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  animation: slideDown 0.3s ease-out;
+  padding: 30px 0;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
 }
 
 .profile-container {

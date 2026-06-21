@@ -16,6 +16,8 @@ public interface PostMapper {
 
     Post findVisiblePostById(@Param("postId") Long postId);
 
+    Post findById(@Param("postId") Long postId);
+
     void insertPost(Post post);
 
     void updatePost(Post post);

@@ -2,8 +2,10 @@ package com.syncshopper.service;
 
 import com.syncshopper.config.AiProperties;
 import com.syncshopper.domain.detection.AiProvider;
+import com.syncshopper.dto.request.AiCommerceQueryRequest;
 import com.syncshopper.dto.request.DetectionAnalyzeRequest;
 import com.syncshopper.dto.response.AiAnalysisResult;
+import com.syncshopper.dto.response.AiCommerceQueryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,13 @@ public class AiAnalysisService {
             return mockAiAnalysisService.analyze(request);
         }
         return fastApiAnalysisClient.analyze(request);
+    }
+
+    public AiCommerceQueryResponse generateCommerceQuery(AiCommerceQueryRequest request) {
+        if (aiProperties.isMockEnabled()) {
+            return mockAiAnalysisService.generateCommerceQuery(request);
+        }
+        return fastApiAnalysisClient.generateCommerceQuery(request);
     }
 
     public AiProvider getCurrentProvider() {

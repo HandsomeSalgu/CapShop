@@ -22,6 +22,7 @@ public class PostDetailResponse {
     private String title;
     private String content;
     private String postType;
+    private String visibleYn;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -31,6 +32,7 @@ public class PostDetailResponse {
                 .title(post.getTitle())
                 .content(post.getContent())
                 .postType(post.getPostType().name())
+                .visibleYn(post.getVisibleYn())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();

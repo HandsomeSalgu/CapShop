@@ -24,6 +24,23 @@ public class PostService {
 
     private final PostMapper postMapper;
 
+    public PageResponse<PostListResponse> getAllPosts(PostSearchCondition condition) {
+        PostSearchCondition normalizedCondition = normalizeCondition(condition);
+        normalizedCondition.setIncludeHidden(true);
+
+        long totalCount = postMapper.countPosts(normalizedCondition);
+        List<PostListResponse> posts = postMapper.findPosts(normalizedCondition).stream()
+                .map(PostListResponse::from)
+                .toList();
+
+        return PageResponse.of(
+                posts,
+                normalizedCondition.getPage(),
+                normalizedCondition.getSize(),
+                totalCount
+        );
+    }
+
     public PageResponse<PostListResponse> getPosts(PostSearchCondition condition) {
         PostSearchCondition normalizedCondition = normalizeCondition(condition);
 
@@ -42,6 +59,10 @@ public class PostService {
 
     public PostDetailResponse getPostDetail(Long postId) {
         return PostDetailResponse.from(findVisiblePost(postId));
+    }
+
+    public PostDetailResponse getAdminPostDetail(Long postId) {
+        return PostDetailResponse.from(findPostById(postId));
     }
 
     public PageResponse<PostListResponse> getNotices(int page, int size) {
@@ -92,6 +113,14 @@ public class PostService {
         }
         return post;
     }
+
+    private Post findPostById(Long postId) {
+        Post post = postMapper.findById(postId);
+        if (post == null) {
+            throw new CustomException(ErrorCode.POST_NOT_FOUND);
+        }
+        return post;
+    }
     public PostDetailResponse createPost(Long adminId, com.syncshopper.dto.request.PostCreateRequest request) {
         Post post = Post.builder()
                 .title(request.getTitle())
@@ -122,8 +151,14 @@ public class PostService {
     }
 
     public void deletePost(Long adminId, Long postId) {
-        Post post = findVisiblePost(postId);
+        Post post = findPostById(postId);
         post.setVisibleYn("N");
+        postMapper.updatePost(post);
+    }
+
+    public void restorePost(Long adminId, Long postId) {
+        Post post = findPostById(postId);
+        post.setVisibleYn("Y");
         postMapper.updatePost(post);
     }
 }
