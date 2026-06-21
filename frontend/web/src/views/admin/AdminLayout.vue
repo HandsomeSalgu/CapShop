@@ -1,8 +1,7 @@
 <script setup>
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const route = useRoute()
 
 const goBackToMain = () => {
   router.push('/')

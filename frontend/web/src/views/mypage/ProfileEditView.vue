@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import axios from 'axios'
 
-onBeforeRouteLeave((to, from) => {
+onBeforeRouteLeave(() => {
   sessionStorage.removeItem('passwordVerified')
 })
 

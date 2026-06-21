@@ -19,6 +19,8 @@ const alertPreparing = () => {
   isDropdownOpen.value = false
 }
 
+void alertPreparing
+
 const goToMyPage = () => {
   isDropdownOpen.value = false
   router.push('/mypage/profile')

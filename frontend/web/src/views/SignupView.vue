@@ -54,7 +54,7 @@ const checkEmail = async () => {
     return
   }
   
-  const emailRegex = /^[a-zA-Z0-9+-\_.]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/
+  const emailRegex = /^[a-zA-Z0-9+-_.]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/
   if (!emailRegex.test(email.value)) {
     emailErrorMsg.value = '올바른 이메일 형식이 아닙니다.'
     emailSuccessMsg.value = ''
@@ -72,7 +72,7 @@ const checkEmail = async () => {
       emailErrorMsg.value = '사용할 수 없는 이메일입니다.'
       emailSuccessMsg.value = ''
     }
-  } catch (error) {
+  } catch {
     emailErrorMsg.value = '이메일 확인 중 오류가 발생했습니다.'
     emailSuccessMsg.value = ''
   }

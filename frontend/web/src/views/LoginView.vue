@@ -28,7 +28,7 @@ const handleLogin = async () => {
     // 메인 화면으로 이동
     router.push('/');
     
-  } catch (error) {
+  } catch {
     // 백엔드에서 거절(400, 401 에러 등)하면 에러 문구 띄우기
     loginError.value = true;
   }
