@@ -30,6 +30,11 @@ const router = createRouter({
       component: () => import('../views/CategoryView.vue'),
     },
     {
+      path: '/ai-recommend',
+      name: 'aiRecommend',
+      component: () => import('../views/AiRecommendView.vue'),
+    },
+    {
       path: '/product/:id',
       name: 'productDetail',
       component: () => import('../views/ProductDetailView.vue'),

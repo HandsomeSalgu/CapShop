@@ -71,7 +71,7 @@ const goToAdminPage = () => {
       </div>
       <nav class="gnb">
         <RouterLink to="/best">베스트 상품리스트</RouterLink>
-        <a href="#">AI 추천 상품리스트</a>
+        <RouterLink to="/ai-recommend">AI 추천 상품리스트</RouterLink>
         <RouterLink to="/category">전체 카테고리</RouterLink>
         <a href="#">크롬 익스텐션 설치</a>
         <RouterLink to="/board">공지사항/FAQ</RouterLink>
