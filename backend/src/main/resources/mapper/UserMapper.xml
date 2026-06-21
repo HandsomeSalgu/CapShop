@@ -97,4 +97,40 @@
         WHERE user_id = #{userId}
     </update>
 
+    <select id="findAllUsers" resultMap="UserResultMap">
+        SELECT * FROM users
+        <where>
+            <if test="keyword != null and keyword != ''">
+                nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAllUsers" resultType="long">
+        SELECT COUNT(1) FROM users
+        <where>
+            <if test="keyword != null and keyword != ''">
+                nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+    </select>
+
+    <update id="updateUserStatus">
+        UPDATE users
+        SET status = #{status},
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateUserRole">
+        UPDATE users
+        SET role = #{role},
+            updated_at = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
 </mapper>

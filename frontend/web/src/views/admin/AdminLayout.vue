@@ -19,19 +19,19 @@ const goBackToMain = () => {
       
       <nav class="sidebar-nav">
         <ul>
-          <li class="menu-item">
+          <li class="menu-item" :class="{ active: route.path.startsWith('/admin/dashboard') }">
             <a href="#" class="menu-link" @click.prevent>
               <i class="fa-solid fa-chart-pie menu-icon"></i>
               <span>Dashboard</span>
             </a>
           </li>
-          <li class="menu-item">
-            <a href="#" class="menu-link" @click.prevent>
+          <li class="menu-item" :class="{ active: route.path.startsWith('/admin/user') }">
+            <RouterLink to="/admin/user" class="menu-link">
               <i class="fa-regular fa-user menu-icon"></i>
               <span>User</span>
-            </a>
+            </RouterLink>
           </li>
-          <li class="menu-item active">
+          <li class="menu-item" :class="{ active: route.path.startsWith('/admin/board') }">
             <RouterLink to="/admin/board" class="menu-link">
               <i class="fa-solid fa-list menu-icon"></i>
               <span>Board Post</span>

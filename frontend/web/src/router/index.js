@@ -74,6 +74,11 @@ const router = createRouter({
           path: 'board/write',
           name: 'adminBoardWrite',
           component: () => import('../views/admin/AdminBoardWriteView.vue'),
+        },
+        {
+          path: 'user',
+          name: 'adminUser',
+          component: () => import('../views/admin/AdminUserView.vue'),
         }
       ]
     }
