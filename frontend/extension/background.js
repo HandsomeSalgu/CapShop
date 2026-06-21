@@ -14,6 +14,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "SYNC_SHOPPER_SEARCH_COMMERCE") {
+    sendCommerceSearchRequest(message, sendResponse);
+    return true;
+  }
+
   if (message.type === "SYNC_SHOPPER_LOGIN") {
     sendLoginRequest(message, sendResponse);
     return true;
@@ -169,6 +174,57 @@ async function sendDetectionAnalyzeRequest(message, sendResponse) {
     });
   } catch (error) {
     console.error("[SyncShopper] detection request failed", error);
+
+    sendResponse({
+      success: false,
+      errorCode: "NETWORK_ERROR",
+      errorMessage: error.message
+    });
+  }
+}
+
+async function sendCommerceSearchRequest(message, sendResponse) {
+  const { requestUrl, accessToken } = message;
+
+  if (!requestUrl || !accessToken) {
+    sendResponse({
+      success: false,
+      errorMessage: "Missing commerce search request data"
+    });
+    return;
+  }
+
+  try {
+    const response = await fetch(requestUrl, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`
+      }
+    });
+
+    let result = null;
+    const responseText = await response.text();
+
+    if (responseText) {
+      try {
+        result = JSON.parse(responseText);
+      } catch (error) {
+        result = responseText;
+      }
+    }
+
+    const isApiResponse = result && typeof result === "object" && Object.prototype.hasOwnProperty.call(result, "success");
+    const isSuccess = response.ok && (!isApiResponse || result.success === true);
+
+    sendResponse({
+      success: isSuccess,
+      status: response.status,
+      result: isApiResponse ? result.data : result,
+      message: isApiResponse ? result.message : null,
+      errorMessage: isSuccess ? null : (isApiResponse ? result.message : `Request failed: ${response.status}`)
+    });
+  } catch (error) {
+    console.error("[SyncShopper] commerce search request failed", error);
 
     sendResponse({
       success: false,

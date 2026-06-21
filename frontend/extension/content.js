@@ -364,10 +364,7 @@ function createCaptureResultPanel() {
   previewImage.id = "syncshopper-result-preview";
   previewImage.alt = "\uCEA1\uCCD0 \uACB0\uACFC";
 
-  const resultTitle = document.createElement("h3");
-  resultTitle.textContent = "\uBD84\uC11D \uACB0\uACFC";
-
-  const resultContent = document.createElement("pre");
+  const resultContent = document.createElement("div");
   resultContent.id = "syncshopper-result-content";
   resultContent.textContent = "\uACB0\uACFC\uB97C \uAE30\uB2E4\uB9AC\uB294 \uC911...";
 
@@ -375,7 +372,6 @@ function createCaptureResultPanel() {
   panel.appendChild(title);
   panel.appendChild(previewTitle);
   panel.appendChild(previewImage);
-  panel.appendChild(resultTitle);
   panel.appendChild(resultContent);
   document.body.appendChild(panel);
 
@@ -390,19 +386,265 @@ function updateCapturePanelResult(result) {
     return;
   }
 
-  resultContent.textContent = formatResultForPanel(result);
+  resultContent.replaceChildren(renderResultForPanel(result));
 }
 
-function formatResultForPanel(result) {
+function renderResultForPanel(result) {
+  const fragment = document.createDocumentFragment();
+
   if (typeof result === "string") {
-    return result;
+    fragment.appendChild(createPanelMessage(result));
+    return fragment;
   }
 
   if (result === null || result === undefined) {
-    return "\uBD84\uC11D \uACB0\uACFC\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.";
+    fragment.appendChild(createPanelMessage("\uBD84\uC11D \uACB0\uACFC\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4."));
+    return fragment;
   }
 
-  return JSON.stringify(result, null, 2);
+  const analysis = result && typeof result === "object" && result.data ? result.data : result;
+
+  if (analysis.error) {
+    fragment.appendChild(createPanelMessage(analysis.error));
+    return fragment;
+  }
+
+  const targetName = analysis.detection?.targetName || analysis.targetName || "\uC54C \uC218 \uC5C6\uB294 \uC0C1\uD488";
+  const products = Array.isArray(analysis.products) ? analysis.products : [];
+
+  const detectionBlock = document.createElement("section");
+  detectionBlock.className = "syncshopper-detection-summary";
+
+  const detectionLabel = document.createElement("div");
+  detectionLabel.className = "syncshopper-section-label";
+  detectionLabel.textContent = "AI \uD0D0\uC9C0 \uACB0\uACFC:";
+
+  const detectionValue = document.createElement("div");
+  detectionValue.className = "syncshopper-detection-target";
+  detectionValue.textContent = targetName;
+
+  detectionBlock.appendChild(detectionLabel);
+  detectionBlock.appendChild(detectionValue);
+  fragment.appendChild(detectionBlock);
+  fragment.appendChild(createRecaptureButton());
+  fragment.appendChild(createNaverSearchQueryBlock(analysis));
+
+  fragment.appendChild(createProductResultsBlock(products));
+  return fragment;
+}
+
+function createPanelMessage(message) {
+  const messageElement = document.createElement("p");
+  messageElement.className = "syncshopper-panel-message";
+  messageElement.textContent = message;
+  return messageElement;
+}
+
+function createRecaptureButton() {
+  const button = document.createElement("button");
+  button.className = "syncshopper-recapture-button";
+  button.type = "button";
+  button.textContent = "\uB2E4\uC2DC \uCEA1\uCCD0\uD558\uAE30";
+  button.addEventListener("click", () => {
+    const panel = document.getElementById("syncshopper-result-panel");
+
+    if (panel) {
+      panel.remove();
+    }
+
+    startAreaSelection();
+  });
+
+  return button;
+}
+
+function createNaverSearchQueryBlock(analysis) {
+  const query = analysis.commerceQuery?.primary_query || analysis.commerceQuery?.fallback_queries?.[0] || analysis.targetName || analysis.detection?.targetName || "";
+
+  const block = document.createElement("section");
+  block.className = "syncshopper-query-block";
+
+  const label = document.createElement("label");
+  label.className = "syncshopper-section-label";
+  label.setAttribute("for", "syncshopper-naver-search-query");
+  label.textContent = "\uB124\uC774\uBC84 \uAC80\uC0C9 \uCFFC\uB9AC";
+
+  const row = document.createElement("div");
+  row.className = "syncshopper-query-row";
+
+  const input = document.createElement("input");
+  input.id = "syncshopper-naver-search-query";
+  input.className = "syncshopper-query-input";
+  input.type = "text";
+  input.value = query;
+  input.placeholder = "\uB124\uC774\uBC84\uC5D0\uC11C \uAC80\uC0C9\uD560 \uD0A4\uC6CC\uB4DC";
+
+  const searchButton = document.createElement("button");
+  searchButton.className = "syncshopper-query-search-button";
+  searchButton.type = "button";
+  searchButton.textContent = "\uAC80\uC0C9";
+
+  async function submitSearch() {
+    if (searchButton.disabled) {
+      return;
+    }
+
+    const trimmedQuery = input.value.trim();
+
+    if (!trimmedQuery) {
+      showToast("\uAC80\uC0C9\uC5B4\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.", "warning");
+      input.focus();
+      return;
+    }
+
+    searchButton.disabled = true;
+    searchButton.textContent = "\uAC80\uC0C9\uC911";
+    setProductResultsLoading();
+
+    try {
+      const products = await requestCommerceTop3Products(trimmedQuery);
+      updateProductResults(products);
+      showToast("\uB124\uC774\uBC84 \uAC80\uC0C9\uACB0\uACFC\uB97C \uC5C5\uB370\uC774\uD2B8\uD588\uC2B5\uB2C8\uB2E4.", "success");
+    } catch (error) {
+      console.error("[SyncShopper] commerce search failed", error);
+      updateProductResults([]);
+      showToast(error.message || "\uB124\uC774\uBC84 \uAC80\uC0C9\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "error");
+    } finally {
+      searchButton.disabled = false;
+      searchButton.textContent = "\uAC80\uC0C9";
+    }
+  }
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      submitSearch();
+    }
+  });
+
+  searchButton.addEventListener("click", submitSearch);
+
+  row.appendChild(input);
+  row.appendChild(searchButton);
+  block.appendChild(label);
+  block.appendChild(row);
+
+  return block;
+}
+
+function createProductResultsBlock(products) {
+  const productBlock = document.createElement("section");
+  productBlock.className = "syncshopper-product-results";
+
+  const productLabel = document.createElement("div");
+  productLabel.className = "syncshopper-section-label";
+  productLabel.textContent = "\uB124\uC774\uBC84 \uAC80\uC0C9\uACB0\uACFC";
+
+  const productList = document.createElement("div");
+  productList.id = "syncshopper-product-list";
+
+  productBlock.appendChild(productLabel);
+  productBlock.appendChild(productList);
+  renderProductList(productList, products);
+
+  return productBlock;
+}
+
+function setProductResultsLoading() {
+  const productList = document.getElementById("syncshopper-product-list");
+
+  if (!productList) {
+    return;
+  }
+
+  productList.replaceChildren(createPanelMessage("\uB124\uC774\uBC84 \uAC80\uC0C9 \uC911..."));
+}
+
+function updateProductResults(products) {
+  const productList = document.getElementById("syncshopper-product-list");
+
+  if (!productList) {
+    return;
+  }
+
+  renderProductList(productList, products);
+}
+
+function renderProductList(productList, products) {
+  productList.replaceChildren();
+
+  if (!Array.isArray(products) || products.length === 0) {
+    productList.appendChild(createPanelMessage("\uD45C\uC2DC\uD560 \uC0C1\uD488\uC774 \uC5C6\uC2B5\uB2C8\uB2E4."));
+    return;
+  }
+
+  products.forEach((product) => {
+    productList.appendChild(createProductCard(product));
+  });
+}
+
+function createProductCard(product) {
+  const card = document.createElement("article");
+  card.className = "syncshopper-product-card";
+
+  const image = document.createElement("img");
+  image.className = "syncshopper-product-image";
+  image.alt = product.title || "\uC0C1\uD488 \uC774\uBBF8\uC9C0";
+  image.loading = "lazy";
+
+  if (product.imageUrl) {
+    image.src = product.imageUrl;
+  }
+
+  const details = document.createElement("div");
+  details.className = "syncshopper-product-details";
+
+  const title = document.createElement("div");
+  title.className = "syncshopper-product-title";
+  title.textContent = product.title || "\uC0C1\uD488\uBA85 \uC5C6\uC74C";
+
+  const meta = document.createElement("div");
+  meta.className = "syncshopper-product-meta";
+  meta.textContent = [product.mallName, product.brand].filter(Boolean).join(" \u00B7 ");
+
+  const price = document.createElement("div");
+  price.className = "syncshopper-product-price";
+  price.textContent = formatProductPrice(product.price);
+
+  const link = document.createElement("a");
+  link.className = "syncshopper-product-link";
+  link.textContent = "\uC0C1\uD488 \uD310\uB9E4 \uD398\uC774\uC9C0\uB85C \uC774\uB3D9";
+  link.href = product.affiliateUrl || "#";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+
+  if (!product.affiliateUrl) {
+    link.removeAttribute("href");
+    link.setAttribute("aria-disabled", "true");
+  }
+
+  details.appendChild(title);
+
+  if (meta.textContent) {
+    details.appendChild(meta);
+  }
+
+  details.appendChild(price);
+  details.appendChild(link);
+
+  card.appendChild(image);
+  card.appendChild(details);
+
+  return card;
+}
+
+function formatProductPrice(price) {
+  const numericPrice = Number(price);
+
+  if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+    return "\uAC00\uACA9 \uC815\uBCF4 \uC5C6\uC74C";
+  }
+
+  return `${new Intl.NumberFormat("ko-KR").format(numericPrice)}\uC6D0`;
 }
 
 function getYouTubeVideoId() {
@@ -731,6 +973,64 @@ async function sendDetectionAnalyzeRequest(croppedDataUrl) {
   showToast("\uC0C1\uD488 \uBD84\uC11D \uC644\uB8CC", "success");
 
   return result;
+}
+
+async function requestCommerceTop3Products(query) {
+  const { backendBaseUrl, accessToken } = await getExtensionSettings();
+
+  if (!backendBaseUrl) {
+    throw new Error("\uBC31\uC5D4\uB4DC \uC8FC\uC18C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+  }
+
+  if (!accessToken) {
+    showLoginPanel();
+    throw new Error("\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.");
+  }
+
+  const requestUrl = `${backendBaseUrl.replace(/\/$/, "")}/api/commerce/top3?query=${encodeURIComponent(query)}`;
+  const response = await requestCommerceSearch({
+    requestUrl,
+    accessToken
+  });
+
+  if (!response.success && response.errorCode === "NETWORK_ERROR") {
+    throw new Error(response.errorMessage || "\uBC31\uC5D4\uB4DC \uC11C\uBC84\uC5D0 \uC5F0\uACB0\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
+  }
+
+  if (response.status === 401) {
+    await chrome.storage.local.remove(["accessToken", "authUser"]);
+    showLoginPanel();
+    throw new Error("\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+  }
+
+  if (!response.success) {
+    throw new Error(response.errorMessage || `Request failed: ${response.status}`);
+  }
+
+  return Array.isArray(response.result) ? response.result : [];
+}
+
+function requestCommerceSearch({ requestUrl, accessToken }) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      {
+        type: "SYNC_SHOPPER_SEARCH_COMMERCE",
+        requestUrl,
+        accessToken
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+
+        resolve(response || {
+          success: false,
+          errorMessage: "No response from background service worker"
+        });
+      }
+    );
+  });
 }
 
 function requestDetectionAnalyze({ requestUrl, accessToken, requestBody }) {
