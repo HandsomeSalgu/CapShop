@@ -1,13 +1,16 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import logoImage from '@/assets/logo.png'
 
 const emit = defineEmits(['open-search'])
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const isDropdownOpen = ref(false)
+
+const isHomePage = computed(() => route.path === '/')
 
 const isSticky = ref(false)
 const gnbRef = ref(null)
@@ -73,7 +76,7 @@ const goToAdminPage = () => {
 </script>
 
 <template>
-  <header>
+  <header :class="{ 'absolute-header': isHomePage }">
     <div class="container">
       <div class="header-top">
         <div class="welcome-msg">스크린샷으로 찾는 똑같은 상품 추천</div>
@@ -129,6 +132,16 @@ const goToAdminPage = () => {
 header {
   border-bottom: 1px solid var(--border-color);
   padding-top: 50px;
+}
+
+header.absolute-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  border-bottom: none;
+  background-color: transparent;
 }
 
 .header-top {
