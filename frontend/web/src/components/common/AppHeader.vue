@@ -37,7 +37,7 @@ const goToAdminPage = () => {
   <header>
     <div class="container">
       <div class="header-top">
-        <div class="welcome-msg">CapShop에 오신 것을 환영합니다!</div>
+        <div class="welcome-msg">스크린샷으로 찾는 똑같은 상품 추천</div>
         <RouterLink to="/" class="logo" style="text-decoration: none;">
           <img :src="logoImage" alt="CapShop Logo" />
         </RouterLink>
@@ -87,14 +87,14 @@ const goToAdminPage = () => {
 <style scoped>
 header {
   border-bottom: 1px solid var(--border-color);
-  padding-top: 40px;
+  padding-top: 50px;
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 15px;
+  padding-bottom: 40px;
 }
 
 .welcome-msg {
@@ -112,7 +112,7 @@ header {
 }
 
 .logo img {
-  max-height: 50px;
+  max-height: 35px;
   object-fit: contain;
 }
 
@@ -142,12 +142,12 @@ header {
 .gnb {
   display: flex;
   justify-content: center;
-  gap: 40px;
-  padding: 15px 0;
+  gap: 55px;
+  padding: 20px 0;
 }
 
 .gnb a {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   position: relative;
 }
