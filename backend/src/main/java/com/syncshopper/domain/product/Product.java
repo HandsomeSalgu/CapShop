@@ -23,8 +23,10 @@ public class Product {
     private Integer price;
     private String imageUrl;
     private String affiliateUrl;
+    private String mallName;
     private String description;
     private String source;
+    private String externalProductId;
     private Integer reviewCount;
     private Double rating;
     private String visibleYn;

@@ -3,8 +3,10 @@ package com.syncshopper.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.syncshopper.config.AiProperties;
+import com.syncshopper.dto.request.AiCommerceQueryRequest;
 import com.syncshopper.dto.request.DetectionAnalyzeRequest;
 import com.syncshopper.dto.response.AiAnalysisResult;
+import com.syncshopper.dto.response.AiCommerceQueryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -57,5 +59,22 @@ public class FastApiAnalysisClient {
         } catch (Exception e) {
             throw new IllegalStateException("Invalid FastAPI analysis response.", e);
         }
+    }
+
+    public AiCommerceQueryResponse generateCommerceQuery(AiCommerceQueryRequest request) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        Duration timeout = Duration.ofMillis(aiProperties.getTimeoutMs());
+        requestFactory.setConnectTimeout(timeout);
+        requestFactory.setReadTimeout(timeout);
+
+        return restClientBuilder.clone()
+                .baseUrl(aiProperties.getFastapiBaseUrl())
+                .requestFactory(requestFactory)
+                .build()
+                .post()
+                .uri(aiProperties.getCommerceQueryPath())
+                .body(request)
+                .retrieve()
+                .body(AiCommerceQueryResponse.class);
     }
 }

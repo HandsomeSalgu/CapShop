@@ -8,8 +8,11 @@ import com.syncshopper.domain.detection.AiAnalysisLog;
 import com.syncshopper.domain.detection.AiProvider;
 import com.syncshopper.domain.detection.Detection;
 import com.syncshopper.domain.detection.DetectionStatus;
+import com.syncshopper.dto.request.AiCommerceQueryRequest;
 import com.syncshopper.dto.request.DetectionAnalyzeRequest;
 import com.syncshopper.dto.response.AiAnalysisResult;
+import com.syncshopper.dto.response.AiCommerceQueryResponse;
+import com.syncshopper.dto.response.CommerceProductResponse;
 import com.syncshopper.dto.response.DetectionAnalyzeResponse;
 import com.syncshopper.dto.response.DetectionDetailResponse;
 import com.syncshopper.dto.response.DetectionHistoryResponse;
@@ -40,6 +43,7 @@ public class DetectionService {
     private final DetectionMapper detectionMapper;
     private final AiAnalysisLogMapper aiAnalysisLogMapper;
     private final AiAnalysisService aiAnalysisService;
+    private final CommerceService commerceService;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -74,7 +78,8 @@ public class DetectionService {
                     true, null, startedAt);
 
             Detection savedDetection = detectionMapper.findByIdAndUserId(detection.getDetectionId(), userId);
-            return toAnalyzeResponse(savedDetection == null ? detection : savedDetection);
+            Detection responseDetection = savedDetection == null ? detection : savedDetection;
+            return enrichWithCommerce(responseDetection, request);
         } catch (Exception e) {
             detectionMapper.updateDetectionFailed(detection.getDetectionId(), DetectionStatus.FAILED);
             saveAnalysisLog(detection.getDetectionId(), provider, requestPayload, null, false, e.getMessage(), startedAt);
@@ -125,6 +130,59 @@ public class DetectionService {
                 .confidence(detection.getConfidence())
                 .status(detection.getStatus() == null ? null : detection.getStatus().name())
                 .createdAt(detection.getCreatedAt())
+                .detection(toDetectionSummary(detection))
+                .products(List.of())
+                .message("상품 분석이 완료되었습니다.")
+                .build();
+    }
+
+    private DetectionAnalyzeResponse enrichWithCommerce(Detection detection, DetectionAnalyzeRequest request) {
+        DetectionAnalyzeResponse response = toAnalyzeResponse(detection);
+
+        AiCommerceQueryResponse commerceQuery;
+        try {
+            commerceQuery = aiAnalysisService.generateCommerceQuery(AiCommerceQueryRequest.builder()
+                    .targetName(detection.getTargetName())
+                    .categoryName(detection.getCategoryName())
+                    .brand(detection.getBrand())
+                    .modelName(detection.getModelName())
+                    .confidence(detection.getConfidence())
+                    .subtitleText(request.getSubtitleText())
+                    .videoId(request.getVideoId())
+                    .timestampSec(request.getTimestampSec())
+                    .build());
+        } catch (RuntimeException e) {
+            response.setCommerceQuery(null);
+            response.setProducts(List.of());
+            response.setMessage("상품 분석은 완료되었지만 검색어 생성에 실패했습니다.");
+            return response;
+        }
+
+        response.setCommerceQuery(commerceQuery);
+
+        List<CommerceProductResponse> products;
+        try {
+            products = commerceService.searchTop3(commerceQuery);
+        } catch (RuntimeException e) {
+            response.setProducts(List.of());
+            response.setMessage("상품 분석은 완료되었지만 쇼핑 검색에 실패했습니다.");
+            return response;
+        }
+
+        response.setProducts(products);
+        response.setMessage(products.isEmpty()
+                ? "상품 분석은 완료되었지만 검색된 상품이 없습니다."
+                : "상품 분석이 완료되었습니다.");
+        return response;
+    }
+
+    private DetectionAnalyzeResponse.DetectionSummary toDetectionSummary(Detection detection) {
+        return DetectionAnalyzeResponse.DetectionSummary.builder()
+                .targetName(detection.getTargetName())
+                .categoryName(detection.getCategoryName())
+                .brand(detection.getBrand())
+                .modelName(detection.getModelName())
+                .confidence(detection.getConfidence())
                 .build();
     }
 

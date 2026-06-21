@@ -19,7 +19,12 @@ public interface ProductMapper {
     Product findBySourceAndAffiliateUrl(@Param("source") String source,
                                         @Param("affiliateUrl") String affiliateUrl);
 
+    Product findBySourceAndExternalProductId(@Param("source") String source,
+                                             @Param("externalProductId") String externalProductId);
+
     int insertCommerceProduct(Product product);
+
+    int updateCommerceProduct(Product product);
 
     List<Product> findBestProducts(@Param("limit") int limit);
 

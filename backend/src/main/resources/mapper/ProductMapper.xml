@@ -14,8 +14,10 @@
         <result property="price" column="price"/>
         <result property="imageUrl" column="image_url"/>
         <result property="affiliateUrl" column="affiliate_url"/>
+        <result property="mallName" column="mall_name"/>
         <result property="description" column="description"/>
         <result property="source" column="source"/>
+        <result property="externalProductId" column="external_product_id"/>
         <result property="reviewCount" column="review_count"/>
         <result property="rating" column="rating"/>
         <result property="visibleYn" column="visible_yn"/>
@@ -25,7 +27,7 @@
 
     <sql id="ProductColumns">
         product_id, title, brand, category_id, category_name, price, image_url,
-        affiliate_url, description, source, review_count, rating, visible_yn,
+        affiliate_url, mall_name, description, source, external_product_id, review_count, rating, visible_yn,
         created_at, updated_at
     </sql>
 
@@ -94,6 +96,15 @@
         LIMIT 1
     </select>
 
+    <select id="findBySourceAndExternalProductId" resultMap="ProductResultMap">
+        SELECT
+        <include refid="ProductColumns"/>
+        FROM products
+        WHERE source = #{source}
+          AND external_product_id = #{externalProductId}
+        LIMIT 1
+    </select>
+
     <insert id="insertCommerceProduct"
             parameterType="com.syncshopper.domain.product.Product"
             useGeneratedKeys="true"
@@ -105,8 +116,10 @@
             price,
             image_url,
             affiliate_url,
+            mall_name,
             description,
             source,
+            external_product_id,
             review_count,
             rating,
             visible_yn
@@ -118,13 +131,30 @@
             #{price},
             #{imageUrl},
             #{affiliateUrl},
+            #{mallName},
             #{description},
             #{source},
+            #{externalProductId},
             #{reviewCount},
             #{rating},
             #{visibleYn}
         )
     </insert>
+
+    <update id="updateCommerceProduct" parameterType="com.syncshopper.domain.product.Product">
+        UPDATE products
+        SET title = #{title},
+            brand = #{brand},
+            category_name = #{categoryName},
+            price = #{price},
+            image_url = #{imageUrl},
+            affiliate_url = #{affiliateUrl},
+            mall_name = #{mallName},
+            description = #{description},
+            visible_yn = #{visibleYn},
+            updated_at = NOW()
+        WHERE product_id = #{productId}
+    </update>
 
     <select id="findBestProducts" resultMap="ProductResultMap">
         SELECT
