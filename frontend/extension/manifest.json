@@ -16,7 +16,8 @@
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
-    "http://localhost:8080/*"
+    "http://localhost:8080/*",
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
