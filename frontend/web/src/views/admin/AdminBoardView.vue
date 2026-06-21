@@ -194,7 +194,9 @@ onUnmounted(() => {
                 <td class="text-center font-weight-bold text-muted">#{{ item.id }}</td>
                 <td class="text-muted">{{ item.date }}</td>
                 <td class="font-weight-bold text-dark">{{ item.title }}</td>
-                <td class="text-truncate text-muted">{{ item.detail }}</td>
+                <td>
+                  <span class="text-truncate text-muted">{{ item.detail }}</span>
+                </td>
                 <td>
                   <span class="badge-user">{{ item.username }}</span>
                 </td>
