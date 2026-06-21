@@ -383,7 +383,6 @@ CREATE TABLE affiliate_clicks (
     INDEX idx_affiliate_clicks_clicked_at (clicked_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
 -- =========================================================
 -- Initial Category Data
 -- =========================================================
