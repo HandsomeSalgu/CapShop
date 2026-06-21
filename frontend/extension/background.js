@@ -93,11 +93,15 @@ async function sendDetectionAnalyzeRequest(message, sendResponse) {
       }
     }
 
+    const isApiResponse = result && typeof result === "object" && Object.prototype.hasOwnProperty.call(result, "success");
+    const isSuccess = response.ok && (!isApiResponse || result.success === true);
+
     sendResponse({
-      success: response.ok,
+      success: isSuccess,
       status: response.status,
-      result,
-      errorMessage: response.ok ? null : `Request failed: ${response.status}`
+      result: isApiResponse ? result.data : result,
+      message: isApiResponse ? result.message : null,
+      errorMessage: isSuccess ? null : (isApiResponse ? result.message : `Request failed: ${response.status}`)
     });
   } catch (error) {
     console.error("[SyncShopper] detection request failed", error);

@@ -21,7 +21,6 @@ import com.syncshopper.mapper.AiAnalysisLogMapper;
 import com.syncshopper.mapper.DetectionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -46,7 +45,6 @@ public class DetectionService {
     private final CommerceService commerceService;
     private final ObjectMapper objectMapper;
 
-    @Transactional
     public DetectionAnalyzeResponse analyzeFrame(Long userId, DetectionAnalyzeRequest request) {
         String imageHash = sha256(request.getImageBase64());
         Detection detection = Detection.builder()

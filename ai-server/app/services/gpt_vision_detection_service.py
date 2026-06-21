@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 
 import httpx
@@ -6,6 +7,9 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.schemas.detection_schema import AnalyzeFrameRequest, AnalyzeFrameResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 SYSTEM_PROMPT = """
@@ -153,17 +157,25 @@ def analyze_frame_with_gpt_vision(request: AnalyzeFrameRequest) -> AnalyzeFrameR
                 json=_build_payload(request),
             )
     except httpx.TimeoutException as exc:
+        logger.warning("GPT Vision request timed out")
         raise HTTPException(
             status_code=504,
             detail="GPT Vision request timed out",
         ) from exc
     except httpx.RequestError as exc:
+        logger.warning("GPT Vision request failed: %s", str(exc))
         raise HTTPException(
             status_code=502,
             detail=f"GPT Vision request failed: {str(exc)}",
         ) from exc
 
     if response.status_code >= 400:
+        logger.warning(
+            "GPT Vision API error: status=%s image_chars=%s response=%s",
+            response.status_code,
+            len(request.image_base64 or ""),
+            _truncate(response.text),
+        )
         raise HTTPException(
             status_code=502,
             detail=f"GPT Vision API error: {response.status_code} {_truncate(response.text)}",
@@ -172,6 +184,7 @@ def analyze_frame_with_gpt_vision(request: AnalyzeFrameRequest) -> AnalyzeFrameR
     try:
         response_json = response.json()
     except json.JSONDecodeError as exc:
+        logger.warning("GPT Vision API returned non-JSON response: %s", _truncate(response.text))
         raise HTTPException(
             status_code=502,
             detail=f"GPT Vision API returned non-JSON response: {_truncate(response.text)}",
@@ -180,6 +193,10 @@ def analyze_frame_with_gpt_vision(request: AnalyzeFrameRequest) -> AnalyzeFrameR
     try:
         content = response_json["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
+        logger.warning(
+            "Unexpected GPT Vision response format: %s",
+            _truncate(json.dumps(response_json, ensure_ascii=False)),
+        )
         raise HTTPException(
             status_code=502,
             detail=f"Unexpected GPT Vision response format: {_truncate(json.dumps(response_json, ensure_ascii=False))}",

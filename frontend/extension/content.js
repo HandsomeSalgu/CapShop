@@ -272,9 +272,14 @@ function cropCapturedImage(dataUrl, rect) {
       const sourceWidth = rect.width * ratio;
       const sourceHeight = rect.height * ratio;
 
+      const maxOutputSide = 1024;
+      const scale = Math.min(1, maxOutputSide / Math.max(sourceWidth, sourceHeight));
+      const outputWidth = Math.max(1, Math.round(sourceWidth * scale));
+      const outputHeight = Math.max(1, Math.round(sourceHeight * scale));
+
       const canvas = document.createElement("canvas");
-      canvas.width = sourceWidth;
-      canvas.height = sourceHeight;
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
 
       const context = canvas.getContext("2d");
 
@@ -291,11 +296,11 @@ function cropCapturedImage(dataUrl, rect) {
         sourceHeight,
         0,
         0,
-        sourceWidth,
-        sourceHeight
+        outputWidth,
+        outputHeight
       );
 
-      resolve(canvas.toDataURL("image/png"));
+      resolve(canvas.toDataURL("image/jpeg", 0.86));
     };
 
     image.onerror = () => {

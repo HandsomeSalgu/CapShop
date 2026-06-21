@@ -7,6 +7,7 @@ import com.syncshopper.dto.response.CommerceProductResponse;
 import com.syncshopper.dto.response.NaverShoppingItemResponse;
 import com.syncshopper.dto.response.NaverShoppingSearchResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.cache.annotation.Cacheable;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class CommerceService {
@@ -54,7 +56,6 @@ public class CommerceService {
                 .toList();
     }
 
-    @Transactional
     public List<CommerceProductResponse> searchTop3(AiCommerceQueryResponse queryResponse) {
         if (queryResponse == null || queryResponse.getPrimaryQuery() == null || queryResponse.getPrimaryQuery().isBlank()) {
             return List.of();
@@ -66,9 +67,13 @@ public class CommerceService {
             queries.addAll(queryResponse.getFallbackQueries());
         }
 
+        log.info("Commerce Top3 query candidates: {}", queries);
+
         Map<String, CommerceProductResponse> productsByKey = new LinkedHashMap<>();
         for (String query : queries.stream().filter(value -> value != null && !value.isBlank()).distinct().toList()) {
             NaverShoppingSearchResponse response = naverShoppingClient.search(query, null, null, null);
+            int itemCount = response == null || response.getItems() == null ? 0 : response.getItems().size();
+            log.info("Naver shopping search query='{}' itemCount={}", query, itemCount);
             if (response == null || response.getItems() == null) {
                 continue;
             }
@@ -83,11 +88,13 @@ public class CommerceService {
             }
         }
 
-        return productsByKey.values().stream()
+        List<CommerceProductResponse> products = productsByKey.values().stream()
                 .limit(TOP3_LIMIT)
                 .map(this::upsertSafely)
                 .filter(product -> product != null)
                 .toList();
+        log.info("Commerce Top3 final productCount={}", products.size());
+        return products;
     }
 
     private List<CommerceProductResponse> mapAndUpsert(NaverShoppingSearchResponse response) {
@@ -120,6 +127,12 @@ public class CommerceService {
             product.setProductId(productUpsertService.upsertCommerceProduct(product));
             return product;
         } catch (RuntimeException e) {
+            log.warn(
+                    "Failed to upsert commerce product. title={} externalProductId={}",
+                    product.getTitle(),
+                    product.getExternalProductId(),
+                    e
+            );
             return null;
         }
     }
