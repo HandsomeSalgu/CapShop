@@ -20,6 +20,7 @@ import com.syncshopper.dto.response.PageResponse;
 import com.syncshopper.mapper.AiAnalysisLogMapper;
 import com.syncshopper.mapper.DetectionMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -30,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class DetectionService {
@@ -64,6 +66,19 @@ public class DetectionService {
 
         try {
             AiAnalysisResult aiResult = aiAnalysisService.analyze(request);
+            log.info(
+                    "[SyncShopper AI Detection Result] detectionId={} videoId={} timestampSec={} targetName='{}' categoryName='{}' brand='{}' modelName='{}' confidence={} rawResponse={}",
+                    detection.getDetectionId(),
+                    request.getVideoId(),
+                    request.getTimestampSec(),
+                    aiResult.getTargetName(),
+                    aiResult.getCategoryName(),
+                    aiResult.getBrand(),
+                    aiResult.getModelName(),
+                    aiResult.getConfidence(),
+                    aiResult.getRawResponseJson()
+            );
+
             detection.setTargetName(aiResult.getTargetName());
             detection.setCategoryName(aiResult.getCategoryName());
             detection.setBrand(aiResult.getBrand());
@@ -150,11 +165,24 @@ public class DetectionService {
                     .timestampSec(request.getTimestampSec())
                     .build());
         } catch (RuntimeException e) {
+            log.warn("[SyncShopper AI Commerce Query Result] query generation failed detectionId={}", detection.getDetectionId(), e);
             response.setCommerceQuery(null);
             response.setProducts(List.of());
             response.setMessage("상품 분석은 완료되었지만 검색어 생성에 실패했습니다.");
             return response;
         }
+
+        log.info(
+                "[SyncShopper AI Commerce Query Result] detectionId={} primaryQuery='{}' fallbackQueries={} normalizedBrand='{}' normalizedModel='{}' normalizedCategory='{}' queryConfidence={} reason='{}'",
+                detection.getDetectionId(),
+                commerceQuery.getPrimaryQuery(),
+                commerceQuery.getFallbackQueries(),
+                commerceQuery.getNormalizedBrand(),
+                commerceQuery.getNormalizedModel(),
+                commerceQuery.getNormalizedCategory(),
+                commerceQuery.getQueryConfidence(),
+                commerceQuery.getReason()
+        );
 
         response.setCommerceQuery(commerceQuery);
 
@@ -162,10 +190,20 @@ public class DetectionService {
         try {
             products = commerceService.searchTop3(commerceQuery);
         } catch (RuntimeException e) {
+            log.warn("[SyncShopper Commerce Products Result] search failed detectionId={}", detection.getDetectionId(), e);
             response.setProducts(List.of());
             response.setMessage("상품 분석은 완료되었지만 쇼핑 검색에 실패했습니다.");
             return response;
         }
+
+        log.info(
+                "[SyncShopper Commerce Products Result] detectionId={} productCount={} products={}",
+                detection.getDetectionId(),
+                products.size(),
+                products.stream()
+                        .map(this::productDebugPayload)
+                        .toList()
+        );
 
         response.setProducts(products);
         response.setMessage(products.isEmpty()
@@ -182,6 +220,17 @@ public class DetectionService {
                 .modelName(detection.getModelName())
                 .confidence(detection.getConfidence())
                 .build();
+    }
+
+    private Map<String, Object> productDebugPayload(CommerceProductResponse product) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("productId", product.getProductId());
+        payload.put("title", product.getTitle());
+        payload.put("brand", product.getBrand());
+        payload.put("categoryName", product.getCategoryName());
+        payload.put("price", product.getPrice());
+        payload.put("mallName", product.getMallName());
+        return payload;
     }
 
     private void saveAnalysisLog(
