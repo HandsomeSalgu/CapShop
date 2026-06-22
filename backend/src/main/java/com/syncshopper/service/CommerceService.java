@@ -30,12 +30,16 @@ public class CommerceService {
     private final ProductUpsertService productUpsertService;
 
     @Cacheable(value = "commerceSearch", key = "#query + '_' + #display + '_' + #start + '_' + #sort")
-    @Transactional
     public List<CommerceProductResponse> searchProducts(String query, Integer display, Integer start, String sort) {
         validateQuery(query);
 
         NaverShoppingSearchResponse response = naverShoppingClient.search(query, display, start, sort);
-        return mapAndUpsert(response).stream()
+        if (response == null || response.getItems() == null) {
+            return List.of();
+        }
+
+        return response.getItems().stream()
+                .map(this::toCommerceProductResponse)
                 .toList();
     }
 
@@ -52,7 +56,6 @@ public class CommerceService {
         return response.getItems().stream()
                 .limit(TOP3_LIMIT)
                 .map(this::toCommerceProductResponse)
-                .peek(product -> product.setProductId(productUpsertService.upsertCommerceProduct(product)))
                 .toList();
     }
 
@@ -90,22 +93,10 @@ public class CommerceService {
 
         List<CommerceProductResponse> products = productsByKey.values().stream()
                 .limit(TOP3_LIMIT)
-                .map(this::upsertSafely)
                 .filter(product -> product != null)
                 .toList();
         log.info("Commerce Top3 final productCount={}", products.size());
         return products;
-    }
-
-    private List<CommerceProductResponse> mapAndUpsert(NaverShoppingSearchResponse response) {
-        if (response == null || response.getItems() == null) {
-            return List.of();
-        }
-
-        return response.getItems().stream()
-                .map(this::toCommerceProductResponse)
-                .peek(product -> product.setProductId(productUpsertService.upsertCommerceProduct(product)))
-                .toList();
     }
 
     private CommerceProductResponse toCommerceProductResponse(NaverShoppingItemResponse item) {
@@ -122,20 +113,6 @@ public class CommerceService {
                 .build();
     }
 
-    private CommerceProductResponse upsertSafely(CommerceProductResponse product) {
-        try {
-            product.setProductId(productUpsertService.upsertCommerceProduct(product));
-            return product;
-        } catch (RuntimeException e) {
-            log.warn(
-                    "Failed to upsert commerce product. title={} externalProductId={}",
-                    product.getTitle(),
-                    product.getExternalProductId(),
-                    e
-            );
-            return null;
-        }
-    }
 
     private String deduplicateKey(CommerceProductResponse product) {
         if (product.getAffiliateUrl() != null && !product.getAffiliateUrl().isBlank()) {

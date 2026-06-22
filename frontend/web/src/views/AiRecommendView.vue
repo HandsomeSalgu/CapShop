@@ -53,7 +53,8 @@ const goToDetail = (product) => {
   router.push({
     path: `/product/${product.productId}`,
     state: {
-      productData: JSON.stringify(product)
+      productData: JSON.stringify(product),
+      sourcePage: 'RECOMMENDATION_PAGE'
     }
   })
 }
