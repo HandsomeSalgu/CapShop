@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -32,4 +32,8 @@ class AnalyzeFrameResponse(BaseModel):
     category_name: str
     brand: Optional[str] = None
     model_name: Optional[str] = None
+    color: Optional[str] = None
+    shape: Optional[str] = None
+    logo_text: Optional[str] = None
+    key_features: List[str] = Field(default_factory=list)
     confidence: float = Field(..., ge=0.0, le=1.0)

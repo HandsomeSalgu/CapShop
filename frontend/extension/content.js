@@ -3,6 +3,16 @@ console.log("[SyncShopper] content script loaded");
 const DEFAULT_BACKEND_BASE_URL = "http://localhost:8080";
 const DEFAULT_FRONTEND_BASE_URL = "http://localhost:5173";
 const DEFAULT_TOAST_DURATION_MS = 3000;
+const DEFAULT_ANALYSIS_PROGRESS_MESSAGE = "AI 분석 준비중...";
+const ANALYSIS_PROGRESS_MESSAGES = [
+  "이미지 속 상품을 탐지중...",
+  "쇼핑 검색어를 만드는 중...",
+  "네이버 쇼핑에서 검색중...",
+  "관련 있는 상품만 걸러내는 중...",
+  "유사한 친구 찾는 중...",
+  "추천 결과를 정리중..."
+];
+const ANALYSIS_PROGRESS_STEP_MS = 2400;
 
 let currentVideo = null;
 let captureButton = null;
@@ -12,6 +22,10 @@ let selectionBox = null;
 let captureGuide = null;
 let toastTimer = null;
 let pendingLoginSuccessCallback = null;
+let analysisProgressTypingTimer = null;
+let analysisProgressTypingToken = 0;
+let analysisProgressSequenceTimer = null;
+let analysisProgressSequenceIndex = 0;
 
 function createCaptureButton() {
   const existingButton = document.getElementById("syncshopper-capture-button");
@@ -332,7 +346,7 @@ function previewCroppedImage(croppedDataUrl) {
   }
 
   previewImage.src = croppedDataUrl;
-  resultContent.textContent = "AI 분석 요청 중...";
+  renderAnalysisProgress(DEFAULT_ANALYSIS_PROGRESS_MESSAGE);
 }
 
 function createCaptureResultPanel() {
@@ -354,6 +368,7 @@ function createCaptureResultPanel() {
   closeButton.textContent = "×";
   closeButton.setAttribute("aria-label", "Close SyncShopper result panel");
   closeButton.addEventListener("click", () => {
+    stopAnalysisProgressSequence();
     panel.remove();
   });
 
@@ -386,7 +401,116 @@ function updateCapturePanelResult(result) {
     return;
   }
 
+  stopAnalysisProgressSequence();
   resultContent.replaceChildren(renderResultForPanel(result));
+}
+
+function renderAnalysisProgress(message) {
+  const panel = createCaptureResultPanel();
+  const resultContent = panel.querySelector("#syncshopper-result-content");
+
+  if (!resultContent) {
+    return;
+  }
+
+  let progressText = resultContent.querySelector(".syncshopper-progress-text");
+
+  if (!progressText) {
+    resultContent.replaceChildren(createAnalysisProgressElement());
+    progressText = resultContent.querySelector(".syncshopper-progress-text");
+  }
+
+  if (progressText) {
+    typeAnalysisProgressText(progressText, message || DEFAULT_ANALYSIS_PROGRESS_MESSAGE);
+  }
+}
+
+function startAnalysisProgressSequence() {
+  stopAnalysisProgressSequence();
+
+  analysisProgressSequenceIndex = 0;
+  renderAnalysisProgress(ANALYSIS_PROGRESS_MESSAGES[analysisProgressSequenceIndex]);
+
+  analysisProgressSequenceTimer = setInterval(() => {
+    analysisProgressSequenceIndex += 1;
+
+    if (analysisProgressSequenceIndex >= ANALYSIS_PROGRESS_MESSAGES.length) {
+      analysisProgressSequenceIndex = ANALYSIS_PROGRESS_MESSAGES.length - 1;
+      clearInterval(analysisProgressSequenceTimer);
+      analysisProgressSequenceTimer = null;
+      return;
+    }
+
+    renderAnalysisProgress(ANALYSIS_PROGRESS_MESSAGES[analysisProgressSequenceIndex]);
+  }, ANALYSIS_PROGRESS_STEP_MS);
+}
+
+function stopAnalysisProgressSequence() {
+  if (analysisProgressSequenceTimer) {
+    clearInterval(analysisProgressSequenceTimer);
+    analysisProgressSequenceTimer = null;
+  }
+
+  stopAnalysisProgressTyping();
+}
+
+function createAnalysisProgressElement() {
+  const wrapper = document.createElement("section");
+  wrapper.className = "syncshopper-analysis-progress";
+  wrapper.setAttribute("aria-live", "polite");
+
+  const indicator = document.createElement("div");
+  indicator.className = "syncshopper-progress-indicator";
+
+  const spinner = document.createElement("span");
+  spinner.className = "syncshopper-progress-spinner";
+
+  const text = document.createElement("span");
+  text.className = "syncshopper-progress-text";
+
+  const cursor = document.createElement("span");
+  cursor.className = "syncshopper-progress-cursor";
+  cursor.textContent = "|";
+
+  indicator.appendChild(spinner);
+  indicator.appendChild(text);
+  indicator.appendChild(cursor);
+  wrapper.appendChild(indicator);
+
+  return wrapper;
+}
+
+function typeAnalysisProgressText(element, message) {
+  stopAnalysisProgressTyping();
+
+  const token = analysisProgressTypingToken + 1;
+  analysisProgressTypingToken = token;
+  element.textContent = "";
+
+  let index = 0;
+  analysisProgressTypingTimer = setInterval(() => {
+    if (analysisProgressTypingToken !== token) {
+      return;
+    }
+
+    index += 1;
+    element.textContent = message.slice(0, index);
+
+    if (index >= message.length) {
+      stopAnalysisProgressTyping(false);
+    }
+  }, 38);
+}
+
+function stopAnalysisProgressTyping(invalidate = true) {
+  if (analysisProgressTypingTimer) {
+    clearInterval(analysisProgressTypingTimer);
+    analysisProgressTypingTimer = null;
+  }
+
+  if (invalidate) {
+    analysisProgressTypingToken += 1;
+  }
 }
 
 function renderResultForPanel(result) {
@@ -449,6 +573,7 @@ function createRecaptureButton() {
     const panel = document.getElementById("syncshopper-result-panel");
 
     if (panel) {
+      stopAnalysisProgressSequence();
       panel.remove();
     }
 
@@ -938,6 +1063,8 @@ async function sendDetectionAnalyzeRequest(croppedDataUrl) {
     timestampSec,
     imageSize: croppedDataUrl.length
   });
+
+  startAnalysisProgressSequence();
 
   const response = await requestDetectionAnalyze({
     requestUrl,

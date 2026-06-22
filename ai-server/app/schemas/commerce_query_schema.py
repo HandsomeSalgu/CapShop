@@ -24,6 +24,13 @@ class CommerceQueryRequest(BaseModel):
         description="Detected model name",
         examples=["Air Force 1"],
     )
+    color: Optional[str] = Field(None, description="Detected dominant product color")
+    shape: Optional[str] = Field(None, description="Detected product shape or silhouette")
+    logo_text: Optional[str] = Field(None, description="Visible logo or text on the product")
+    key_features: List[str] = Field(
+        default_factory=list,
+        description="Important visual features detected from the frame",
+    )
     confidence: float = Field(
         0.0,
         ge=0.0,

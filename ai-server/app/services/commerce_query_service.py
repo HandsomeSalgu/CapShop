@@ -11,35 +11,51 @@ from app.schemas.commerce_query_schema import CommerceQueryRequest, CommerceQuer
 SYSTEM_PROMPT = """
 You are a commerce search query generator for SyncShopper.
 
-Your task is to convert visual product detection results into high-quality search queries for a Korean commerce search API such as Naver Shopping.
+Your task is to convert visual product detection results into Korean shopping search queries for a Korean commerce search API such as Naver Shopping.
+
+The most important goal is to preserve as much information as possible from the detection result and translate it into natural Korean search terms.
 
 Rules:
+
 1. Return only one JSON object.
 2. Do not include markdown.
 3. Do not include explanations outside JSON.
 4. Generate one primary_query and multiple fallback_queries.
-5. primary_query should be concise and useful for shopping search.
-6. primary_query should usually be 2 to 6 words.
-7. If brand and model are known, use them in primary_query.
-8. If model is unknown, use brand + product category.
-9. If brand is unknown, use product type, color, or category.
-10. Do not invent brand or model names.
-11. Do not include YouTube UI text, browser UI text, captions UI, comments, or unrelated text.
-12. Prefer Korean shopping-friendly query terms when useful.
-13. Include English fallback query when brand/model are English.
-14. query_confidence must be between 0.0 and 1.0.
-15. If detection confidence is low, generate broader queries and lower query_confidence.
+5. Build the primary_query by translating the detected product information into Korean as directly as possible.
+6. Preserve all useful visual attributes from the detection result, such as product type, category, color, material, shape, style, size, gender style, usage, brand, and model name.
+7. Do not remove useful details just to make the query shorter.
+8. primary_query should be a Korean shopping-friendly query, but it may include English brand names or model names when they are part of the detected product.
+9. If brand and model are known, include both in primary_query.
+10. If model is unknown but brand is known, use brand + translated product details + translated category.
+11. If brand is unknown, use translated product type, color, material, style, and category as much as possible.
+12. Do not invent brand names, model names, colors, materials, or styles that are not present or strongly implied in the detection result.
+13. Do not include YouTube UI text, browser UI text, captions UI, comments, or unrelated text.
+14. Prefer Korean terms commonly used in Korean shopping searches.
+15. Include fallback_queries with different levels of specificity:
+
+    * one detailed Korean query preserving most details
+    * one shorter Korean query using only core product type/category
+    * one broader Korean category query
+    * one English fallback query if the original detection contains English brand, model, or product terms
+16. If detection confidence is high, generate more specific queries.
+17. If detection confidence is low, generate broader queries and lower query_confidence.
+18. query_confidence must be between 0.0 and 1.0.
+19. normalized_brand must be the detected brand if known, otherwise null.
+20. normalized_model must be the detected model name if known, otherwise null.
+21. normalized_category must be the Korean translated category if possible.
+22. reason should briefly explain in Korean how the query was generated from the detection result.
 
 Return JSON with exactly these keys:
 {
-  "primary_query": string,
-  "fallback_queries": string[],
-  "normalized_brand": string | null,
-  "normalized_model": string | null,
-  "normalized_category": string | null,
-  "query_confidence": number,
-  "reason": string
+"primary_query": string,
+"fallback_queries": string[],
+"normalized_brand": string | null,
+"normalized_model": string | null,
+"normalized_category": string | null,
+"query_confidence": number,
+"reason": string
 }
+
 """.strip()
 
 
@@ -52,6 +68,10 @@ Detection Result:
 - category_name: {request.category_name or ""}
 - brand: {request.brand or ""}
 - model_name: {request.model_name or ""}
+- color: {request.color or ""}
+- shape: {request.shape or ""}
+- logo_text: {request.logo_text or ""}
+- key_features: {", ".join(request.key_features or [])}
 - confidence: {request.confidence}
 
 Context:
@@ -170,7 +190,7 @@ def _build_payload(request: CommerceQueryRequest) -> dict[str, Any]:
         "model": settings.gms_openai_query_model,
         "messages": [
             {
-                "role": "system",
+                "role": "developer",
                 "content": SYSTEM_PROMPT,
             },
             {
@@ -280,7 +300,11 @@ def generate_commerce_query(request: CommerceQueryRequest) -> CommerceQueryRespo
     if response.status_code >= 400:
         raise HTTPException(
             status_code=502,
-            detail=f"Commerce query generation API error: {response.status_code} {_truncate(response.text)}",
+            detail=(
+                f"Commerce query generation API error: {response.status_code} "
+                f"url={settings.gms_openai_chat_completions_url} "
+                f"model={settings.gms_openai_query_model} {_truncate(response.text)}"
+            ),
         )
 
     try:

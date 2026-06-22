@@ -92,7 +92,7 @@ public class DetectionService {
 
             Detection savedDetection = detectionMapper.findByIdAndUserId(detection.getDetectionId(), userId);
             Detection responseDetection = savedDetection == null ? detection : savedDetection;
-            return enrichWithCommerce(responseDetection, request);
+            return enrichWithCommerce(responseDetection, request, aiResult);
         } catch (Exception e) {
             detectionMapper.updateDetectionFailed(detection.getDetectionId(), DetectionStatus.FAILED);
             saveAnalysisLog(detection.getDetectionId(), provider, requestPayload, null, false, e.getMessage(), startedAt);
@@ -149,7 +149,55 @@ public class DetectionService {
                 .build();
     }
 
-    private DetectionAnalyzeResponse enrichWithCommerce(Detection detection, DetectionAnalyzeRequest request) {
+    private DetectionAnalyzeResponse enrichWithCommerce(
+            Detection detection,
+            DetectionAnalyzeRequest request,
+            AiAnalysisResult aiResult
+    ) {
+        if (aiResult.getCommerceQuery() != null) {
+            return enrichWithIntegratedCommerce(detection, aiResult);
+        }
+
+        return enrichWithLegacyCommerce(detection, request);
+    }
+
+    private DetectionAnalyzeResponse enrichWithIntegratedCommerce(Detection detection, AiAnalysisResult aiResult) {
+        DetectionAnalyzeResponse response = toAnalyzeResponse(detection);
+        AiCommerceQueryResponse commerceQuery = aiResult.getCommerceQuery();
+        List<CommerceProductResponse> products = aiResult.getProducts() == null
+                ? List.of()
+                : aiResult.getProducts();
+
+        log.info(
+                "[SyncShopper AI Commerce Query Result] detectionId={} primaryQuery='{}' fallbackQueries={} normalizedBrand='{}' normalizedModel='{}' normalizedCategory='{}' queryConfidence={} reason='{}'",
+                detection.getDetectionId(),
+                commerceQuery.getPrimaryQuery(),
+                commerceQuery.getFallbackQueries(),
+                commerceQuery.getNormalizedBrand(),
+                commerceQuery.getNormalizedModel(),
+                commerceQuery.getNormalizedCategory(),
+                commerceQuery.getQueryConfidence(),
+                commerceQuery.getReason()
+        );
+
+        log.info(
+                "[SyncShopper Commerce Products Result] detectionId={} productCount={} products={}",
+                detection.getDetectionId(),
+                products.size(),
+                products.stream()
+                        .map(this::productDebugPayload)
+                        .toList()
+        );
+
+        response.setCommerceQuery(commerceQuery);
+        response.setProducts(products);
+        response.setMessage(products.isEmpty()
+                ? "상품 분석은 완료되었지만 검색된 상품이 없습니다."
+                : "상품 분석이 완료되었습니다.");
+        return response;
+    }
+
+    private DetectionAnalyzeResponse enrichWithLegacyCommerce(Detection detection, DetectionAnalyzeRequest request) {
         DetectionAnalyzeResponse response = toAnalyzeResponse(detection);
 
         AiCommerceQueryResponse commerceQuery;

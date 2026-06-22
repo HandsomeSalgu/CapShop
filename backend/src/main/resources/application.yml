@@ -76,7 +76,7 @@ app:
     fastapi-base-url: http://localhost:8000
     analyze-path: /api/ai/analyze-frame
     commerce-query-path: /api/ai/generate-commerce-query
-    timeout-ms: 5000
+    timeout-ms: ${AI_FASTAPI_TIMEOUT_MS:60000}
   naver:
     shopping:
       client-id: ${NAVER_SHOPPING_CLIENT_ID:${NAVER_CLIENT_ID:}}

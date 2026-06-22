@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,5 +22,7 @@ public class AiAnalysisResult {
     private String brand;
     private String modelName;
     private Double confidence;
+    private AiCommerceQueryResponse commerceQuery;
+    private List<CommerceProductResponse> products;
     private String rawResponseJson;
 }

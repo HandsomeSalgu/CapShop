@@ -18,26 +18,37 @@ You are a visual commerce detection system for SyncShopper.
 Your task is to analyze a captured image from a YouTube video and identify the single most purchase-relevant product in the selected area.
 
 Rules:
+
 1. Return only one JSON object.
 2. Do not include markdown.
 3. Do not include explanations outside JSON.
 4. Identify only one product candidate.
 5. Focus on purchasable consumer products such as fashion items, electronics, cosmetics, accessories, shoes, bags, furniture, kitchen items, and lifestyle goods.
-6. Ignore YouTube UI, captions UI, buttons, comments, side recommendation thumbnails, player controls, browser UI, and unrelated text.
-7. Do not identify people or infer personal identity.
-8. If a brand or model is visible or strongly implied, include it.
-9. If brand or model is unknown, return null for that field.
-10. If the object is unclear or not purchase-relevant, return Unknown product with low confidence.
-11. confidence must be a number between 0.0 and 1.0.
+6. When identifying the product, consider visible visual attributes such as color, shape, material, and style to make the target_name more specific and commerce-search-friendly.
+7. Ignore YouTube UI, captions UI, buttons, comments, side recommendation thumbnails, player controls, browser UI, and unrelated text.
+8. Do not identify people or infer personal identity.
+9. If a brand or model is visible or strongly implied, include it.
+10. If brand or model is unknown, return null for that field.
+11. If the object is unclear or not purchase-relevant, return Unknown product with low confidence.
+12. Extract the dominant product color when visible.
+13. Extract the product shape, silhouette, or form factor when useful.
+14. Extract visible brand/logo text if present, otherwise return null.
+15. key_features must list 2 to 6 concise visual details useful for shopping search, such as material, pattern, texture, color placement, buttons, straps, screen shape, sole shape, or container shape.
+16. confidence must be a number between 0.0 and 1.0.
 
 Return JSON with exactly these keys:
 {
-  "target_name": string,
-  "category_name": string,
-  "brand": string | null,
-  "model_name": string | null,
-  "confidence": number
+"target_name": string,
+"category_name": string,
+"brand": string | null,
+"model_name": string | null,
+"color": string | null,
+"shape": string | null,
+"logo_text": string | null,
+"key_features": string[],
+"confidence": number
 }
+
 """.strip()
 
 
@@ -85,6 +96,19 @@ def _normalize_response(data: dict[str, Any]) -> AnalyzeFrameResponse:
     category_name = data.get("category_name") or "기타"
     brand = data.get("brand")
     model_name = data.get("model_name")
+    color = data.get("color")
+    shape = data.get("shape")
+    logo_text = data.get("logo_text")
+    key_features = data.get("key_features") or []
+
+    if not isinstance(key_features, list):
+        key_features = []
+
+    key_features = [
+        str(feature).strip()
+        for feature in key_features
+        if feature and str(feature).strip()
+    ]
 
     try:
         confidence = float(data.get("confidence", 0.55))
@@ -98,16 +122,20 @@ def _normalize_response(data: dict[str, Any]) -> AnalyzeFrameResponse:
         category_name=category_name,
         brand=brand,
         model_name=model_name,
+        color=color,
+        shape=shape,
+        logo_text=logo_text,
+        key_features=key_features[:6],
         confidence=confidence,
     )
 
 
 def _build_payload(request: AnalyzeFrameRequest) -> dict[str, Any]:
     return {
-        "model": settings.gms_openai_model,
+        "model": settings.gms_openai_vision_model,
         "messages": [
             {
-                "role": "system",
+                "role": "developer",
                 "content": SYSTEM_PROMPT,
             },
             {
@@ -153,7 +181,7 @@ def _print_detection_debug(
     debug_payload = {
         "request": {
             "provider": settings.ai_detection_provider,
-            "model": settings.gms_openai_model,
+            "model": settings.gms_openai_vision_model,
             "video_id": request.video_id,
             "timestamp_sec": request.timestamp_sec,
             "subtitle_text": _truncate(request.subtitle_text or "", 300),
@@ -205,14 +233,20 @@ def analyze_frame_with_gpt_vision(request: AnalyzeFrameRequest) -> AnalyzeFrameR
 
     if response.status_code >= 400:
         logger.warning(
-            "GPT Vision API error: status=%s image_chars=%s response=%s",
+            "GPT Vision API error: status=%s url=%s model=%s image_chars=%s response=%s",
             response.status_code,
+            settings.gms_openai_chat_completions_url,
+            settings.gms_openai_vision_model,
             len(request.image_base64 or ""),
             _truncate(response.text),
         )
         raise HTTPException(
             status_code=502,
-            detail=f"GPT Vision API error: {response.status_code} {_truncate(response.text)}",
+            detail=(
+                f"GPT Vision API error: {response.status_code} "
+                f"url={settings.gms_openai_chat_completions_url} "
+                f"model={settings.gms_openai_vision_model} {_truncate(response.text)}"
+            ),
         )
 
     try:
