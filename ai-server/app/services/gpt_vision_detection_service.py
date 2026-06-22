@@ -137,6 +137,39 @@ def _truncate(value: str, max_length: int = 500) -> str:
     return f"{value[:max_length]}..."
 
 
+def _response_to_dict(response: AnalyzeFrameResponse) -> dict[str, Any]:
+    if hasattr(response, "model_dump"):
+        return response.model_dump()
+
+    return response.dict()
+
+
+def _print_detection_debug(
+    request: AnalyzeFrameRequest,
+    raw_content: str,
+    parsed: dict[str, Any],
+    normalized: AnalyzeFrameResponse,
+) -> None:
+    debug_payload = {
+        "request": {
+            "provider": settings.ai_detection_provider,
+            "model": settings.gms_openai_model,
+            "video_id": request.video_id,
+            "timestamp_sec": request.timestamp_sec,
+            "subtitle_text": _truncate(request.subtitle_text or "", 300),
+            "image_base64_chars": len(request.image_base64 or ""),
+        },
+        "gpt_raw_content": _truncate(raw_content, 2000),
+        "parsed_detection": parsed,
+        "normalized_detection": _response_to_dict(normalized),
+    }
+    print(
+        "\n[SyncShopper AI Detection Result]\n"
+        + json.dumps(debug_payload, ensure_ascii=False, indent=2),
+        flush=True,
+    )
+
+
 def analyze_frame_with_gpt_vision(request: AnalyzeFrameRequest) -> AnalyzeFrameResponse:
     if not settings.gms_openai_api_key:
         raise HTTPException(
@@ -148,13 +181,14 @@ def analyze_frame_with_gpt_vision(request: AnalyzeFrameRequest) -> AnalyzeFrameR
         "Content-Type": "application/json",
         "Authorization": f"Bearer {settings.gms_openai_api_key}",
     }
+    payload = _build_payload(request)
 
     try:
         with httpx.Client(timeout=settings.gms_openai_timeout_sec) as client:
             response = client.post(
                 settings.gms_openai_chat_completions_url,
                 headers=headers,
-                json=_build_payload(request),
+                json=payload,
             )
     except httpx.TimeoutException as exc:
         logger.warning("GPT Vision request timed out")
@@ -203,4 +237,6 @@ def analyze_frame_with_gpt_vision(request: AnalyzeFrameRequest) -> AnalyzeFrameR
         ) from exc
 
     parsed = _extract_json_content(content)
-    return _normalize_response(parsed)
+    normalized = _normalize_response(parsed)
+    _print_detection_debug(request, content, parsed, normalized)
+    return normalized

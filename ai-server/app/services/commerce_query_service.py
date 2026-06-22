@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 from fastapi import HTTPException
@@ -154,7 +154,7 @@ def _generate_mock_commerce_query(request: CommerceQueryRequest) -> CommerceQuer
         if query and query.strip() and query.strip() != primary_query and query.strip() not in fallback_queries:
             fallback_queries.append(query.strip())
 
-    return CommerceQueryResponse(
+    return _debug_response(request, CommerceQueryResponse(
         primary_query=primary_query,
         fallback_queries=fallback_queries[:5],
         normalized_brand=request.brand,
@@ -162,7 +162,7 @@ def _generate_mock_commerce_query(request: CommerceQueryRequest) -> CommerceQuer
         normalized_category=request.category_name,
         query_confidence=max(0.0, min(request.confidence or 0.7, 1.0)),
         reason="Mock commerce query generated from detection result.",
-    )
+    ), provider="mock")
 
 
 def _build_payload(request: CommerceQueryRequest) -> dict[str, Any]:
@@ -187,6 +187,53 @@ def _truncate(value: str, max_length: int = 500) -> str:
         return value
 
     return f"{value[:max_length]}..."
+
+
+def _response_to_dict(response: CommerceQueryResponse) -> dict[str, Any]:
+    if hasattr(response, "model_dump"):
+        return response.model_dump()
+
+    return response.dict()
+
+
+def _print_query_debug(
+    request: CommerceQueryRequest,
+    response: CommerceQueryResponse,
+    raw_content: Optional[str] = None,
+    parsed: Optional[dict[str, Any]] = None,
+    provider: Optional[str] = None,
+) -> None:
+    debug_payload = {
+        "request_detection": {
+            "target_name": request.target_name,
+            "category_name": request.category_name,
+            "brand": request.brand,
+            "model_name": request.model_name,
+            "confidence": request.confidence,
+            "subtitle_text": _truncate(request.subtitle_text or "", 300),
+            "video_id": request.video_id,
+            "timestamp_sec": request.timestamp_sec,
+        },
+        "provider": provider or settings.ai_commerce_query_provider,
+        "model": settings.gms_openai_query_model,
+        "gpt_raw_content": _truncate(raw_content, 2000) if raw_content is not None else None,
+        "parsed_query": parsed,
+        "normalized_query": _response_to_dict(response),
+    }
+    print(
+        "\n[SyncShopper AI Commerce Query Result]\n"
+        + json.dumps(debug_payload, ensure_ascii=False, indent=2),
+        flush=True,
+    )
+
+
+def _debug_response(
+    request: CommerceQueryRequest,
+    response: CommerceQueryResponse,
+    provider: Optional[str] = None,
+) -> CommerceQueryResponse:
+    _print_query_debug(request, response, provider=provider)
+    return response
 
 
 def generate_commerce_query(request: CommerceQueryRequest) -> CommerceQueryResponse:
@@ -253,4 +300,6 @@ def generate_commerce_query(request: CommerceQueryRequest) -> CommerceQueryRespo
         ) from exc
 
     parsed = _extract_json_content(content)
-    return _normalize_response(parsed, request)
+    normalized = _normalize_response(parsed, request)
+    _print_query_debug(request, normalized, raw_content=content, parsed=parsed)
+    return normalized
