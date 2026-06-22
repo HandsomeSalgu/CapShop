@@ -25,25 +25,37 @@ public class UserEventService {
 
     private final UserEventMapper userEventMapper;
     private final ProductMapper productMapper;
+    private final ProductUpsertService productUpsertService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
     public UserEventResponse createProductDetailViewEvent(Long userId, ProductDetailViewEventRequest request) {
-        Product product = productMapper.findById(request.getProductId());
+        Long productId = request.getProductId();
+
+        if (request.getProduct() != null) {
+            productId = productUpsertService.upsertCommerceProduct(request.getProduct());
+        }
+
+        if (productId == null) {
+            throw new CustomException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+
+        Product product = productMapper.findById(productId);
         if (product == null) {
             throw new CustomException(ErrorCode.PRODUCT_NOT_FOUND);
         }
 
-        UserEvent userEvent = UserEvent.builder()
-                .userId(userId)
-                .productId(request.getProductId())
-                .eventType(UserEventType.PRODUCT_DETAIL_VIEW)
-                .sourcePage(request.getSourcePage())
-                .targetUrl(null)
-                .metadataJson(null)
-                .build();
-
-        userEventMapper.insertUserEvent(userEvent);
+        UserEvent userEvent = createInternalEvent(
+                userId,
+                productId,
+                null,
+                UserEventType.PRODUCT_DETAIL_VIEW,
+                request.getSourcePage(),
+                null,
+                product.getCategoryName(),
+                product.getBrand(),
+                product.getAffiliateUrl()
+        );
 
         UserEvent savedEvent = userEventMapper.findById(userEvent.getEventId());
         return UserEventResponse.from(savedEvent);
@@ -65,7 +77,7 @@ public class UserEventService {
                 request.getVideoId(),
                 request.getCategoryName(),
                 request.getBrand(),
-                null
+                product.getAffiliateUrl()
         );
 
         UserEvent savedEvent = userEventMapper.findById(userEvent.getEventId());

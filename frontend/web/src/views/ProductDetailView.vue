@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppBanner from '@/components/common/AppBanner.vue'
 import { useAuthStore } from '@/stores/auth'
+import { userEventApi } from '@/api/userEvent'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,6 +41,15 @@ const fetchProductDetail = async (id) => {
         link: parsed.affiliateUrl || parsed.link || ''
       }
       selectedImage.value = product.value.mainImage
+      
+      // 로그 저장 비동기 호출 (결과를 기다리지 않고 백그라운드 실행)
+      if (authStore.isLoggedIn) {
+        userEventApi.logProductDetailView({
+          productId: product.value.id,
+          product: parsed,
+          sourcePage: history.state.sourcePage || 'PRODUCT_DETAIL'
+        }).catch(err => console.error('이벤트 로그 저장 실패:', err))
+      }
     } else {
       error.value = '상품 데이터를 불러올 수 없습니다. 카테고리 페이지를 통해 접근해주세요.'
     }
