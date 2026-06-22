@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import CustomSelect from '@/components/common/CustomSelect.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -74,6 +75,42 @@ const phone = ref('')
 const birthYear = ref('')
 const birthMonth = ref('')
 const birthDay = ref('')
+
+const currentDate = new Date()
+const currentYear = currentDate.getFullYear()
+const currentMonth = currentDate.getMonth() + 1
+const currentDay = currentDate.getDate()
+
+const availableYears = Array.from({ length: 100 }, (_, i) => currentYear - i)
+
+const availableMonths = computed(() => {
+  if (birthYear.value === currentYear) {
+    return Array.from({ length: currentMonth }, (_, i) => i + 1)
+  }
+  return Array.from({ length: 12 }, (_, i) => i + 1)
+})
+
+const availableDays = computed(() => {
+  if (!birthMonth.value) {
+    return Array.from({ length: 31 }, (_, i) => i + 1)
+  }
+  const yearForCalc = birthYear.value || 2024 // 년도를 아직 선택 안 했다면 29일이 포함되도록 2024년(윤년) 기준으로 일수 계산
+  let days = new Date(yearForCalc, birthMonth.value, 0).getDate()
+  
+  if (birthYear.value === currentYear && birthMonth.value === currentMonth) {
+    days = Math.min(days, currentDay)
+  }
+  return Array.from({ length: days }, (_, i) => i + 1)
+})
+
+watch([birthYear, birthMonth], () => {
+  if (birthYear.value === currentYear && birthMonth.value > currentMonth) {
+    birthMonth.value = ''
+  }
+  if (birthDay.value && birthDay.value > availableDays.value.length) {
+    birthDay.value = ''
+  }
+})
 
 const formErrorMsg = ref('')
 
@@ -209,8 +246,8 @@ const submitSignup = async () => {
   }
   
   // 간단한 날짜 조합 로직
-  const paddedMonth = birthMonth.value.padStart(2, '0')
-  const paddedDay = birthDay.value.padStart(2, '0')
+  const paddedMonth = String(birthMonth.value).padStart(2, '0')
+  const paddedDay = String(birthDay.value).padStart(2, '0')
   const birthDateStr = `${birthYear.value}-${paddedMonth}-${paddedDay}`
 
   try {
@@ -360,9 +397,9 @@ const goLogin = () => {
       <div class="form-group">
         <label>생년월일</label>
         <div class="birth-inputs">
-          <input type="text" v-model="birthYear" placeholder="년도" class="form-input" maxlength="4">
-          <input type="text" v-model="birthMonth" placeholder="월" class="form-input" maxlength="2">
-          <input type="text" v-model="birthDay" placeholder="일" class="form-input" maxlength="2">
+          <CustomSelect v-model="birthYear" :options="availableYears" placeholder="년도" max-height="150px" />
+          <CustomSelect v-model="birthMonth" :options="availableMonths" placeholder="월" max-height="150px" />
+          <CustomSelect v-model="birthDay" :options="availableDays" placeholder="일" max-height="150px" />
         </div>
       </div>
 
@@ -556,9 +593,8 @@ const goLogin = () => {
   gap: 10px;
 }
 
-.birth-inputs input {
+.birth-inputs > * {
   flex: 1;
-  text-align: center;
 }
 
 .error-msg {
