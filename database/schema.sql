@@ -16,6 +16,9 @@ DROP TABLE IF EXISTS ai_analysis_logs;
 DROP TABLE IF EXISTS user_events;
 DROP TABLE IF EXISTS wishlists;
 DROP TABLE IF EXISTS recommendations;
+DROP TABLE IF EXISTS product_candidates;
+DROP TABLE IF EXISTS search_results;
+DROP TABLE IF EXISTS search_queries;
 DROP TABLE IF EXISTS detections;
 DROP TABLE IF EXISTS posts;
 DROP TABLE IF EXISTS products;
@@ -193,6 +196,10 @@ CREATE TABLE detections (
     category_name VARCHAR(50) NULL,
     brand VARCHAR(100) NULL,
     model_name VARCHAR(100) NULL,
+    color VARCHAR(100) NULL,
+    shape VARCHAR(255) NULL,
+    logo_text VARCHAR(255) NULL,
+    key_features_json JSON NULL,
     confidence DECIMAL(5,4) NULL,
 
     status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
@@ -207,6 +214,100 @@ CREATE TABLE detections (
     INDEX idx_detections_image_hash (image_hash),
     INDEX idx_detections_status (status),
     INDEX idx_detections_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- =========================================================
+-- 6-1. search_queries
+-- Detection 湲곕컲 寃??荑쇰━
+-- =========================================================
+
+CREATE TABLE search_queries (
+    query_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    job_id BIGINT NOT NULL,
+    query_text VARCHAR(255) NOT NULL,
+    query_type VARCHAR(30) NOT NULL,
+    source_target VARCHAR(50) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_search_queries_detection
+        FOREIGN KEY (job_id) REFERENCES detections(detection_id)
+        ON DELETE CASCADE,
+
+    INDEX idx_search_queries_job_id (job_id),
+    INDEX idx_search_queries_type (query_type),
+    INDEX idx_search_queries_source_target (source_target),
+    INDEX idx_search_queries_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- =========================================================
+-- 6-2. search_results
+-- ?ㅼ씠踰?寃??寃곌낵 ?뺢퇋??洹몃┝
+-- =========================================================
+
+CREATE TABLE search_results (
+    result_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    job_id BIGINT NOT NULL,
+    query_id BIGINT NULL,
+    source VARCHAR(50) NOT NULL,
+    title VARCHAR(500) NULL,
+    url TEXT NULL,
+    image_url TEXT NULL,
+    snippet TEXT NULL,
+    price VARCHAR(50) NULL,
+    mall_name VARCHAR(100) NULL,
+    raw_json JSON NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_search_results_detection
+        FOREIGN KEY (job_id) REFERENCES detections(detection_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_search_results_query
+        FOREIGN KEY (query_id) REFERENCES search_queries(query_id)
+        ON DELETE SET NULL,
+
+    INDEX idx_search_results_job_id (job_id),
+    INDEX idx_search_results_query_id (query_id),
+    INDEX idx_search_results_source (source),
+    INDEX idx_search_results_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- =========================================================
+-- 6-3. product_candidates
+-- 寃??寃곌낵 1李??먯닔???꾨낫
+-- =========================================================
+
+CREATE TABLE product_candidates (
+    candidate_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    job_id BIGINT NOT NULL,
+    result_id BIGINT NULL,
+    product_name VARCHAR(500) NULL,
+    brand VARCHAR(100) NULL,
+    category VARCHAR(100) NULL,
+    image_url TEXT NULL,
+    product_url TEXT NULL,
+    price VARCHAR(50) NULL,
+    visual_score DECIMAL(6,2) NULL,
+    text_score DECIMAL(6,2) NULL,
+    final_score DECIMAL(6,2) NULL,
+    reason TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_product_candidates_detection
+        FOREIGN KEY (job_id) REFERENCES detections(detection_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_product_candidates_result
+        FOREIGN KEY (result_id) REFERENCES search_results(result_id)
+        ON DELETE SET NULL,
+
+    INDEX idx_product_candidates_job_id (job_id),
+    INDEX idx_product_candidates_result_id (result_id),
+    INDEX idx_product_candidates_final_score (final_score),
+    INDEX idx_product_candidates_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

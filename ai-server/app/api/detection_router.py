@@ -32,6 +32,13 @@ def _to_integrated_response(graph_response: ShoppingAnalysisResponse) -> dict[st
 
     return {
         **frame_payload,
+        "ocr_analysis": _model_to_dict(graph_response.ocr_analysis) if graph_response.ocr_analysis else None,
+        "visual_analysis": _model_to_dict(graph_response.visual_analysis) if graph_response.visual_analysis else None,
+        "search_identification": (
+            _model_to_dict(graph_response.search_identification)
+            if graph_response.search_identification
+            else None
+        ),
         "commerce_query": _model_to_dict(graph_response.query),
         "products": [
             _to_commerce_product_payload(product)
@@ -41,11 +48,23 @@ def _to_integrated_response(graph_response: ShoppingAnalysisResponse) -> dict[st
             _model_to_dict(product)
             for product in graph_response.selected_products
         ],
+        "google_search_results": [
+            _model_to_dict(result)
+            for result in graph_response.google_search_results
+        ],
+        "similar_products": [
+            _model_to_dict(product)
+            for product in graph_response.similar_products
+        ],
+        "match_status": graph_response.match_status,
+        "message": graph_response.message,
         "quality": _model_to_dict(graph_response.quality),
         "searched_products_count": graph_response.searched_products_count,
         "filtered_products_count": graph_response.filtered_products_count,
         "retry_count": graph_response.retry_count,
         "tried_queries": graph_response.tried_queries,
+        "source_counts": graph_response.source_counts,
+        "google_source_counts": graph_response.google_source_counts,
     }
 
 
@@ -58,9 +77,13 @@ def _to_commerce_product_payload(product: ProductCandidate) -> dict[str, Any]:
         "categoryName": _resolve_category_name(product),
         "price": product.lprice,
         "imageUrl": product.image,
+        "thumbnailUrl": product.thumbnail,
         "affiliateUrl": product.link,
         "source": product.product_type or "NAVER",
         "externalProductId": product.external_product_id or product.product_id,
+        "snippet": product.snippet,
+        "queryType": product.query_type,
+        "queryText": product.source_query,
     }
 
 

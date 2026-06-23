@@ -11,22 +11,13 @@ import java.util.List;
 
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class AiCommerceQueryResponse {
+public class SearchQueryBundleResponse {
 
-    @JsonProperty("primary_query")
-    private String primaryQuery;
-
-    @JsonProperty("exact_text_queries")
-    private List<String> exactTextQueries;
-
-    @JsonProperty("visual_queries")
-    private List<String> visualQueries;
-
-    @JsonProperty("category_queries")
-    private List<String> categoryQueries;
+    @JsonProperty("primary_queries")
+    private List<String> primaryQueries;
 
     @JsonProperty("shopping_queries")
     private List<String> shoppingQueries;
@@ -45,18 +36,4 @@ public class AiCommerceQueryResponse {
 
     @JsonProperty("fallback_queries")
     private List<String> fallbackQueries;
-
-    @JsonProperty("normalized_brand")
-    private String normalizedBrand;
-
-    @JsonProperty("normalized_model")
-    private String normalizedModel;
-
-    @JsonProperty("normalized_category")
-    private String normalizedCategory;
-
-    @JsonProperty("query_confidence")
-    private Double queryConfidence;
-
-    private String reason;
 }

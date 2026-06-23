@@ -6,7 +6,9 @@ import com.syncshopper.common.response.ApiResponse;
 import com.syncshopper.dto.request.DetectionAnalyzeRequest;
 import com.syncshopper.dto.response.DetectionAnalyzeResponse;
 import com.syncshopper.dto.response.DetectionDetailResponse;
+import com.syncshopper.dto.response.DetectionWebSearchResponse;
 import com.syncshopper.service.DetectionService;
+import com.syncshopper.service.DetectionWebSearchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DetectionController {
 
     private final DetectionService detectionService;
+    private final DetectionWebSearchService detectionWebSearchService;
 
     @Operation(summary = "Analyze a video frame")
     @PostMapping("/analyze")
@@ -45,6 +48,15 @@ public class DetectionController {
         return ApiResponse.success(
                 "Detection result retrieved successfully.",
                 detectionService.getDetectionDetail(currentUserId(), detectionId)
+        );
+    }
+
+    @Operation(summary = "Run web search for a detection result")
+    @PostMapping("/{detectionId}/web-search")
+    public ApiResponse<DetectionWebSearchResponse> searchDetectionWeb(@PathVariable Long detectionId) {
+        return ApiResponse.success(
+                "Detection web search completed successfully.",
+                detectionWebSearchService.search(currentUserId(), detectionId)
         );
     }
 

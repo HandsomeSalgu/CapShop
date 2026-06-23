@@ -5,8 +5,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${SPRING_MAIL_USERNAME}
-    password: ${SPRING_MAIL_PASSWORD}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -76,8 +76,21 @@ app:
     fastapi-base-url: http://localhost:8000
     analyze-path: /api/ai/analyze-frame
     commerce-query-path: /api/ai/generate-commerce-query
-    timeout-ms: ${AI_FASTAPI_TIMEOUT_MS:60000}
+    timeout-ms: ${AI_FASTAPI_TIMEOUT_MS:180000}
   naver:
+    client-id: ${NAVER_CLIENT_ID:${NAVER_SHOPPING_CLIENT_ID:}}
+    client-secret: ${NAVER_CLIENT_SECRET:${NAVER_SHOPPING_CLIENT_SECRET:}}
+    search:
+      shopping-url: https://openapi.naver.com/v1/search/shop.json
+      image-url: https://openapi.naver.com/v1/search/image
+      blog-url: https://openapi.naver.com/v1/search/blog.json
+      cafe-url: https://openapi.naver.com/v1/search/cafearticle.json
+      web-url: https://openapi.naver.com/v1/search/webkr.json
+      display: 5
+      start: 1
+      sort: sim
+      exclude: used:rental:cbshop
+      cache-ttl-hours: 24
     shopping:
       client-id: ${NAVER_SHOPPING_CLIENT_ID:${NAVER_CLIENT_ID:}}
       client-secret: ${NAVER_SHOPPING_CLIENT_SECRET:${NAVER_CLIENT_SECRET:}}

@@ -2,10 +2,13 @@ package com.syncshopper.service;
 
 import com.syncshopper.common.exception.CustomException;
 import com.syncshopper.common.exception.ErrorCode;
+import com.syncshopper.domain.search.SearchSource;
 import com.syncshopper.dto.response.AiCommerceQueryResponse;
 import com.syncshopper.dto.response.CommerceProductResponse;
 import com.syncshopper.dto.response.NaverShoppingItemResponse;
 import com.syncshopper.dto.response.NaverShoppingSearchResponse;
+import com.syncshopper.dto.search.NaverSearchApiResponse;
+import com.syncshopper.dto.search.SearchResultItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,8 @@ public class CommerceService {
     private static final int TOP3_LIMIT = 3;
 
     private final NaverShoppingClient naverShoppingClient;
+    private final NaverSearchClient naverSearchClient;
+    private final SearchResultNormalizer searchResultNormalizer;
     private final ProductUpsertService productUpsertService;
 
     @Cacheable(value = "commerceSearch", key = "#query + '_' + #display + '_' + #start + '_' + #sort")
@@ -40,6 +45,45 @@ public class CommerceService {
         }
 
         return response.getItems().stream()
+                .map(this::toCommerceProductResponse)
+                .toList();
+    }
+
+    @Cacheable(value = "commerceSearch", key = "#source + '_' + #query + '_' + #display + '_' + #start + '_' + #sort")
+    public List<CommerceProductResponse> searchProducts(
+            String query,
+            Integer display,
+            Integer start,
+            String sort,
+            String source
+    ) {
+        validateQuery(query);
+
+        if (source == null || source.isBlank() || NAVER_SOURCE.equalsIgnoreCase(source)) {
+            return searchProducts(query, display, start, sort);
+        }
+
+        SearchSource searchSource = parseSearchSource(source);
+        NaverSearchApiResponse response = switch (searchSource) {
+            case NAVER_SHOPPING -> naverSearchClient.searchShopping(query, normalizeDisplay(display));
+            case NAVER_IMAGE -> naverSearchClient.searchImage(query, normalizeDisplay(display));
+            case NAVER_BLOG -> naverSearchClient.searchBlog(query, normalizeDisplay(display));
+            case NAVER_CAFE -> naverSearchClient.searchCafe(query, normalizeDisplay(display));
+            case NAVER_WEB -> naverSearchClient.searchWeb(query, normalizeDisplay(display));
+        };
+
+        if (response == null || !response.isSuccess()) {
+            log.warn(
+                    "Naver source search returned no usable response. source={} query='{}' status={} error={}",
+                    searchSource,
+                    query,
+                    response == null ? null : response.getStatusCode(),
+                    response == null ? null : response.getErrorMessage()
+            );
+            return List.of();
+        }
+
+        return searchResultNormalizer.normalize(response, searchSource.name()).stream()
                 .map(this::toCommerceProductResponse)
                 .toList();
     }
@@ -119,9 +163,28 @@ public class CommerceService {
                 .categoryName(resolveCategory(item))
                 .price(parsePrice(item.getLprice()))
                 .imageUrl(item.getImage())
+                .thumbnailUrl(item.getImage())
                 .affiliateUrl(item.getLink())
                 .source(NAVER_SOURCE)
                 .externalProductId(item.getProductId())
+                .build();
+    }
+
+    private CommerceProductResponse toCommerceProductResponse(SearchResultItem item) {
+        return CommerceProductResponse.builder()
+                .title(item.getTitle())
+                .brand(item.getBrand())
+                .mallName(item.getMallName())
+                .categoryName(item.getCategory())
+                .price(parsePrice(item.getPrice()))
+                .imageUrl(firstNonBlank(item.getImageUrl(), item.getThumbnailUrl()))
+                .thumbnailUrl(firstNonBlank(item.getThumbnailUrl(), item.getImageUrl()))
+                .affiliateUrl(item.getLink())
+                .source(item.getSource() == null ? null : item.getSource().name())
+                .externalProductId(resolveExternalSearchId(item))
+                .snippet(item.getSnippet())
+                .queryType(item.getQueryType())
+                .queryText(item.getQueryText())
                 .build();
     }
 
@@ -162,6 +225,40 @@ public class CommerceService {
         }
 
         return cleanHtml(item.getCategory1());
+    }
+
+    private SearchSource parseSearchSource(String source) {
+        String normalized = source == null ? "" : source.trim().toUpperCase();
+        if (NAVER_SOURCE.equals(normalized)) {
+            return SearchSource.NAVER_SHOPPING;
+        }
+
+        try {
+            return SearchSource.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            throw new CustomException(ErrorCode.INVALID_COMMERCE_QUERY);
+        }
+    }
+
+    private int normalizeDisplay(Integer display) {
+        if (display == null || display < 1) {
+            return 10;
+        }
+        return Math.min(display, 100);
+    }
+
+    private String resolveExternalSearchId(SearchResultItem item) {
+        if (item.getRaw() != null && item.getRaw().get("productId") != null) {
+            return String.valueOf(item.getRaw().get("productId"));
+        }
+        if (item.getLink() != null && !item.getLink().isBlank()) {
+            return item.getSource().name() + ":" + item.getLink();
+        }
+        return item.getSource().name() + ":" + item.getTitle();
+    }
+
+    private String firstNonBlank(String first, String second) {
+        return first != null && !first.isBlank() ? first : second;
     }
 
     private void validateQuery(String query) {

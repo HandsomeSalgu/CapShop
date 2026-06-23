@@ -69,6 +69,14 @@ class Settings:
     naver_shopping_provider: str = _env_str("NAVER_SHOPPING_PROVIDER", "backend")
     naver_shopping_display: int = int(os.getenv("NAVER_SHOPPING_DISPLAY", "30"))
     naver_shopping_sort: str = os.getenv("NAVER_SHOPPING_SORT", "sim")
+    google_custom_search_provider: str = _env_str("GOOGLE_CUSTOM_SEARCH_PROVIDER", "google")
+    google_custom_search_api_key: str | None = os.getenv("GOOGLE_CUSTOM_SEARCH_API_KEY")
+    google_custom_search_cx: str | None = os.getenv("GOOGLE_CUSTOM_SEARCH_CX")
+    google_custom_search_url: str = _env_str(
+        "GOOGLE_CUSTOM_SEARCH_URL",
+        "https://www.googleapis.com/customsearch/v1",
+    )
+    google_custom_search_display: int = int(os.getenv("GOOGLE_CUSTOM_SEARCH_DISPLAY", "5"))
     analysis_max_retries: int = int(os.getenv("AI_ANALYSIS_MAX_RETRIES", "1"))
 
 

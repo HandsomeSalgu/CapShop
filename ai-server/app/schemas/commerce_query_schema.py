@@ -45,6 +45,38 @@ class CommerceQueryRequest(BaseModel):
 
 class CommerceQueryResponse(BaseModel):
     primary_query: str = Field(..., description="Primary search query for commerce API")
+    exact_text_queries: List[str] = Field(
+        default_factory=list,
+        description="Queries focused on visible text or logo text candidates",
+    )
+    visual_queries: List[str] = Field(
+        default_factory=list,
+        description="Queries focused on color, shape, style, and visual features",
+    )
+    category_queries: List[str] = Field(
+        default_factory=list,
+        description="Queries focused on broader product category intent",
+    )
+    shopping_queries: List[str] = Field(
+        default_factory=list,
+        description="Queries optimized for Naver Shopping",
+    )
+    image_queries: List[str] = Field(
+        default_factory=list,
+        description="Queries optimized for Naver Image search",
+    )
+    blog_queries: List[str] = Field(
+        default_factory=list,
+        description="Queries optimized for Naver Blog search",
+    )
+    cafe_queries: List[str] = Field(
+        default_factory=list,
+        description="Queries optimized for Naver Cafe search",
+    )
+    web_queries: List[str] = Field(
+        default_factory=list,
+        description="Queries optimized for Naver Web search",
+    )
     fallback_queries: List[str] = Field(
         default_factory=list,
         description="Fallback search queries",

@@ -622,12 +622,86 @@ function renderResultForPanel(result) {
 
   detectionBlock.appendChild(detectionLabel);
   detectionBlock.appendChild(detectionValue);
+  detectionBlock.appendChild(createAiDetectionEvidenceBlock(analysis));
   fragment.appendChild(detectionBlock);
   fragment.appendChild(createRecaptureButton());
   fragment.appendChild(createNaverSearchQueryBlock(analysis));
 
   fragment.appendChild(createProductResultsBlock(analysis, products));
   return fragment;
+}
+
+function createAiDetectionEvidenceBlock(analysis) {
+  const ocr = analysis.ocrAnalysis || analysis.ocr_analysis || {};
+  const visual = analysis.visualAnalysis || analysis.visual_analysis || {};
+  const identification = analysis.searchIdentification || analysis.search_identification || {};
+  const googleResults = analysis.googleSearchResults || analysis.google_search_results || [];
+
+  const block = document.createElement("div");
+  block.className = "syncshopper-ai-evidence";
+
+  const ocrText = [
+    ...(Array.isArray(ocr.visible_text_candidates) ? ocr.visible_text_candidates : []),
+    ...(Array.isArray(ocr.visibleTextCandidates) ? ocr.visibleTextCandidates : [])
+  ].filter(Boolean).slice(0, 4).join(", ") || ocr.raw_text || ocr.rawText || "감지된 텍스트 없음";
+
+  const visualText = [
+    visual.product_type || visual.productType,
+    visual.color,
+    visual.style,
+    visual.shape
+  ].filter(Boolean).join(" · ") || "시각 특징 없음";
+
+  const featureList = visual.key_features || visual.keyFeatures || [];
+  const identificationText = [
+    identification.target_name || identification.targetName,
+    identification.brand,
+    identification.model_name || identification.modelName
+  ].filter(Boolean).join(" · ");
+
+  block.appendChild(createAiEvidenceRow("OCR", ocrText));
+  block.appendChild(createAiEvidenceRow("이미지", visualText));
+
+  if (Array.isArray(featureList) && featureList.length > 0) {
+    block.appendChild(createAiEvidenceRow("특징", featureList.slice(0, 4).join(", ")));
+  }
+
+  if (identificationText) {
+    block.appendChild(createAiEvidenceRow("검색 식별", identificationText));
+  }
+
+  const evidence = identification.evidence || [];
+  if (Array.isArray(evidence) && evidence.length > 0) {
+    block.appendChild(createAiEvidenceRow("근거", evidence.slice(0, 2).join(" / ")));
+  } else if (Array.isArray(googleResults) && googleResults.length > 0) {
+    const googleText = googleResults
+      .slice(0, 2)
+      .map((item) => item.title || item.displayLink || item.link)
+      .filter(Boolean)
+      .join(" / ");
+    if (googleText) {
+      block.appendChild(createAiEvidenceRow("Google", googleText));
+    }
+  }
+
+  return block;
+}
+
+function createAiEvidenceRow(labelText, valueText) {
+  const row = document.createElement("div");
+  row.className = "syncshopper-ai-evidence-row";
+
+  const label = document.createElement("span");
+  label.className = "syncshopper-ai-evidence-label";
+  label.textContent = labelText;
+
+  const value = document.createElement("span");
+  value.className = "syncshopper-ai-evidence-value";
+  value.textContent = valueText;
+
+  row.appendChild(label);
+  row.appendChild(value);
+  return row;
 }
 
 function createPanelMessage(message) {

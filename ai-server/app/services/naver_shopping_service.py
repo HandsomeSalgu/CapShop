@@ -10,16 +10,32 @@ from app.schemas.analysis_graph_schema import ProductCandidate
 
 
 HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+SUPPORTED_NAVER_SOURCES = {
+    "NAVER_SHOPPING",
+    "NAVER_IMAGE",
+    "NAVER_BLOG",
+    "NAVER_CAFE",
+    "NAVER_WEB",
+}
 
 
 def search_naver_shopping(query: str, *, display: int = 30) -> list[ProductCandidate]:
+    return search_naver_source("NAVER_SHOPPING", query, display=display)
+
+
+def search_naver_source(source: str, query: str, *, display: int = 30) -> list[ProductCandidate]:
     provider = settings.naver_shopping_provider.lower()
+    normalized_source = _normalize_source(source)
 
     if provider == "backend":
-        return _search_backend(query, display=display)
+        results = _search_backend(normalized_source, query, display=display)
+        _print_search_log(normalized_source, query, results)
+        return results
 
     if provider == "mock":
-        return _search_mock(query, display=display)
+        results = _search_mock(normalized_source, query, display=display)
+        _print_search_log(normalized_source, query, results)
+        return results
 
     raise HTTPException(
         status_code=500,
@@ -27,10 +43,11 @@ def search_naver_shopping(query: str, *, display: int = 30) -> list[ProductCandi
     )
 
 
-def _search_backend(query: str, *, display: int) -> list[ProductCandidate]:
+def _search_backend(source: str, query: str, *, display: int) -> list[ProductCandidate]:
     url = _backend_search_url()
     params = {
         "query": query,
+        "source": source,
         "display": max(1, min(display, 100)),
         "start": 1,
         "sort": settings.naver_shopping_sort,
@@ -77,27 +94,36 @@ def _search_backend(query: str, *, display: int) -> list[ProductCandidate]:
             detail="Backend commerce search response data must be a list",
         )
 
-    return [_candidate_from_backend_item(item) for item in items if isinstance(item, dict)]
+    return [_candidate_from_backend_item(item, source) for item in items if isinstance(item, dict)]
 
 
-def _candidate_from_backend_item(item: dict[str, Any]) -> ProductCandidate:
+def _candidate_from_backend_item(item: dict[str, Any], default_source: str) -> ProductCandidate:
     product_id = item.get("productId")
     external_product_id = item.get("externalProductId")
+    source = _clean_text(item.get("source")) or default_source
 
     return ProductCandidate(
         title=_clean_text(item.get("title")) or "",
         link=item.get("affiliateUrl"),
         image=item.get("imageUrl"),
+        thumbnail=item.get("thumbnailUrl") or item.get("imageUrl"),
         lprice=_to_int(item.get("price")),
         mall_name=_clean_text(item.get("mallName")),
         product_id=str(product_id) if product_id is not None else None,
         external_product_id=str(external_product_id) if external_product_id is not None else None,
-        product_type=_clean_text(item.get("source")),
+        product_type=source,
+        query_type=_clean_text(item.get("queryType")),
+        source_query=_clean_text(item.get("queryText")),
+        snippet=_clean_text(item.get("snippet")),
         brand=_clean_text(item.get("brand")),
         category1=_clean_text(item.get("categoryName")),
     )
 
-def _search_mock(query: str, *, display: int) -> list[ProductCandidate]:
+
+def _search_mock(source: str, query: str, *, display: int) -> list[ProductCandidate]:
+    if source != "NAVER_SHOPPING":
+        return _search_mock_source(source, query, display=display)
+
     query_lower = query.lower()
 
     if "airpods" in query_lower or "에어팟" in query_lower or "apple" in query_lower:
@@ -216,7 +242,49 @@ def _search_mock(query: str, *, display: int) -> list[ProductCandidate]:
             ),
         ]
 
+    return [
+        _copy_with_source(candidate, source, query)
+        for candidate in candidates[:display]
+    ]
+
+
+def _search_mock_source(source: str, query: str, *, display: int) -> list[ProductCandidate]:
+    source_label = source.replace("NAVER_", "").lower()
+    image = None
+    thumbnail = None
+
+    if source == "NAVER_IMAGE":
+        image = "https://shopping.example/images/mock-product-1.jpg"
+        thumbnail = image
+
+    candidates = [
+        ProductCandidate(
+            title=f"{query} {source_label} reference",
+            link=f"https://search.example/{source_label}/mock-1",
+            image=image,
+            thumbnail=thumbnail,
+            mall_name=f"Mock {source_label}",
+            product_id=f"mock-{source_label}-1",
+            product_type=source,
+            query_type=source_label.upper(),
+            source_query=query,
+            snippet=f"Mock {source_label} result for {query}",
+        )
+    ]
     return candidates[:display]
+
+
+def _copy_with_source(candidate: ProductCandidate, source: str, query: str) -> ProductCandidate:
+    updates = {
+        "product_type": source,
+        "source_query": query,
+        "query_type": "SHOPPING",
+        "thumbnail": candidate.thumbnail or candidate.image,
+    }
+    if hasattr(candidate, "model_copy"):
+        return candidate.model_copy(update=updates)
+
+    return candidate.copy(update=updates)
 
 
 def _backend_search_url() -> str:
@@ -234,6 +302,34 @@ def _clean_text(value: Any) -> str | None:
     cleaned = HTML_TAG_PATTERN.sub("", str(value))
     cleaned = html.unescape(cleaned).strip()
     return cleaned or None
+
+
+def _normalize_source(source: str) -> str:
+    normalized = (source or "NAVER_SHOPPING").strip().upper()
+    if normalized == "NAVER":
+        normalized = "NAVER_SHOPPING"
+
+    if normalized not in SUPPORTED_NAVER_SOURCES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported Naver search source: {source}",
+        )
+
+    return normalized
+
+
+def _print_search_log(source: str, query: str, results: list[ProductCandidate]) -> None:
+    samples = [
+        _truncate(candidate.title, 80)
+        for candidate in results[:3]
+        if candidate.title
+    ]
+    print(
+        "\n[SyncShopper Naver Search] "
+        f"source={source} query='{_truncate(query, 120)}' "
+        f"result_count={len(results)} samples={samples}",
+        flush=True,
+    )
 
 
 def _to_int(value: Any) -> int | None:

@@ -21,17 +21,18 @@ public class CommerceController {
 
     private final CommerceService commerceService;
 
-    @Operation(summary = "Search commerce products", description = "Searches products with the Naver Shopping API.")
+    @Operation(summary = "Search commerce products", description = "Searches products with Naver Shopping/Image/Blog/Cafe/Web APIs.")
     @GetMapping("/search")
     public ApiResponse<List<CommerceProductResponse>> searchProducts(
             @RequestParam String query,
+            @RequestParam(required = false) String source,
             @RequestParam(required = false) Integer display,
             @RequestParam(required = false, defaultValue = "1") Integer start,
             @RequestParam(required = false) String sort
     ) {
         return ApiResponse.success(
                 "Commerce product search succeeded.",
-                commerceService.searchProducts(query, display, start, sort)
+                commerceService.searchProducts(query, display, start, sort, source)
         );
     }
 

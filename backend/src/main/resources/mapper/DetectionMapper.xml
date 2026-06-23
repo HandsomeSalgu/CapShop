@@ -16,6 +16,10 @@
         <result property="categoryName" column="category_name"/>
         <result property="brand" column="brand"/>
         <result property="modelName" column="model_name"/>
+        <result property="color" column="color"/>
+        <result property="shape" column="shape"/>
+        <result property="logoText" column="logo_text"/>
+        <result property="keyFeaturesJson" column="key_features_json"/>
         <result property="confidence" column="confidence"/>
         <result property="status" column="status"/>
         <result property="createdAt" column="created_at"/>
@@ -50,6 +54,10 @@
             category_name = #{categoryName},
             brand = #{brand},
             model_name = #{modelName},
+            color = #{color},
+            shape = #{shape},
+            logo_text = #{logoText},
+            key_features_json = #{keyFeaturesJson},
             confidence = #{confidence},
             status = #{status}
         WHERE detection_id = #{detectionId}
@@ -73,6 +81,10 @@
             category_name,
             brand,
             model_name,
+            color,
+            shape,
+            logo_text,
+            key_features_json,
             confidence,
             status,
             created_at
