@@ -24,8 +24,12 @@ public class MockAiAnalysisService {
                     .categoryName("Electronics")
                     .brand("Apple")
                     .modelName("AirPods Pro")
+                    .color("white")
+                    .shape("wireless earbuds with charging case")
+                    .logoText(null)
+                    .keyFeatures(List.of("white earbuds", "rounded charging case", "in-ear tips"))
                     .confidence(0.93)
-                    .rawResponseJson("{\"target_name\":\"Apple AirPods Pro\",\"category_name\":\"Electronics\",\"brand\":\"Apple\",\"model_name\":\"AirPods Pro\",\"confidence\":0.93}")
+                    .rawResponseJson("{\"target_name\":\"Apple AirPods Pro\",\"category_name\":\"Electronics\",\"brand\":\"Apple\",\"model_name\":\"AirPods Pro\",\"color\":\"white\",\"shape\":\"wireless earbuds with charging case\",\"logo_text\":null,\"key_features\":[\"white earbuds\",\"rounded charging case\",\"in-ear tips\"],\"confidence\":0.93}")
                     .build();
         }
 
@@ -35,8 +39,12 @@ public class MockAiAnalysisService {
                     .categoryName("Fashion")
                     .brand("Nike")
                     .modelName("Air Force 1")
+                    .color("white")
+                    .shape("low-top sneakers")
+                    .logoText("Nike")
+                    .keyFeatures(List.of("low-top silhouette", "white leather upper", "side swoosh logo"))
                     .confidence(0.91)
-                    .rawResponseJson("{\"target_name\":\"Nike sneakers\",\"category_name\":\"Fashion\",\"brand\":\"Nike\",\"model_name\":\"Air Force 1\",\"confidence\":0.91}")
+                    .rawResponseJson("{\"target_name\":\"Nike sneakers\",\"category_name\":\"Fashion\",\"brand\":\"Nike\",\"model_name\":\"Air Force 1\",\"color\":\"white\",\"shape\":\"low-top sneakers\",\"logo_text\":\"Nike\",\"key_features\":[\"low-top silhouette\",\"white leather upper\",\"side swoosh logo\"],\"confidence\":0.91}")
                     .build();
         }
 
@@ -45,8 +53,12 @@ public class MockAiAnalysisService {
                 .categoryName("Fashion")
                 .brand("Nike")
                 .modelName("Air Force 1")
+                .color("white")
+                .shape("low-top sneakers")
+                .logoText("Nike")
+                .keyFeatures(List.of("low-top silhouette", "white leather upper", "side swoosh logo"))
                 .confidence(0.91)
-                .rawResponseJson("{\"target_name\":\"Nike sneakers\",\"category_name\":\"Fashion\",\"brand\":\"Nike\",\"model_name\":\"Air Force 1\",\"confidence\":0.91}")
+                .rawResponseJson("{\"target_name\":\"Nike sneakers\",\"category_name\":\"Fashion\",\"brand\":\"Nike\",\"model_name\":\"Air Force 1\",\"color\":\"white\",\"shape\":\"low-top sneakers\",\"logo_text\":\"Nike\",\"key_features\":[\"low-top silhouette\",\"white leather upper\",\"side swoosh logo\"],\"confidence\":0.91}")
                 .build();
     }
 

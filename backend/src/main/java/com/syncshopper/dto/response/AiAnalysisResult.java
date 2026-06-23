@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -21,7 +22,16 @@ public class AiAnalysisResult {
     private String categoryName;
     private String brand;
     private String modelName;
+    private String color;
+    private String shape;
+    private String logoText;
+    private List<String> keyFeatures;
     private Double confidence;
+    private Map<String, Object> ocrAnalysis;
+    private Map<String, Object> visualAnalysis;
+    private Map<String, Object> searchIdentification;
+    private List<Map<String, Object>> googleSearchResults;
+    private Map<String, Object> googleSourceCounts;
     private AiCommerceQueryResponse commerceQuery;
     private List<CommerceProductResponse> products;
     private String rawResponseJson;

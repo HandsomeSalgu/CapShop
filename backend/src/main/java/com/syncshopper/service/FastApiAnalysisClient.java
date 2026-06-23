@@ -9,10 +9,12 @@ import com.syncshopper.dto.response.AiAnalysisResult;
 import com.syncshopper.dto.response.AiCommerceQueryResponse;
 import com.syncshopper.dto.response.CommerceProductResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,16 +36,18 @@ public class FastApiAnalysisClient {
         requestFactory.setConnectTimeout(timeout);
         requestFactory.setReadTimeout(timeout);
 
-        String responseBody = restClientBuilder.clone()
+        byte[] responseBytes = restClientBuilder.clone()
                 .baseUrl(aiProperties.getFastapiBaseUrl())
                 .requestFactory(requestFactory)
                 .build()
                 .post()
                 .uri(aiProperties.getAnalyzePath())
+                .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN, MediaType.APPLICATION_OCTET_STREAM)
                 .body(requestBody)
                 .retrieve()
-                .body(String.class);
+                .body(byte[].class);
 
+        String responseBody = decodeResponseBody(responseBytes);
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             return AiAnalysisResult.builder()
@@ -51,14 +55,44 @@ public class FastApiAnalysisClient {
                     .categoryName(root.path("category_name").asText(null))
                     .brand(root.path("brand").asText(null))
                     .modelName(root.path("model_name").asText(null))
+                    .color(root.path("color").asText(null))
+                    .shape(root.path("shape").asText(null))
+                    .logoText(root.path("logo_text").asText(null))
+                    .keyFeatures(parseKeyFeatures(root))
                     .confidence(root.path("confidence").isMissingNode() ? null : root.path("confidence").asDouble())
+                    .ocrAnalysis(parseObject(root, "ocr_analysis"))
+                    .visualAnalysis(parseObject(root, "visual_analysis"))
+                    .searchIdentification(parseObject(root, "search_identification"))
+                    .googleSearchResults(parseObjectList(root, "google_search_results"))
+                    .googleSourceCounts(parseObject(root, "google_source_counts"))
                     .commerceQuery(parseCommerceQuery(root))
                     .products(parseProducts(root))
                     .rawResponseJson(responseBody)
                     .build();
         } catch (Exception e) {
-            throw new IllegalStateException("Invalid FastAPI analysis response.", e);
+            throw new IllegalStateException("Invalid FastAPI analysis response: " + truncate(responseBody), e);
         }
+    }
+
+    private String decodeResponseBody(byte[] responseBytes) {
+        if (responseBytes == null || responseBytes.length == 0) {
+            return "";
+        }
+
+        return new String(responseBytes, StandardCharsets.UTF_8);
+    }
+
+    private String truncate(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        int maxLength = 500;
+        if (value.length() <= maxLength) {
+            return value;
+        }
+
+        return value.substring(0, maxLength) + "...";
     }
 
     private Map<String, Object> toFastApiRequestBody(DetectionAnalyzeRequest request) {
@@ -86,6 +120,33 @@ public class FastApiAnalysisClient {
         }
 
         return objectMapper.readerForListOf(CommerceProductResponse.class).readValue(products);
+    }
+
+    private List<String> parseKeyFeatures(JsonNode root) throws Exception {
+        JsonNode keyFeatures = root.path("key_features");
+        if (keyFeatures.isMissingNode() || keyFeatures.isNull() || !keyFeatures.isArray()) {
+            return List.of();
+        }
+
+        return objectMapper.readerForListOf(String.class).readValue(keyFeatures);
+    }
+
+    private Map<String, Object> parseObject(JsonNode root, String fieldName) throws Exception {
+        JsonNode node = root.path(fieldName);
+        if (node.isMissingNode() || node.isNull() || !node.isObject()) {
+            return Map.of();
+        }
+
+        return objectMapper.readerForMapOf(Object.class).readValue(node);
+    }
+
+    private List<Map<String, Object>> parseObjectList(JsonNode root, String fieldName) throws Exception {
+        JsonNode node = root.path(fieldName);
+        if (node.isMissingNode() || node.isNull() || !node.isArray()) {
+            return List.of();
+        }
+
+        return objectMapper.readerForListOf(Map.class).readValue(node);
     }
 
     public AiCommerceQueryResponse generateCommerceQuery(AiCommerceQueryRequest request) {

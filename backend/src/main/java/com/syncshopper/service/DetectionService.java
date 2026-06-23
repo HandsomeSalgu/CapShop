@@ -67,7 +67,7 @@ public class DetectionService {
         try {
             AiAnalysisResult aiResult = aiAnalysisService.analyze(request);
             log.info(
-                    "[SyncShopper AI Detection Result] detectionId={} videoId={} timestampSec={} targetName='{}' categoryName='{}' brand='{}' modelName='{}' confidence={} rawResponse={}",
+                    "[SyncShopper AI Detection Result] detectionId={} videoId={} timestampSec={} targetName='{}' categoryName='{}' brand='{}' modelName='{}' color='{}' shape='{}' logoText='{}' keyFeatures={} confidence={} rawResponse={}",
                     detection.getDetectionId(),
                     request.getVideoId(),
                     request.getTimestampSec(),
@@ -75,6 +75,10 @@ public class DetectionService {
                     aiResult.getCategoryName(),
                     aiResult.getBrand(),
                     aiResult.getModelName(),
+                    aiResult.getColor(),
+                    aiResult.getShape(),
+                    aiResult.getLogoText(),
+                    aiResult.getKeyFeatures(),
                     aiResult.getConfidence(),
                     aiResult.getRawResponseJson()
             );
@@ -83,6 +87,10 @@ public class DetectionService {
             detection.setCategoryName(aiResult.getCategoryName());
             detection.setBrand(aiResult.getBrand());
             detection.setModelName(aiResult.getModelName());
+            detection.setColor(aiResult.getColor());
+            detection.setShape(aiResult.getShape());
+            detection.setLogoText(aiResult.getLogoText());
+            detection.setKeyFeaturesJson(toJson(aiResult.getKeyFeatures() == null ? List.of() : aiResult.getKeyFeatures()));
             detection.setConfidence(aiResult.getConfidence());
             detection.setStatus(DetectionStatus.SUCCESS);
             detectionMapper.updateDetectionResult(detection);
@@ -114,6 +122,10 @@ public class DetectionService {
                 .categoryName(detection.getCategoryName())
                 .brand(detection.getBrand())
                 .modelName(detection.getModelName())
+                .color(detection.getColor())
+                .shape(detection.getShape())
+                .logoText(detection.getLogoText())
+                .keyFeatures(keyFeaturesFromJson(detection.getKeyFeaturesJson()))
                 .confidence(detection.getConfidence())
                 .status(detection.getStatus() == null ? null : detection.getStatus().name())
                 .createdAt(detection.getCreatedAt())
@@ -140,6 +152,10 @@ public class DetectionService {
                 .categoryName(detection.getCategoryName())
                 .brand(detection.getBrand())
                 .modelName(detection.getModelName())
+                .color(detection.getColor())
+                .shape(detection.getShape())
+                .logoText(detection.getLogoText())
+                .keyFeatures(keyFeaturesFromJson(detection.getKeyFeaturesJson()))
                 .confidence(detection.getConfidence())
                 .status(detection.getStatus() == null ? null : detection.getStatus().name())
                 .createdAt(detection.getCreatedAt())
@@ -164,14 +180,19 @@ public class DetectionService {
     private DetectionAnalyzeResponse enrichWithIntegratedCommerce(Detection detection, AiAnalysisResult aiResult) {
         DetectionAnalyzeResponse response = toAnalyzeResponse(detection);
         AiCommerceQueryResponse commerceQuery = aiResult.getCommerceQuery();
-        List<CommerceProductResponse> products = aiResult.getProducts() == null
-                ? List.of()
-                : aiResult.getProducts();
+        List<CommerceProductResponse> products = List.of();
 
-        try {
-            products = commerceService.persistProducts(products);
-        } catch (RuntimeException e) {
-            log.warn("[SyncShopper Commerce Products Result] product persistence failed detectionId={}", detection.getDetectionId(), e);
+        if (commerceQuery != null && commerceQuery.getPrimaryQuery() != null && !commerceQuery.getPrimaryQuery().isBlank()) {
+            try {
+                products = commerceService.getTop3Products(commerceQuery.getPrimaryQuery());
+            } catch (RuntimeException e) {
+                log.warn(
+                        "[SyncShopper Commerce Products Result] primary query search failed detectionId={} primaryQuery='{}'",
+                        detection.getDetectionId(),
+                        commerceQuery.getPrimaryQuery(),
+                        e
+                );
+            }
         }
 
         log.info(
@@ -187,8 +208,9 @@ public class DetectionService {
         );
 
         log.info(
-                "[SyncShopper Commerce Products Result] detectionId={} productCount={} products={}",
+                "[SyncShopper Commerce Products Result] detectionId={} source=PRIMARY_QUERY primaryQuery='{}' productCount={} products={}",
                 detection.getDetectionId(),
+                commerceQuery == null ? null : commerceQuery.getPrimaryQuery(),
                 products.size(),
                 products.stream()
                         .map(this::productDebugPayload)
@@ -196,6 +218,11 @@ public class DetectionService {
         );
 
         response.setCommerceQuery(commerceQuery);
+        response.setOcrAnalysis(aiResult.getOcrAnalysis());
+        response.setVisualAnalysis(aiResult.getVisualAnalysis());
+        response.setSearchIdentification(aiResult.getSearchIdentification());
+        response.setGoogleSearchResults(aiResult.getGoogleSearchResults());
+        response.setGoogleSourceCounts(aiResult.getGoogleSourceCounts());
         response.setProducts(products);
         response.setMessage(products.isEmpty()
                 ? "상품 분석은 완료되었지만 검색된 상품이 없습니다."
@@ -272,6 +299,10 @@ public class DetectionService {
                 .categoryName(detection.getCategoryName())
                 .brand(detection.getBrand())
                 .modelName(detection.getModelName())
+                .color(detection.getColor())
+                .shape(detection.getShape())
+                .logoText(detection.getLogoText())
+                .keyFeatures(keyFeaturesFromJson(detection.getKeyFeaturesJson()))
                 .confidence(detection.getConfidence())
                 .build();
     }
@@ -322,6 +353,18 @@ public class DetectionService {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException e) {
             return "{}";
+        }
+    }
+
+    private List<String> keyFeaturesFromJson(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+
+        try {
+            return objectMapper.readerForListOf(String.class).readValue(value);
+        } catch (Exception e) {
+            return List.of();
         }
     }
 

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -25,6 +26,10 @@ public class DetectionDetailResponse {
     private String categoryName;
     private String brand;
     private String modelName;
+    private String color;
+    private String shape;
+    private String logoText;
+    private List<String> keyFeatures;
     private Double confidence;
     private String status;
     private LocalDateTime createdAt;

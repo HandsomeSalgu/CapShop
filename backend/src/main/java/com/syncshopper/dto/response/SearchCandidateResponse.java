@@ -11,20 +11,21 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CommerceProductResponse {
+public class SearchCandidateResponse {
 
-    private Long productId;
-    private String title;
-    private String brand;
-    private String mallName;
-    private String categoryName;
-    private Integer price;
-    private String imageUrl;
-    private String thumbnailUrl;
-    private String affiliateUrl;
+    private Integer index;
     private String source;
-    private String externalProductId;
-    private String snippet;
+    private String sourceLabel;
     private String queryType;
     private String queryText;
+    private String title;
+    private String url;
+    private String imageUrl;
+    private String thumbnailUrl;
+    private String snippet;
+    private String price;
+    private String mallName;
+    private Double score;
+    private String matchLevel;
+    private String reason;
 }

@@ -25,6 +25,10 @@ public class Detection {
     private String categoryName;
     private String brand;
     private String modelName;
+    private String color;
+    private String shape;
+    private String logoText;
+    private String keyFeaturesJson;
     private Double confidence;
     private DetectionStatus status;
     private LocalDateTime createdAt;

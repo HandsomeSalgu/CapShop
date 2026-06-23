@@ -4,6 +4,7 @@ import com.syncshopper.dto.response.UserResponse;
 import com.syncshopper.security.CustomUserDetailsService;
 import com.syncshopper.security.JwtTokenProvider;
 import com.syncshopper.service.AuthService;
+import com.syncshopper.service.EmailVerificationService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @MockitoBean
+    private EmailVerificationService emailVerificationService;
 
     @Test
     void signupBindsJsonRequestBody() throws Exception {

@@ -270,6 +270,33 @@
   word-break: break-word;
 }
 
+.syncshopper-ai-evidence {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(187, 247, 208, 0.2);
+}
+
+.syncshopper-ai-evidence-row {
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  gap: 8px;
+  align-items: start;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.syncshopper-ai-evidence-label {
+  color: #86efac;
+  font-weight: 800;
+}
+
+.syncshopper-ai-evidence-value {
+  color: #e5e7eb;
+  word-break: break-word;
+}
+
 .syncshopper-recapture-button {
   width: 100%;
   margin-top: 10px;

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.DetectionSearchMapper">
+
+    <insert id="insertSearchQuery"
+            useGeneratedKeys="true"
+            keyProperty="queryId">
+        INSERT INTO search_queries (
+            job_id,
+            query_text,
+            query_type,
+            source_target
+        )
+        VALUES (
+            #{jobId},
+            #{queryText},
+            #{queryType},
+            #{sourceTarget}
+        )
+    </insert>
+
+    <insert id="insertSearchResult"
+            useGeneratedKeys="true"
+            keyProperty="resultId">
+        INSERT INTO search_results (
+            job_id,
+            query_id,
+            source,
+            title,
+            url,
+            image_url,
+            snippet,
+            price,
+            mall_name,
+            raw_json
+        )
+        VALUES (
+            #{jobId},
+            #{queryId},
+            #{source},
+            #{title},
+            #{url},
+            #{imageUrl},
+            #{snippet},
+            #{price},
+            #{mallName},
+            #{rawJson}
+        )
+    </insert>
+
+    <insert id="insertProductCandidate"
+            useGeneratedKeys="true"
+            keyProperty="candidateId">
+        INSERT INTO product_candidates (
+            job_id,
+            result_id,
+            product_name,
+            brand,
+            category,
+            image_url,
+            product_url,
+            price,
+            visual_score,
+            text_score,
+            final_score,
+            reason
+        )
+        VALUES (
+            #{jobId},
+            #{resultId},
+            #{productName},
+            #{brand},
+            #{category},
+            #{imageUrl},
+            #{productUrl},
+            #{price},
+            #{visualScore},
+            #{textScore},
+            #{finalScore},
+            #{reason}
+        )
+    </insert>
+
+</mapper>
