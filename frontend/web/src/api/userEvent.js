@@ -29,5 +29,21 @@ export const userEventApi = {
       console.error('Failed to log product detail view:', error)
       throw error
     }
+  },
+
+  /**
+   * 제휴 링크 클릭 이벤트 저장
+   * @param {Object} data - { productId, recommendationId, source, targetUrl, videoId, categoryName, brand }
+   */
+  logAffiliateClick: async (data) => {
+    try {
+      const response = await axios.post(`${BASE_URL}/affiliate-click`, data, {
+        headers: getHeaders()
+      })
+      return response.data
+    } catch (error) {
+      console.error('Failed to log affiliate click:', error)
+      // 링크 이동을 막지 않기 위해 에러는 던지지 않고 로깅만 함
+    }
   }
 }

@@ -121,8 +121,30 @@ const toggleWishlist = async () => {
   }
 }
 
-const goToLink = () => {
+const goToLink = async () => {
   if (product.value.link) {
+    if (authStore.isLoggedIn) {
+      try {
+        const stateDataStr = history.state?.productData
+        const stateData = stateDataStr ? JSON.parse(stateDataStr) : {}
+        
+        const payload = {
+          productId: product.value.id,
+          recommendationId: history.state?.recommendationId || null,
+          source: history.state?.sourcePage || 'PRODUCT_DETAIL',
+          targetUrl: product.value.link,
+          videoId: stateData.videoId || null,
+          categoryName: stateData.categoryName || stateData.category1 || null,
+          brand: stateData.brand || stateData.mallName || null
+        }
+        
+        // 백그라운드에서 API 호출 (await 하지 않음)
+        userEventApi.logAffiliateClick(payload)
+      } catch (err) {
+        console.error('Affiliate 클릭 이벤트 전송 실패:', err)
+      }
+    }
+
     window.open(product.value.link, '_blank')
   } else {
     alert('해당 상품의 외부 링크가 존재하지 않습니다.')
