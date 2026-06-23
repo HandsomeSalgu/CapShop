@@ -18,10 +18,12 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final JwtBlacklistService jwtBlacklistService;
     private final CustomUserDetailsService customUserDetailsService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, CustomUserDetailsService customUserDetailsService) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, JwtBlacklistService jwtBlacklistService, CustomUserDetailsService customUserDetailsService) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtBlacklistService = jwtBlacklistService;
         this.customUserDetailsService = customUserDetailsService;
     }
 
@@ -32,6 +34,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null) {
             try {
+                if (jwtBlacklistService.isBlacklisted(token)) {
+                    SecurityContextHolder.clearContext();
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 jwtTokenProvider.validateToken(token);
                 Long userId = jwtTokenProvider.getUserId(token);
                 UserDetails userDetails = customUserDetailsService.loadUserById(userId);

@@ -1,5 +1,7 @@
 package com.syncshopper.controller;
 
+import com.syncshopper.common.exception.CustomException;
+import com.syncshopper.common.exception.ErrorCode;
 import com.syncshopper.common.response.ApiResponse;
 import com.syncshopper.dto.request.EmailCodeRequest;
 import com.syncshopper.dto.request.EmailVerifyRequest;
@@ -14,7 +16,9 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -68,8 +72,17 @@ public class AuthController {
 
     @Operation(summary = "Logout")
     @PostMapping("/logout")
-    public ApiResponse<Void> logout() {
+    public ApiResponse<Void> logout(HttpServletRequest request) {
+        authService.logout(resolveToken(request));
         return ApiResponse.success("Logged out.");
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
     @Operation(summary = "Check email availability")

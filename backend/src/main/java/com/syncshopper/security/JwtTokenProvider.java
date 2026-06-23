@@ -71,6 +71,10 @@ public class JwtTokenProvider {
         return parseClaims(token).get("role", String.class);
     }
 
+    public Date getExpiration(String token) {
+        return parseClaims(token).getExpiration();
+    }
+
     public long getAccessTokenExpiration() {
         return accessTokenExpiration;
     }

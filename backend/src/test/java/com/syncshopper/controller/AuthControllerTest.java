@@ -2,6 +2,7 @@ package com.syncshopper.controller;
 
 import com.syncshopper.dto.response.UserResponse;
 import com.syncshopper.security.CustomUserDetailsService;
+import com.syncshopper.security.JwtBlacklistService;
 import com.syncshopper.security.JwtTokenProvider;
 import com.syncshopper.service.AuthService;
 import com.syncshopper.service.EmailVerificationService;
@@ -35,6 +36,9 @@ class AuthControllerTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @MockitoBean
+    private JwtBlacklistService jwtBlacklistService;
+
+    @MockitoBean
     private CustomUserDetailsService customUserDetailsService;
 
     @MockitoBean
@@ -66,5 +70,14 @@ class AuthControllerTest {
         assertThat(captor.getValue().getNickname()).isEqualTo("hwarang");
         assertThat(captor.getValue().getPhone()).isEqualTo("01012345678");
         assertThat(captor.getValue().getBirthDate().toString()).isEqualTo("2000-01-01");
+    }
+
+    @Test
+    void logoutPassesBearerTokenToService() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .header("Authorization", "Bearer access-token"))
+                .andExpect(status().isOk());
+
+        verify(authService).logout("access-token");
     }
 }

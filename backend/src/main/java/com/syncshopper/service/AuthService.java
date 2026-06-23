@@ -9,6 +9,7 @@ import com.syncshopper.dto.request.LoginRequest;
 import com.syncshopper.dto.request.SignupRequest;
 import com.syncshopper.dto.response.LoginResponse;
 import com.syncshopper.dto.response.UserResponse;
+import com.syncshopper.security.JwtBlacklistService;
 import com.syncshopper.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import org.springframework.security.core.Authentication;
@@ -23,12 +24,14 @@ public class AuthService {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final JwtBlacklistService jwtBlacklistService;
     private final EmailVerificationService emailVerificationService;
 
-    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, EmailVerificationService emailVerificationService) {
+    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, JwtBlacklistService jwtBlacklistService, EmailVerificationService emailVerificationService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtBlacklistService = jwtBlacklistService;
         this.emailVerificationService = emailVerificationService;
     }
 
@@ -103,6 +106,12 @@ public class AuthService {
 
         Long userId = Long.valueOf(authentication.getName());
         return UserResponse.from(userService.findById(userId));
+    }
+
+    public void logout(String accessToken) {
+        jwtTokenProvider.validateToken(accessToken);
+        jwtBlacklistService.blacklist(accessToken, jwtTokenProvider.getExpiration(accessToken));
+        SecurityContextHolder.clearContext();
     }
 
     public boolean checkEmailAvailability(String email) {
