@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.syncshopper.mapper.UserPreferenceMapper">
+
+    <insert id="insertUserPreference" useGeneratedKeys="true" keyProperty="preferenceId" parameterType="com.syncshopper.domain.user.UserPreference">
+        INSERT INTO user_preferences (
+            user_id,
+            category_id,
+            category_name,
+            brand,
+            price_min,
+            price_max,
+            created_at
+        ) VALUES (
+            #{userId},
+            #{categoryId},
+            #{categoryName},
+            #{brand},
+            #{priceMin},
+            #{priceMax},
+            NOW()
+        )
+    </insert>
+
+</mapper>

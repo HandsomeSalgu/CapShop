@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -50,4 +51,7 @@ public class SignupRequest {
 
     @Schema(description = "Social Signup Token", example = "eyJhbGciOiJIUzI1...", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String signupToken;
+
+    @Schema(description = "Preferred Categories", example = "[\"스마트폰 / 태블릿\", \"상의\"]", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private List<String> preferredCategories;
 }

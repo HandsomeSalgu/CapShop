@@ -231,7 +231,7 @@ const validatePasswordConfirm = () => {
   }
 }
 
-const submitSignup = async () => {
+const goStep3 = () => {
   if (!isEmailVerified.value) {
     formErrorMsg.value = '이메일 중복 확인을 진행해주세요.'
     return
@@ -245,10 +245,69 @@ const submitSignup = async () => {
     return
   }
   
-  // 간단한 날짜 조합 로직
+  step.value = 3
+}
+
+// --- Step 3: Category Selection ---
+const selectedCategories = ref([
+  { major: null, minor: null },
+  { major: null, minor: null },
+  { major: null, minor: null }
+])
+
+const activeSelection = ref({
+  index: 0,
+  type: 'major'
+})
+
+const categoryData = {
+  'IT / 전자기기': ['스마트폰 / 태블릿', '노트북 / PC', '음향기기', '스마트워치 / 웨어러블', '카메라 / 촬영장비'],
+  '패션 / 의류': ['상의', '하의', '아우터', '신발', '가방', '패션소품'],
+  '뷰티 / 스킨케어': ['스킨케어', '남성 화장품', '메이크업 / 베이스', '헤어 / 바디케어'],
+  '게임 / 취미': ['게임 타이틀', '게이밍 기어', '악기', '피규어 / 굿즈'],
+  '스포츠 / 아웃도어': ['아웃도어 의류', '클라이밍 / 등산', '캠핑 용품', '스포츠 용품 / 잡화', '수상 스포츠 / 서핑'],
+  '인테리어 / 리빙': ['가구', '조명', '홈데코 / 소품', '침구 / 패브릭', '주방용품'],
+  '식품 / e쿠폰': ['가공식품 / 간식', '음료 / 커피', '모바일 교환권']
+}
+
+const currentCategoryList = computed(() => {
+  if (activeSelection.value.type === 'major') {
+    return Object.keys(categoryData)
+  } else {
+    const selectedMajor = selectedCategories.value[activeSelection.value.index].major
+    return selectedMajor ? categoryData[selectedMajor] : []
+  }
+})
+
+const selectCategoryItem = (item) => {
+  const { index, type } = activeSelection.value
+  if (type === 'major') {
+    selectedCategories.value[index].major = item
+    selectedCategories.value[index].minor = null
+    activeSelection.value.type = 'minor'
+  } else {
+    selectedCategories.value[index].minor = item
+  }
+}
+
+const setActiveSelection = (index, type) => {
+  activeSelection.value = { index, type }
+}
+
+const submitSignup = async () => {
+  const hasSelectedAny = selectedCategories.value.some(cat => cat.major !== null)
+  if (!hasSelectedAny) {
+    const confirmProceed = confirm('아무것도 선택안하면 초반에 추천 시스템을 원활하게 이용할 수 없는데 괜찮으시겠습니까?')
+    if (!confirmProceed) return
+  }
+
   const paddedMonth = String(birthMonth.value).padStart(2, '0')
   const paddedDay = String(birthDay.value).padStart(2, '0')
   const birthDateStr = `${birthYear.value}-${paddedMonth}-${paddedDay}`
+
+  const selectedMinorCategories = selectedCategories.value
+    .filter(cat => cat.minor !== null)
+    .map(cat => cat.minor)
 
   try {
     const payload = {
@@ -256,7 +315,8 @@ const submitSignup = async () => {
       password: password.value,
       nickname: name.value,
       phone: phone.value,
-      birthDate: birthDateStr
+      birthDate: birthDateStr,
+      preferredCategories: selectedMinorCategories
     }
     
     if (signupToken.value) {
@@ -264,7 +324,7 @@ const submitSignup = async () => {
     }
 
     await axios.post('/api/auth/signup', payload)
-    step.value = 3
+    step.value = 4
   } catch (error) {
     if (error.response && error.response.data && error.response.data.message) {
       formErrorMsg.value = error.response.data.message
@@ -273,6 +333,7 @@ const submitSignup = async () => {
     }
   }
 }
+
 
 // --- Step 3: Complete ---
 const goLogin = () => {
@@ -409,12 +470,76 @@ const goLogin = () => {
 
       <div class="btn-group">
         <button class="btn-outline" @click="step = 1">뒤로가기</button>
-        <button class="btn-primary" @click="submitSignup">다음으로</button>
+        <button class="btn-primary" @click="goStep3">다음으로</button>
       </div>
     </div>
 
-    <!-- Step 3: Complete -->
-    <div v-else-if="step === 3" class="signup-card center-card">
+    <!-- Step 3: Categories -->
+    <div v-else-if="step === 3" class="signup-card category-card">
+      <div class="signup-header">
+        <h2>관심 카테고리 선택</h2>
+        <p class="subtitle">관심 카테고리를 선택해주세요</p>
+      </div>
+
+      <div class="category-selection-container">
+        <!-- Left Panel: Selected Slots -->
+        <div class="category-slots">
+          <div 
+            v-for="(cat, idx) in selectedCategories" 
+            :key="idx" 
+            class="category-slot"
+          >
+            <div class="slot-label">관심 카테고리 {{ idx + 1 }}</div>
+            <div 
+              class="slot-box" 
+              :class="{ active: activeSelection.index === idx && activeSelection.type === 'major' }"
+              @click="setActiveSelection(idx, 'major')"
+            >
+              {{ cat.major || '대분류 선택' }}
+            </div>
+            <div 
+              class="slot-box minor" 
+              :class="{ active: activeSelection.index === idx && activeSelection.type === 'minor', disabled: !cat.major }"
+              @click="cat.major ? setActiveSelection(idx, 'minor') : null"
+            >
+              {{ cat.minor || '소분류 선택' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Selection List -->
+        <div class="category-options-panel">
+          <h3>
+            {{ activeSelection.type === 'major' ? '대분류 선택창' : '소분류 선택창' }}
+            <span v-if="activeSelection.type === 'minor' && selectedCategories[activeSelection.index].major">
+              ({{ selectedCategories[activeSelection.index].major }})
+            </span>
+          </h3>
+          <div class="options-grid">
+            <button 
+              v-for="item in currentCategoryList" 
+              :key="item"
+              class="option-btn"
+              :class="{ selected: activeSelection.type === 'major' ? selectedCategories[activeSelection.index].major === item : selectedCategories[activeSelection.index].minor === item }"
+              @click="selectCategoryItem(item)"
+            >
+              {{ item }}
+            </button>
+            <div v-if="currentCategoryList.length === 0" class="empty-options">
+              대분류를 먼저 선택해주세요.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-outline" @click="step = 2">뒤로가기</button>
+        <button class="btn-primary" @click="submitSignup">가입하기</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Complete -->
+    <div v-else-if="step === 4" class="signup-card center-card">
       <div class="complete-icon">
         <i class="fa-solid fa-circle-check"></i>
       </div>
@@ -634,5 +759,125 @@ const goLogin = () => {
 
 .btn-large {
   width: 100%;
+}
+
+/* Category Selection UI */
+.category-card {
+  max-width: 800px;
+}
+
+.category-selection-container {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+  min-height: 350px;
+}
+
+.category-slots {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.category-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.slot-label {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--text-color);
+  margin-bottom: 5px;
+}
+
+.slot-box {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+
+.slot-box:hover:not(.disabled) {
+  border-color: var(--primary-color);
+  background-color: #f0f7ff;
+}
+
+.slot-box.active {
+  border-color: var(--primary-color);
+  background-color: #e6f0ff;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.slot-box.minor {
+  margin-top: 2px;
+}
+
+.slot-box.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #eee;
+}
+
+.category-options-panel {
+  flex: 2;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.category-options-panel h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  color: #333;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  align-content: start;
+  flex-grow: 1;
+}
+
+.option-btn {
+  padding: 12px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.option-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.option-btn.selected {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.empty-options {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #888;
+  margin-top: 40px;
 }
 </style>
