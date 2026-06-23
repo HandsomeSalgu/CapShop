@@ -16,10 +16,12 @@ export const wishlistApi = {
   /**
    * 상품을 위시리스트에 추가
    * @param {number|string} productId 
+   * @param {string} sourcePage
    */
-  addWishlist: async (productId) => {
+  addWishlist: async (productId, sourcePage = 'UNKNOWN') => {
     try {
-      const response = await axios.post(`${BASE_URL}/${productId}`, {}, {
+      const response = await axios.post(`${BASE_URL}/${productId}`, null, {
+        params: { sourcePage },
         headers: getHeaders()
       })
       return response.data
@@ -32,10 +34,12 @@ export const wishlistApi = {
   /**
    * 상품을 위시리스트에서 제거
    * @param {number|string} productId 
+   * @param {string} sourcePage
    */
-  removeWishlist: async (productId) => {
+  removeWishlist: async (productId, sourcePage = 'UNKNOWN') => {
     try {
       const response = await axios.delete(`${BASE_URL}/${productId}`, {
+        params: { sourcePage },
         headers: getHeaders()
       })
       return response.data
