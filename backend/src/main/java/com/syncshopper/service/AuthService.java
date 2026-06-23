@@ -11,6 +11,8 @@ import com.syncshopper.dto.request.LoginRequest;
 import com.syncshopper.dto.request.SignupRequest;
 import com.syncshopper.dto.response.LoginResponse;
 import com.syncshopper.dto.response.UserResponse;
+import com.syncshopper.mapper.CategoryMapper;
+import com.syncshopper.mapper.UserPreferenceMapper;
 import com.syncshopper.security.JwtBlacklistService;
 import com.syncshopper.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
@@ -33,7 +35,7 @@ public class AuthService {
     private final CategoryMapper categoryMapper;
     private final UserPreferenceMapper userPreferenceMapper;
 
-    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, JwtBlacklistService jwtBlacklistService, EmailVerificationService emailVerificationService) {
+    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, JwtBlacklistService jwtBlacklistService, EmailVerificationService emailVerificationService, CategoryMapper categoryMapper, UserPreferenceMapper userPreferenceMapper) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
