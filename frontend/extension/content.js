@@ -15,6 +15,7 @@ const ANALYSIS_PROGRESS_MESSAGES = [
 const ANALYSIS_PROGRESS_STEP_MS = 2400;
 
 let currentVideo = null;
+let captureLauncher = null;
 let captureButton = null;
 let observer = null;
 let captureOverlay = null;
@@ -39,10 +40,14 @@ function createCaptureButton() {
   button.id = "syncshopper-capture-button";
   button.type = "button";
   button.textContent = "상품 캡쳐";
-  button.style.display = "none";
 
   button.addEventListener("click", async () => {
     console.log("[SyncShopper] capture button clicked");
+
+    if (!prepareVideoForCapture()) {
+      showToast("영상 화면을 찾을 수 없습니다.", "warning");
+      return;
+    }
 
     if (await isLoggedIn()) {
       startAreaSelection();
@@ -50,27 +55,91 @@ function createCaptureButton() {
     }
 
     showLoginPanel(() => {
-      startAreaSelection();
+      if (prepareVideoForCapture()) {
+        startAreaSelection();
+        return;
+      }
+
+      showToast("영상 화면을 찾을 수 없습니다.", "warning");
     });
   });
 
-  document.body.appendChild(button);
   captureButton = button;
 
   return captureButton;
 }
 
-function showCaptureButton() {
+function createCaptureLauncher() {
+  const existingLauncher = document.getElementById("syncshopper-capture-launcher");
+
+  if (existingLauncher) {
+    captureLauncher = existingLauncher;
+    return captureLauncher;
+  }
+
+  const launcher = document.createElement("aside");
+  launcher.id = "syncshopper-capture-launcher";
+  launcher.setAttribute("aria-label", "SyncShopper capture launcher");
+
+  const title = document.createElement("div");
+  title.className = "syncshopper-launcher-title";
+  title.textContent = "CapShop";
+
+  const description = document.createElement("p");
+  description.className = "syncshopper-launcher-description";
+  description.textContent = "영상 속 상품을 바로 캡쳐하세요.";
+
   const button = createCaptureButton();
-  button.style.display = "block";
+
+  launcher.appendChild(title);
+  launcher.appendChild(description);
+  launcher.appendChild(button);
+  document.body.appendChild(launcher);
+  captureLauncher = launcher;
+
+  return captureLauncher;
+}
+
+function showCaptureButton() {
+  const launcher = createCaptureLauncher();
+  launcher.hidden = false;
 }
 
 function hideCaptureButton() {
-  const button = document.getElementById("syncshopper-capture-button");
+  const launcher = document.getElementById("syncshopper-capture-launcher");
 
-  if (button) {
-    button.style.display = "none";
+  if (launcher) {
+    launcher.hidden = true;
   }
+}
+
+function isSupportedYouTubePage() {
+  return Boolean(getYouTubeVideoId());
+}
+
+function updateCaptureLauncherVisibility() {
+  if (isSupportedYouTubePage()) {
+    showCaptureButton();
+    return;
+  }
+
+  hideCaptureButton();
+}
+
+function prepareVideoForCapture() {
+  const video = currentVideo || document.querySelector("video");
+
+  if (!video) {
+    return false;
+  }
+
+  currentVideo = video;
+
+  if (!video.paused) {
+    video.pause();
+  }
+
+  return true;
 }
 
 function bindVideoEvents(video) {
@@ -78,23 +147,24 @@ function bindVideoEvents(video) {
     return;
   }
 
+  currentVideo = video;
+
   if (video.dataset.syncShopperBound === "true") {
+    updateCaptureLauncherVisibility();
     return;
   }
 
-  currentVideo = video;
   video.dataset.syncShopperBound = "true";
 
   console.log("[SyncShopper] video element found", video);
+  updateCaptureLauncherVisibility();
 
   video.addEventListener("pause", () => {
     console.log("[SyncShopper] video paused");
-    showCaptureButton();
   });
 
   video.addEventListener("play", () => {
     console.log("[SyncShopper] video played");
-    hideCaptureButton();
     removeAreaSelectionOverlay();
   });
 }
@@ -180,6 +250,7 @@ function startAreaSelection() {
     if (rect.width < 30 || rect.height < 30) {
       console.warn("[SyncShopper] selected area is too small");
       showToast("선택 영역이 너무 작습니다.", "warning");
+      updateCaptureLauncherVisibility();
       return;
     }
 
@@ -370,6 +441,7 @@ function createCaptureResultPanel() {
   closeButton.addEventListener("click", () => {
     stopAnalysisProgressSequence();
     panel.remove();
+    updateCaptureLauncherVisibility();
   });
 
   const previewTitle = document.createElement("h3");
@@ -847,7 +919,7 @@ function showLoginPanel(onLoginSuccess) {
   closeButton.addEventListener("click", () => {
     pendingLoginSuccessCallback = null;
     panel.remove();
-    showCaptureButton();
+    updateCaptureLauncherVisibility();
   });
 
   const title = document.createElement("h2");
@@ -1185,7 +1257,7 @@ function requestDetectionAnalyze({ requestUrl, accessToken, requestBody }) {
 }
 
 function initSyncShopperExtension() {
-  createCaptureButton();
+  updateCaptureLauncherVisibility();
 
   const found = findAndBindVideo();
 
@@ -1204,6 +1276,7 @@ window.addEventListener("yt-navigate-finish", () => {
 
   setTimeout(() => {
     findAndBindVideo();
+    updateCaptureLauncherVisibility();
   }, 500);
 });
 
