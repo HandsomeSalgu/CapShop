@@ -40,6 +40,10 @@ public class WishlistService {
         return PageResponse.of(products, pageRequest.page(), pageRequest.size(), totalCount);
     }
 
+    public boolean checkWishlist(Long userId, Long productId) {
+        return wishlistMapper.findByUserIdAndProductId(userId, productId) != null;
+    }
+
     @Transactional
     public void addWishlist(Long userId, Long productId) {
         ensureVisibleProduct(productId);

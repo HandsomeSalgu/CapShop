@@ -53,6 +53,15 @@ public class WishlistController {
         return ApiResponse.success("Wishlist removed successfully.");
     }
 
+    @Operation(summary = "Check if product is in my wishlist")
+    @GetMapping("/check/{productId}")
+    public ApiResponse<Boolean> checkWishlist(@PathVariable Long productId) {
+        return ApiResponse.success(
+                "Wishlist status checked successfully.",
+                wishlistService.checkWishlist(currentUserId(), productId)
+        );
+    }
+
     private Long currentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
