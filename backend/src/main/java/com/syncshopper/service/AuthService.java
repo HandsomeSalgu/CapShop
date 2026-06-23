@@ -2,13 +2,17 @@ package com.syncshopper.service;
 
 import com.syncshopper.common.exception.CustomException;
 import com.syncshopper.common.exception.ErrorCode;
+import com.syncshopper.domain.product.Category;
 import com.syncshopper.domain.user.AuthProvider;
 import com.syncshopper.domain.user.User;
+import com.syncshopper.domain.user.UserPreference;
 import com.syncshopper.domain.user.UserStatus;
 import com.syncshopper.dto.request.LoginRequest;
 import com.syncshopper.dto.request.SignupRequest;
 import com.syncshopper.dto.response.LoginResponse;
 import com.syncshopper.dto.response.UserResponse;
+import com.syncshopper.mapper.CategoryMapper;
+import com.syncshopper.mapper.UserPreferenceMapper;
 import com.syncshopper.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import org.springframework.security.core.Authentication;
@@ -17,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 public class AuthService {
 
@@ -24,16 +30,21 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final EmailVerificationService emailVerificationService;
+    private final CategoryMapper categoryMapper;
+    private final UserPreferenceMapper userPreferenceMapper;
 
-    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, EmailVerificationService emailVerificationService) {
+    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, EmailVerificationService emailVerificationService, CategoryMapper categoryMapper, UserPreferenceMapper userPreferenceMapper) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.emailVerificationService = emailVerificationService;
+        this.categoryMapper = categoryMapper;
+        this.userPreferenceMapper = userPreferenceMapper;
     }
 
     @Transactional
     public UserResponse signup(SignupRequest request) {
+        User user;
         if (request.getSignupToken() != null && !request.getSignupToken().isEmpty()) {
             Claims claims = jwtTokenProvider.parseSignupToken(request.getSignupToken());
             String email = claims.get("email", String.class);
@@ -46,7 +57,7 @@ public class AuthService {
             }
 
             String encodedPassword = passwordEncoder.encode(request.getPassword());
-            User user = userService.createSocialUserWithDetails(
+            user = userService.createSocialUserWithDetails(
                     email,
                     encodedPassword,
                     AuthProvider.valueOf(providerStr),
@@ -55,20 +66,36 @@ public class AuthService {
                     profileImageUrl,
                     request.getPhone(),
                     request.getBirthDate());
-            return UserResponse.from(user);
+        } else {
+            if (userService.existsByEmail(request.getEmail())) {
+                throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+            }
+
+            String encodedPassword = passwordEncoder.encode(request.getPassword());
+            user = userService.createLocalUser(
+                    request.getEmail(),
+                    encodedPassword,
+                    request.getNickname(),
+                    request.getPhone(),
+                    request.getBirthDate());
         }
 
-        if (userService.existsByEmail(request.getEmail())) {
-            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        // Save User Preferences
+        List<String> preferredCategories = request.getPreferredCategories();
+        if (preferredCategories != null && !preferredCategories.isEmpty()) {
+            for (String categoryName : preferredCategories) {
+                Category category = categoryMapper.findByName(categoryName);
+                if (category != null) {
+                    UserPreference userPreference = UserPreference.builder()
+                            .userId(user.getUserId())
+                            .categoryId(category.getCategoryId())
+                            .categoryName(category.getName())
+                            .build();
+                    userPreferenceMapper.insertUserPreference(userPreference);
+                }
+            }
         }
 
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
-        User user = userService.createLocalUser(
-                request.getEmail(),
-                encodedPassword,
-                request.getNickname(),
-                request.getPhone(),
-                request.getBirthDate());
         return UserResponse.from(user);
     }
 

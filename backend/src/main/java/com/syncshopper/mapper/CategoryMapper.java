@@ -9,4 +9,5 @@ import java.util.List;
 public interface CategoryMapper {
 
     List<Category> findVisibleCategories();
+    Category findByName(String name);
 }
