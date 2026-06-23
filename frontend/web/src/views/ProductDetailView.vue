@@ -99,13 +99,15 @@ const toggleWishlist = async () => {
     return
   }
   
+  const sourcePage = history.state.sourcePage || 'PRODUCT_DETAIL'
+  
   try {
     if (isWishlisted.value) {
-      await wishlistApi.removeWishlist(product.value.id)
+      await wishlistApi.removeWishlist(product.value.id, sourcePage)
       isWishlisted.value = false
       alert('위시리스트에서 상품이 제거되었습니다.')
     } else {
-      await wishlistApi.addWishlist(product.value.id)
+      await wishlistApi.addWishlist(product.value.id, sourcePage)
       isWishlisted.value = true
       alert('위시리스트에 상품이 추가되었습니다.')
     }
