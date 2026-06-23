@@ -488,16 +488,59 @@ CREATE TABLE affiliate_clicks (
 -- Initial Category Data
 -- =========================================================
 
-INSERT INTO categories (name, parent_id, visible_yn)
-VALUES
-('패션', NULL, 'Y'),
-('뷰티', NULL, 'Y'),
-('전자기기', NULL, 'Y'),
-('가구/인테리어', NULL, 'Y'),
-('스포츠/아웃도어', NULL, 'Y'),
-('식품', NULL, 'Y'),
-('취미/키덜트', NULL, 'Y'),
-('자동차용품', NULL, 'Y');
+INSERT INTO categories (category_id, name, parent_id, visible_yn) VALUES
+-- 1. IT / 전자기기
+(1, 'IT / 전자기기', NULL, 'Y'),
+(11, '스마트폰 / 태블릿', 1, 'Y'),
+(12, '노트북 / PC', 1, 'Y'),
+(13, '음향기기', 1, 'Y'),
+(14, '스마트워치 / 웨어러블', 1, 'Y'),
+(15, '카메라 / 촬영장비', 1, 'Y'),
+
+-- 2. 패션 / 의류
+(2, '패션 / 의류', NULL, 'Y'),
+(21, '상의', 2, 'Y'),
+(22, '하의', 2, 'Y'),
+(23, '아우터', 2, 'Y'),
+(24, '신발', 2, 'Y'),
+(25, '가방', 2, 'Y'),
+(26, '패션소품', 2, 'Y'),
+
+-- 3. 뷰티 / 스킨케어
+(3, '뷰티 / 스킨케어', NULL, 'Y'),
+(31, '스킨케어', 3, 'Y'),
+(32, '남성 화장품', 3, 'Y'),
+(33, '메이크업 / 베이스', 3, 'Y'),
+(34, '헤어 / 바디케어', 3, 'Y'),
+
+-- 4. 게임 / 취미
+(4, '게임 / 취미', NULL, 'Y'),
+(41, '게임 타이틀', 4, 'Y'),
+(42, '게이밍 기어', 4, 'Y'),
+(43, '악기', 4, 'Y'),
+(44, '피규어 / 굿즈', 4, 'Y'),
+
+-- 5. 스포츠 / 아웃도어
+(5, '스포츠 / 아웃도어', NULL, 'Y'),
+(51, '아웃도어 의류', 5, 'Y'),
+(52, '클라이밍 / 등산', 5, 'Y'),
+(53, '캠핑 용품', 5, 'Y'),
+(54, '스포츠 용품 / 잡화', 5, 'Y'),
+(55, '수상 스포츠 / 서핑', 5, 'Y'),
+
+-- 6. 인테리어 / 리빙
+(6, '인테리어 / 리빙', NULL, 'Y'),
+(61, '가구', 6, 'Y'),
+(62, '조명', 6, 'Y'),
+(63, '홈데코 / 소품', 6, 'Y'),
+(64, '침구 / 패브릭', 6, 'Y'),
+(65, '주방용품', 6, 'Y'),
+
+-- 7. 식품 / e쿠폰
+(7, '식품 / e쿠폰', NULL, 'Y'),
+(71, '가공식품 / 간식', 7, 'Y'),
+(72, '음료 / 커피', 7, 'Y'),
+(73, '모바일 교환권', 7, 'Y');
 
 
 -- =========================================================
@@ -507,37 +550,37 @@ VALUES
 INSERT INTO products
 (product_id, title, brand, category_id, category_name, price, image_url, affiliate_url, description, source, review_count, rating, visible_yn, created_at, updated_at)
 VALUES
-(1, 'Nike Air Force 1', 'Nike', 1, '패션', 129000,
+(1, 'Nike Air Force 1', 'Nike', 24, '신발', 129000,
  'https://example.com/nike-air-force.jpg',
  'https://example.com/buy/nike-air-force',
  '클래식한 디자인의 Nike Air Force 1 스니커즈입니다.',
  'MOCK', 120, 4.8, 'Y', NOW(), NOW()),
 
-(2, 'Adidas Samba OG', 'Adidas', 1, '패션', 139000,
+(2, 'Adidas Samba OG', 'Adidas', 24, '신발', 139000,
  'https://example.com/adidas-samba.jpg',
  'https://example.com/buy/adidas-samba',
  '데일리 코디에 어울리는 Adidas Samba OG 스니커즈입니다.',
  'MOCK', 95, 4.6, 'Y', NOW(), NOW()),
 
-(3, 'Apple AirPods Pro 2', 'Apple', 3, '전자기기', 329000,
+(3, 'Apple AirPods Pro 2', 'Apple', 13, '음향기기', 329000,
  'https://example.com/airpods-pro.jpg',
  'https://example.com/buy/airpods-pro',
  '노이즈 캔슬링을 지원하는 Apple AirPods Pro 2입니다.',
  'MOCK', 310, 4.9, 'Y', NOW(), NOW()),
 
-(4, 'Dyson Supersonic Hair Dryer', 'Dyson', 2, '뷰티', 499000,
+(4, 'Dyson Supersonic Hair Dryer', 'Dyson', 34, '헤어 / 바디케어', 499000,
  'https://example.com/dyson-hair-dryer.jpg',
  'https://example.com/buy/dyson-hair-dryer',
  '빠른 건조와 스타일링을 지원하는 Dyson 헤어드라이어입니다.',
  'MOCK', 180, 4.7, 'Y', NOW(), NOW()),
 
-(5, 'Sony WH-1000XM5', 'Sony', 3, '전자기기', 459000,
+(5, 'Sony WH-1000XM5', 'Sony', 13, '음향기기', 459000,
  'https://example.com/sony-wh1000xm5.jpg',
  'https://example.com/buy/sony-wh1000xm5',
  '고성능 노이즈 캔슬링 무선 헤드폰입니다.',
  'MOCK', 260, 4.8, 'Y', NOW(), NOW()),
 
-(6, 'New Balance 530', 'New Balance', 1, '패션', 119000,
+(6, 'New Balance 530', 'New Balance', 24, '신발', 119000,
  'https://example.com/new-balance-530.jpg',
  'https://example.com/buy/new-balance-530',
  '편안한 착화감의 New Balance 530 운동화입니다.',
