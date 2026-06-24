@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from app.core.config import settings
 from app.services.graph.candidate_utils import _merge_best_candidates
 from app.services.graph.state import ShoppingAnalysisState
-from app.services.scoring.visual_score import _fallback_visual_rerank, _gpt_visual_rerank
+from app.services.scoring.visual_score import _fallback_visual_rerank, _gemini_visual_rerank
 
 
 def _visual_reranker_node(state: ShoppingAnalysisState) -> dict[str, Any]:
@@ -19,12 +19,12 @@ def _visual_reranker_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     provider = settings.ai_visual_reranker_provider.lower()
     if provider == "mock":
         reranked = _fallback_visual_rerank(candidates)
-    elif provider == "gpt":
-        should_skip, score_stats = _should_skip_gpt_visual_rerank(candidates)
+    elif provider == "gemini":
+        should_skip, score_stats = _should_skip_gemini_visual_rerank(candidates)
         if should_skip:
             print(
                 "\n[SyncShopper Visual Reranker] "
-                "skipped GPT visual rerank because text score was strong enough "
+                "skipped Gemini visual rerank because text score was strong enough "
                 f"candidate_count={len(candidates)} "
                 f"top_text_score={score_stats['top_text_score']:.3f} "
                 f"top3_avg_text_score={score_stats['top3_avg_text_score']:.3f} "
@@ -34,10 +34,10 @@ def _visual_reranker_node(state: ShoppingAnalysisState) -> dict[str, Any]:
             )
             reranked = _fallback_visual_rerank(
                 candidates,
-                visual_reason="skipped GPT visual rerank because text score was strong enough",
+                visual_reason="skipped Gemini visual rerank because text score was strong enough",
             )
         else:
-            reranked = _gpt_visual_rerank(state["request"], state["frame_analysis"], candidates)
+            reranked = _gemini_visual_rerank(state["request"], state["frame_analysis"], candidates)
     else:
         raise HTTPException(
             status_code=500,
@@ -56,7 +56,7 @@ def _visual_reranker_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     }
 
 
-def _should_skip_gpt_visual_rerank(candidates: list[Any]) -> tuple[bool, dict[str, float]]:
+def _should_skip_gemini_visual_rerank(candidates: list[Any]) -> tuple[bool, dict[str, float]]:
     text_scores = sorted(
         [float(getattr(candidate, "text_score", 0.0) or 0.0) for candidate in candidates],
         reverse=True,

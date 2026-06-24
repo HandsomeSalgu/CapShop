@@ -6,8 +6,14 @@ services:
       - 'MYSQL_ROOT_PASSWORD=potato'
     ports:
       - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
 
   redis:
     image: 'redis:latest'
     ports:
       - '6379:6379'
+
+volumes:
+  mysql_data:

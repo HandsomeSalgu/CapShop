@@ -2,11 +2,11 @@ import json
 import re
 from typing import Any, Optional
 
-import httpx
 from fastapi import HTTPException
 
 from app.core.config import settings
 from app.schemas.commerce_query_schema import CommerceQueryRequest, CommerceQueryResponse
+from app.services.gemini_client import call_chat_completion
 from app.services.prompts.query_prompt import COMMERCE_QUERY_SYSTEM_PROMPT, build_commerce_query_user_prompt
 
 
@@ -506,21 +506,17 @@ def _generate_mock_commerce_query(request: CommerceQueryRequest) -> CommerceQuer
     ), provider="mock")
 
 
-def _build_payload(request: CommerceQueryRequest) -> dict[str, Any]:
-    return {
-        "model": settings.gms_openai_query_model,
-        "messages": [
-            {
-                "role": "developer",
-                "content": COMMERCE_QUERY_SYSTEM_PROMPT,
-            },
-            {
-                "role": "user",
-                "content": build_commerce_query_user_prompt(request),
-            },
-        ],
-        "temperature": 0.2,
-    }
+def _build_messages(request: CommerceQueryRequest) -> list[dict[str, Any]]:
+    return [
+        {
+            "role": "developer",
+            "content": COMMERCE_QUERY_SYSTEM_PROMPT,
+        },
+        {
+            "role": "user",
+            "content": build_commerce_query_user_prompt(request),
+        },
+    ]
 
 
 def _truncate(value: str, max_length: int = 500) -> str:
@@ -556,8 +552,8 @@ def _print_query_debug(
             "timestamp_sec": request.timestamp_sec,
         },
         "provider": provider or settings.ai_commerce_query_provider,
-        "model": settings.gms_openai_query_model,
-        "gpt_raw_content": _truncate(raw_content, 2000) if raw_content is not None else None,
+        "model": settings.gemini_query_model,
+        "ai_raw_content": _truncate(raw_content, 2000) if raw_content is not None else None,
         "parsed_query": parsed,
         "normalized_query": _response_to_dict(response),
     }
@@ -583,66 +579,17 @@ def generate_commerce_query(request: CommerceQueryRequest) -> CommerceQueryRespo
     if provider == "mock":
         return _generate_mock_commerce_query(request)
 
-    if provider != "gpt":
+    if provider != "gemini":
         raise HTTPException(
             status_code=500,
             detail=f"Unsupported AI_COMMERCE_QUERY_PROVIDER: {settings.ai_commerce_query_provider}",
         )
 
-    if not settings.gms_openai_api_key:
-        raise HTTPException(
-            status_code=500,
-            detail="GMS_OPENAI_API_KEY is not configured",
-        )
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {settings.gms_openai_api_key}",
-    }
-
-    try:
-        with httpx.Client(timeout=settings.gms_openai_timeout_sec) as client:
-            response = client.post(
-                settings.gms_openai_chat_completions_url,
-                headers=headers,
-                json=_build_payload(request),
-            )
-    except httpx.TimeoutException as exc:
-        raise HTTPException(
-            status_code=504,
-            detail="Commerce query generation request timed out",
-        ) from exc
-    except httpx.RequestError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Commerce query generation request failed: {str(exc)}",
-        ) from exc
-
-    if response.status_code >= 400:
-        raise HTTPException(
-            status_code=502,
-            detail=(
-                f"Commerce query generation API error: {response.status_code} "
-                f"url={settings.gms_openai_chat_completions_url} "
-                f"model={settings.gms_openai_query_model} {_truncate(response.text)}"
-            ),
-        )
-
-    try:
-        response_json = response.json()
-    except json.JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Commerce query generation API returned non-JSON response: {_truncate(response.text)}",
-        ) from exc
-
-    try:
-        content = response_json["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Unexpected commerce query response format: {_truncate(json.dumps(response_json, ensure_ascii=False))}",
-        ) from exc
+    content = call_chat_completion(
+        _build_messages(request),
+        model=settings.gemini_query_model,
+        temperature=0.2,
+    )
 
     parsed = _extract_json_content(content)
     normalized = _normalize_response(parsed, request)

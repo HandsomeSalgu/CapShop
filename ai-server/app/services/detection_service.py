@@ -2,7 +2,7 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.schemas.detection_schema import AnalyzeFrameRequest, AnalyzeFrameResponse
-from app.services.gpt_vision_detection_service import analyze_frame_with_gpt_vision
+from app.services.gemini_vision_detection_service import analyze_frame_with_gemini_vision
 from app.services.mock_detection_service import analyze_frame_mock
 from app.utils.image_utils import is_valid_base64_image
 
@@ -19,8 +19,8 @@ def analyze_frame(request: AnalyzeFrameRequest) -> AnalyzeFrameResponse:
     if provider == "mock":
         return analyze_frame_mock(request)
 
-    if provider == "gpt":
-        return analyze_frame_with_gpt_vision(request)
+    if provider == "gemini":
+        return analyze_frame_with_gemini_vision(request)
 
     raise HTTPException(
         status_code=500,

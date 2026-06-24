@@ -13,7 +13,7 @@ from app.schemas.analysis_graph_schema import (
     VisualFeatureAnalysisResult,
 )
 from app.schemas.detection_schema import AnalyzeFrameRequest, AnalyzeFrameResponse
-from app.services.gms_openai_client import call_chat_completion, extract_json_object
+from app.services.gemini_client import call_chat_completion, extract_json_object
 from app.services.prompts.judge_prompt import SEARCH_IDENTIFICATION_PROMPT
 from app.services.prompts.ocr_prompt import OCR_SYSTEM_PROMPT, build_ocr_user_prompt
 from app.services.prompts.visual_prompt import VISUAL_SYSTEM_PROMPT, build_visual_user_prompt
@@ -23,7 +23,7 @@ def analyze_ocr(request: AnalyzeFrameRequest) -> OcrAnalysisResult:
     provider = settings.ai_detection_provider.lower()
     if provider == "mock":
         return _mock_ocr(request)
-    if provider != "gpt":
+    if provider != "gemini":
         raise HTTPException(status_code=500, detail=f"Unsupported AI_DETECTION_PROVIDER: {settings.ai_detection_provider}")
 
     parsed = _call_image_json(
@@ -41,7 +41,7 @@ def analyze_visual_features(request: AnalyzeFrameRequest) -> VisualFeatureAnalys
     provider = settings.ai_detection_provider.lower()
     if provider == "mock":
         return _mock_visual(request)
-    if provider != "gpt":
+    if provider != "gemini":
         raise HTTPException(status_code=500, detail=f"Unsupported AI_DETECTION_PROVIDER: {settings.ai_detection_provider}")
 
     parsed = _call_image_json(
@@ -96,7 +96,7 @@ def identify_from_search(
     google_results: list[GoogleSearchResult],
 ) -> SearchIdentificationResult:
     provider = settings.ai_detection_provider.lower()
-    if provider != "gpt" or not settings.gms_openai_api_key:
+    if provider != "gemini" or not settings.gemini_api_key:
         return _fallback_identification(frame_analysis, ocr, visual, naver_candidates, google_results)
 
     payload = {
@@ -117,7 +117,7 @@ def identify_from_search(
                 ),
             },
         ],
-        model=settings.gms_openai_query_model,
+        model=settings.gemini_query_model,
         temperature=0.1,
     )
     parsed = extract_json_object(raw_content)
@@ -164,7 +164,7 @@ def _call_image_json(
                 ],
             },
         ],
-        model=settings.gms_openai_vision_model,
+        model=settings.gemini_vision_model,
         temperature=temperature,
     )
     return extract_json_object(raw_content)

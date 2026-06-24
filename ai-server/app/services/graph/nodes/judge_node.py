@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.schemas.analysis_graph_schema import ProductCandidate, ResultQuality, ShoppingAnalysisResponse
-from app.services.gms_openai_client import call_chat_completion, extract_json_object
+from app.services.gemini_client import call_chat_completion, extract_json_object
 from app.services.graph.candidate_utils import _is_recommendable_product
 from app.services.graph.debug import _model_to_dict, _print_graph_debug
 from app.services.graph.state import ShoppingAnalysisState
@@ -17,8 +17,8 @@ def _result_judge_node(state: ShoppingAnalysisState) -> dict[str, Any]:
 
     if provider == "mock":
         quality = _fallback_result_judge(state.get("best_candidates") or [])
-    elif provider == "gpt":
-        quality = _gpt_result_judge(state)
+    elif provider == "gemini":
+        quality = _gemini_result_judge(state)
     else:
         raise HTTPException(
             status_code=500,
@@ -105,7 +105,7 @@ def _fallback_result_judge(candidates: list[ProductCandidate]) -> ResultQuality:
         ),
     )
 
-def _gpt_result_judge(state: ShoppingAnalysisState) -> ResultQuality:
+def _gemini_result_judge(state: ShoppingAnalysisState) -> ResultQuality:
     candidates = state.get("best_candidates") or []
     raw_content = call_chat_completion(
         build_result_judge_messages(
@@ -113,7 +113,7 @@ def _gpt_result_judge(state: ShoppingAnalysisState) -> ResultQuality:
             query=_model_to_dict(state["query"]),
             candidates=[_model_to_dict(candidate) for candidate in candidates[:8]],
         ),
-        model=settings.gms_openai_query_model,
+        model=settings.gemini_query_model,
         temperature=0.0,
     )
     parsed = extract_json_object(raw_content)

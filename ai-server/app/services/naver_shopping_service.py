@@ -64,7 +64,7 @@ def _search_backend(source: str, query: str, *, display: int) -> list[ProductCan
     }
 
     try:
-        with httpx.Client(timeout=settings.gms_openai_timeout_sec) as client:
+        with httpx.Client(timeout=settings.http_timeout_sec) as client:
             response = client.get(url, params=params)
     except httpx.TimeoutException as exc:
         raise HTTPException(

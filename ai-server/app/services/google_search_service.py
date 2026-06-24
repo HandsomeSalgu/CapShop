@@ -57,7 +57,7 @@ def _search_google(query: str, *, display: int) -> list[GoogleSearchResult]:
     }
 
     try:
-        with httpx.Client(timeout=settings.gms_openai_timeout_sec) as client:
+        with httpx.Client(timeout=settings.http_timeout_sec) as client:
             response = client.get(settings.google_custom_search_url, params=params)
     except httpx.TimeoutException as exc:
         raise HTTPException(status_code=504, detail="Google Custom Search request timed out") from exc

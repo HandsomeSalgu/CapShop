@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from app.core.config import settings
 from app.schemas.commerce_query_schema import CommerceQueryResponse
 from app.services.commerce_query_service import generate_commerce_query, _koreanize_search_query
-from app.services.gms_openai_client import call_chat_completion, extract_json_object
+from app.services.gemini_client import call_chat_completion, extract_json_object
 from app.services.graph.debug import _model_to_dict, _print_graph_debug
 from app.services.graph.query_helpers import (
     _category_queries,
@@ -41,8 +41,8 @@ def _retry_query_generator_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     provider = settings.ai_commerce_query_provider.lower()
     retry_count = state.get("retry_count", 0) + 1
 
-    if provider == "gpt":
-        query = _gpt_retry_query(state)
+    if provider == "gemini":
+        query = _gemini_retry_query(state)
     elif provider == "mock":
         query = _fallback_retry_query(state)
     else:
@@ -59,7 +59,7 @@ def _retry_query_generator_node(state: ShoppingAnalysisState) -> dict[str, Any]:
         "retry_count": retry_count,
     }
 
-def _gpt_retry_query(state: ShoppingAnalysisState) -> CommerceQueryResponse:
+def _gemini_retry_query(state: ShoppingAnalysisState) -> CommerceQueryResponse:
     candidates = state.get("best_candidates") or []
     raw_content = call_chat_completion(
         build_retry_query_messages(
@@ -69,7 +69,7 @@ def _gpt_retry_query(state: ShoppingAnalysisState) -> CommerceQueryResponse:
             quality=_model_to_dict(state["quality"]),
             top_candidates=[_model_to_dict(candidate) for candidate in candidates[:5]],
         ),
-        model=settings.gms_openai_query_model,
+        model=settings.gemini_query_model,
         temperature=0.25,
     )
     parsed = extract_json_object(raw_content)

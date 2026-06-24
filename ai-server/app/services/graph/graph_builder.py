@@ -8,7 +8,7 @@ from app.services.graph.debug import _print_graph_debug, _print_graph_error
 from app.services.graph.nodes.filter_node import _text_filter_node
 from app.services.graph.nodes.frame_node import _frame_analyzer_node
 from app.services.graph.nodes.judge_node import _final_formatter_node, _result_judge_node
-from app.services.graph.nodes.query_node import _query_generator_node, _retry_query_generator_node
+from app.services.graph.nodes.query_node import _query_generator_node
 from app.services.graph.nodes.rerank_node import _visual_reranker_node
 from app.services.graph.nodes.search_node import _google_search_node, _naver_search_node, _search_identifier_node
 from app.services.graph.state import ShoppingAnalysisState
@@ -35,25 +35,6 @@ def analyze_shopping(request: ShoppingAnalysisRequest) -> ShoppingAnalysisRespon
         raise
 
 
-def _route_after_judge(state: ShoppingAnalysisState) -> str:
-    quality = state["quality"]
-    max_retries = state["request"].max_retries
-
-    if quality.is_good or state.get("retry_count", 0) >= max_retries:
-        next_node = "final_formatter"
-    else:
-        next_node = "retry_query_generator"
-
-    _print_graph_debug("result_judge.route", {
-        "next_node": next_node,
-        "is_good": quality.is_good,
-        "retry_count": state.get("retry_count", 0),
-        "max_retries": max_retries,
-        "quality": quality,
-    })
-    return next_node
-
-
 def _build_graph():
     workflow = StateGraph(ShoppingAnalysisState)
     workflow.add_node("frame_analyzer", _with_node_logging("frame_analyzer", _frame_analyzer_node))
@@ -64,7 +45,6 @@ def _build_graph():
     workflow.add_node("text_filter", _with_node_logging("text_filter", _text_filter_node))
     workflow.add_node("visual_reranker", _with_node_logging("visual_reranker", _visual_reranker_node))
     workflow.add_node("result_judge", _with_node_logging("result_judge", _result_judge_node))
-    workflow.add_node("retry_query_generator", _with_node_logging("retry_query_generator", _retry_query_generator_node))
     workflow.add_node("final_formatter", _with_node_logging("final_formatter", _final_formatter_node))
 
     workflow.add_edge(START, "frame_analyzer")
@@ -75,15 +55,7 @@ def _build_graph():
     workflow.add_edge("search_identifier", "text_filter")
     workflow.add_edge("text_filter", "visual_reranker")
     workflow.add_edge("visual_reranker", "result_judge")
-    workflow.add_conditional_edges(
-        "result_judge",
-        _route_after_judge,
-        {
-            "final_formatter": "final_formatter",
-            "retry_query_generator": "retry_query_generator",
-        },
-    )
-    workflow.add_edge("retry_query_generator", "naver_search")
+    workflow.add_edge("result_judge", "final_formatter")
     workflow.add_edge("final_formatter", END)
 
     return workflow.compile()
@@ -97,31 +69,33 @@ def _with_node_logging(
         started_at = time.perf_counter()
         try:
             result = node_func(state)
-            elapsed_ms = int((time.perf_counter() - started_at) * 1000)
-            print(
-                f"\n[SyncShopper LangGraph] {node_name} completed elapsed_ms={elapsed_ms}",
-                flush=True,
-            )
+            _print_node_elapsed(node_name, "completed", started_at)
             _print_graph_debug(node_name, result)
             return result
         except Exception as exc:
-            elapsed_ms = int((time.perf_counter() - started_at) * 1000)
-            print(
-                f"\n[SyncShopper LangGraph] {node_name} failed elapsed_ms={elapsed_ms}",
-                flush=True,
-            )
+            _print_node_elapsed(node_name, "failed", started_at)
             _print_graph_error(node_name, exc)
             raise
 
     return wrapped_node
 
 
+def _print_node_elapsed(node_name: str, status: str, started_at: float) -> None:
+    elapsed_sec = time.perf_counter() - started_at
+    elapsed_ms = int(elapsed_sec * 1000)
+    print(
+        "\n[SyncShopper LangGraph Timing] "
+        f"node={node_name} status={status} elapsed_sec={elapsed_sec:.3f} elapsed_ms={elapsed_ms}",
+        flush=True,
+    )
+
+
 def _print_total_elapsed(label: str, started_at: float) -> None:
     elapsed_sec = time.perf_counter() - started_at
     elapsed_ms = int(elapsed_sec * 1000)
     print(
-        "\n[SyncShopper LangGraph] "
-        f"{label} total_elapsed_ms={elapsed_ms} total_elapsed_sec={elapsed_sec:.3f}",
+        "\n[SyncShopper LangGraph Timing] "
+        f"status={label} total_elapsed_sec={elapsed_sec:.3f} total_elapsed_ms={elapsed_ms}",
         flush=True,
     )
 

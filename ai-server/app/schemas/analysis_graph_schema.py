@@ -18,7 +18,7 @@ class ShoppingAnalysisRequest(AnalyzeFrameRequest):
         settings.analysis_max_retries,
         ge=0,
         le=3,
-        description="How many times the graph can regenerate queries when quality is low",
+        description="Deprecated compatibility field. The graph now runs one search pass only.",
     )
 
 

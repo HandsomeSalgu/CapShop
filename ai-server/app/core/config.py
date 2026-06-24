@@ -77,29 +77,22 @@ class Settings:
         "AI_RESULT_JUDGE_PROVIDER",
         os.getenv("AI_ANALYSIS_PROVIDER", os.getenv("AI_COMMERCE_QUERY_PROVIDER", "mock")),
     )
-    gms_openai_api_key: str | None = os.getenv("GMS_OPENAI_API_KEY")
-    gms_openai_chat_completions_url: str = _env_str(
-        "GMS_OPENAI_CHAT_COMPLETIONS_URL",
-        "https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions",
+    gemini_api_key: str | None = _env_optional_str("GEMINI_API_KEY")
+    gemini_model: str = _env_str("GEMINI_MODEL", "gemini-2.5-flash")
+    gemini_vision_model: str = _env_str(
+        "GEMINI_VISION_MODEL",
+        _env_str("GEMINI_MODEL", "gemini-2.5-flash"),
     )
-    gms_openai_embeddings_url: str = _env_str(
-        "GMS_OPENAI_EMBEDDINGS_URL",
-        "https://gms.ssafy.io/gmsapi/api.openai.com/v1/embeddings",
+    gemini_query_model: str = _env_str(
+        "GEMINI_QUERY_MODEL",
+        _env_str("GEMINI_MODEL", "gemini-2.5-flash"),
     )
-    gms_openai_model: str = _env_str("GMS_OPENAI_MODEL", "gpt-5.4-mini")
-    gms_openai_vision_model: str = _env_str(
-        "GMS_OPENAI_VISION_MODEL",
-        _env_str("GMS_OPENAI_MODEL", "gpt-5.4-mini"),
+    gemini_generate_content_url_template: str = _env_str(
+        "GEMINI_GENERATE_CONTENT_URL_TEMPLATE",
+        "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
     )
-    gms_openai_query_model: str = _env_str(
-        "GMS_OPENAI_QUERY_MODEL",
-        _env_str("GMS_OPENAI_MODEL", "gpt-5.4-mini"),
-    )
-    gms_openai_embedding_model: str = _env_str(
-        "GMS_OPENAI_EMBEDDING_MODEL",
-        "text-embedding-3-small",
-    )
-    gms_openai_timeout_sec: float = float(os.getenv("GMS_OPENAI_TIMEOUT_SEC", "30"))
+    gemini_timeout_sec: float = _env_float("GEMINI_TIMEOUT_SEC", 30.0)
+    http_timeout_sec: float = _env_float("HTTP_TIMEOUT_SEC", gemini_timeout_sec)
     backend_base_url: str = _env_str("BACKEND_BASE_URL", "http://localhost:8080")
     backend_commerce_search_path: str = _env_str(
         "BACKEND_COMMERCE_SEARCH_PATH",
@@ -129,14 +122,13 @@ class Settings:
     )
     google_custom_search_display: int = int(os.getenv("GOOGLE_CUSTOM_SEARCH_DISPLAY", "5"))
     google_custom_search_strict_errors: bool = _env_bool("GOOGLE_CUSTOM_SEARCH_STRICT_ERRORS", False)
-    gemini_api_key: str | None = _env_optional_str("GEMINI_API_KEY")
-    gemini_search_model: str = _env_str("GEMINI_SEARCH_MODEL", "gemini-3.5-flash")
+    gemini_search_model: str = _env_str("GEMINI_SEARCH_MODEL", "gemini-2.5-flash")
     gemini_search_endpoint: str = _env_str(
         "GEMINI_SEARCH_ENDPOINT",
         "https://generativelanguage.googleapis.com/v1beta/interactions",
     )
-    gemini_search_timeout_seconds: float = float(os.getenv("GEMINI_SEARCH_TIMEOUT_SECONDS", "20"))
-    analysis_max_retries: int = int(os.getenv("AI_ANALYSIS_MAX_RETRIES", "1"))
+    gemini_search_timeout_seconds: float = _env_float("GEMINI_SEARCH_TIMEOUT_SECONDS", 20.0)
+    analysis_max_retries: int = int(os.getenv("AI_ANALYSIS_MAX_RETRIES", "0"))
     db_host: str = _env_str("DB_HOST", "localhost")
     db_port: int = int(_env_str("DB_PORT", "3306"))
     db_user: str = _env_str("DB_USER", "root")

@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from app.core.config import settings
 from app.schemas.analysis_graph_schema import ProductCandidate, ShoppingAnalysisRequest
 from app.schemas.detection_schema import AnalyzeFrameResponse
-from app.services.gms_openai_client import call_chat_completion, extract_json_object
+from app.services.gemini_client import call_chat_completion, extract_json_object
 from app.services.graph.candidate_utils import _candidate_prompt_id, _copy_candidate
 from app.services.graph.debug import _model_to_dict, _print_graph_debug
 from app.services.prompts.visual_prompt import _visual_rerank_messages
@@ -29,7 +29,7 @@ def _fallback_visual_rerank(
     ]
     return sorted(reranked, key=lambda item: item.final_score, reverse=True)
 
-def _gpt_visual_rerank(
+def _gemini_visual_rerank(
     request: ShoppingAnalysisRequest,
     frame_analysis: AnalyzeFrameResponse,
     candidates: list[ProductCandidate],
@@ -94,14 +94,14 @@ def _gpt_visual_rerank(
     if skipped_image_count:
         _print_graph_debug("visual_reranker.image_filter", {
             "skipped_candidate_image_count": skipped_image_count,
-            "reason": "candidate image URL was not safe for GMS/OpenAI image_url input",
+            "reason": "candidate image URL was not safe for Gemini image input",
         })
 
     messages = _visual_rerank_messages(content)
     try:
         raw_content = call_chat_completion(
             messages,
-            model=settings.gms_openai_model,
+            model=settings.gemini_model,
             temperature=0.0,
         )
     except HTTPException as exc:
@@ -109,12 +109,12 @@ def _gpt_visual_rerank(
             raise
 
         _print_graph_debug("visual_reranker.image_retry", {
-            "reason": "GMS/OpenAI rejected at least one candidate image URL; retrying without candidate images",
+            "reason": "Gemini rejected at least one candidate image URL; retrying without candidate images",
             "detail": exc.detail,
         })
         raw_content = call_chat_completion(
             _visual_rerank_messages(_without_candidate_images(content, request.image_base64)),
-            model=settings.gms_openai_model,
+            model=settings.gemini_model,
             temperature=0.0,
         )
     parsed = extract_json_object(raw_content)
@@ -193,7 +193,11 @@ def _is_safe_image_url(url: str | None) -> bool:
 
 def _is_invalid_candidate_image_error(exc: HTTPException) -> bool:
     detail = str(exc.detail or exc)
-    return "invalid_image_url" in detail or "Error while downloading" in detail
+    return (
+        "invalid_image_url" in detail
+        or "Error while downloading" in detail
+        or "candidate image download" in detail
+    )
 
 def _without_candidate_images(
     content: list[dict[str, Any]],
