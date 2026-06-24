@@ -32,12 +32,14 @@ const fetchProducts = async (isLoadMore = false) => {
   if (customSearchQuery.value) {
     query = customSearchQuery.value
   } else if (selectedKeyword.value) {
+    // 키워드(칩)를 클릭했을 경우 해당 키워드만 검색어로 사용
     query = selectedKeyword.value
   } else if (selectedSubCategory.value) {
     // 소분류 선택 시, 첫 번째 키워드를 기본으로 사용
     query = selectedSubCategory.value.items[0] || selectedSubCategory.value.name
   } else if (selectedMainCategory.value) {
-    query = selectedMainCategory.value.name
+    // 대분류만 선택 시, 대분류 이름을 검색어로 사용하되 불필요한 특수문자 제거
+    query = selectedMainCategory.value.name.replace(/[^a-zA-Z가-힣0-9 ]/g, '')
   }
 
   if (!query) return
@@ -223,6 +225,13 @@ const goToDetail = (product) => {
         <div class="content-header">
           <!-- 3. 검색된 상품 표시 및 커스텀 검색 -->
           <div class="page-indicator">
+            <div class="breadcrumb-container" style="font-size: 1.1rem; font-weight: 600; color: #333; margin-bottom: 0.5rem;" v-if="selectedMainCategory">
+              <span>
+                ( {{ selectedMainCategory.name }} 
+                <span v-if="selectedSubCategory">> {{ selectedSubCategory.name }}</span>
+                )
+              </span>
+            </div>
             <div class="custom-search-container">
               <input 
                 type="text" 
