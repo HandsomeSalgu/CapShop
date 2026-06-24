@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.schemas.analysis_graph_schema import ProductCandidate
+from app.services.cache import search_cache
 
 
 HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
@@ -26,14 +27,23 @@ def search_naver_shopping(query: str, *, display: int = 30) -> list[ProductCandi
 def search_naver_source(source: str, query: str, *, display: int = 30) -> list[ProductCandidate]:
     provider = settings.naver_shopping_provider.lower()
     normalized_source = _normalize_source(source)
+    cache_key = ("NAVER", normalized_source, query, display, settings.naver_shopping_sort)
+    cached_results = _get_cached_results(cache_key)
+    if cached_results is not None:
+        _print_cache_log("hit", normalized_source, query)
+        return cached_results
+
+    _print_cache_log("miss", normalized_source, query)
 
     if provider == "backend":
         results = _search_backend(normalized_source, query, display=display)
+        _set_cached_results(cache_key, results)
         _print_search_log(normalized_source, query, results)
         return results
 
     if provider == "mock":
         results = _search_mock(normalized_source, query, display=display)
+        _set_cached_results(cache_key, results)
         _print_search_log(normalized_source, query, results)
         return results
 
@@ -328,6 +338,33 @@ def _print_search_log(source: str, query: str, results: list[ProductCandidate]) 
         "\n[SyncShopper Naver Search] "
         f"source={source} query='{_truncate(query, 120)}' "
         f"result_count={len(results)} samples={samples}",
+        flush=True,
+    )
+
+
+def _get_cached_results(key: tuple[str, str, str, int, str]) -> list[ProductCandidate] | None:
+    if settings.search_cache_ttl_seconds <= 0 or settings.search_cache_max_size <= 0:
+        return None
+
+    return search_cache.get(key)
+
+
+def _set_cached_results(key: tuple[str, str, str, int, str], results: list[ProductCandidate]) -> None:
+    search_cache.set(
+        key,
+        results,
+        ttl_seconds=settings.search_cache_ttl_seconds,
+        max_size=settings.search_cache_max_size,
+    )
+
+
+def _print_cache_log(status: str, source: str, query: str) -> None:
+    if settings.search_cache_ttl_seconds <= 0 or settings.search_cache_max_size <= 0:
+        return
+
+    print(
+        "\n[SyncShopper Search Cache] "
+        f"{status} source={source} query='{_truncate(query, 120)}'",
         flush=True,
     )
 

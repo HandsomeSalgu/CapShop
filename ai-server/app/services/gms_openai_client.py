@@ -84,11 +84,22 @@ def extract_json_object(content: str) -> dict[str, Any]:
 
     try:
         parsed = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to parse AI response as JSON: {_truncate(content)}",
-        ) from exc
+    except json.JSONDecodeError:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start < 0 or end <= start:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to parse AI response as JSON: {_truncate(content)}",
+            )
+
+        try:
+            parsed = json.loads(cleaned[start:end + 1])
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to parse AI response as JSON: {_truncate(content)}",
+            ) from exc
 
     if not isinstance(parsed, dict):
         raise HTTPException(

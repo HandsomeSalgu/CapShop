@@ -111,9 +111,23 @@ def _run_naver_search_tasks(search_tasks: list[_NaverSearchTask]) -> dict[_Naver
 
 
 def _google_search_node(state: ShoppingAnalysisState) -> dict[str, Any]:
+    existing_candidates = state.get("search_candidates") or []
+    if len(existing_candidates) >= settings.skip_gemini_min_candidates:
+        print(
+            "\n[SyncShopper Gemini Grounded Search] "
+            "skipped because Naver candidates are enough "
+            f"count={len(existing_candidates)} threshold={settings.skip_gemini_min_candidates}",
+            flush=True,
+        )
+        return {
+            "search_candidates": existing_candidates,
+            "google_search_results": [],
+            "source_counts": state.get("source_counts") or {},
+            "google_source_counts": {GEMINI_GROUNDED_SEARCH_SOURCE: 0},
+        }
+
     request = state["request"]
     queries = _google_query_candidates(state)
-    existing_candidates = state.get("search_candidates") or []
     if not queries:
         return {
             "search_candidates": existing_candidates,

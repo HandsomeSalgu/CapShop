@@ -47,6 +47,17 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_float(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+
+    try:
+        return float(value.strip().strip('"').strip("'"))
+    except ValueError:
+        return default
+
+
 @dataclass
 class Settings:
     ai_detection_provider: str = _env_str("AI_DETECTION_PROVIDER", "mock")
@@ -98,6 +109,11 @@ class Settings:
     naver_shopping_display: int = int(os.getenv("NAVER_SHOPPING_DISPLAY", "30"))
     naver_shopping_sort: str = os.getenv("NAVER_SHOPPING_SORT", "sim")
     naver_search_max_workers: int = _env_int("AI_NAVER_SEARCH_MAX_WORKERS", 5)
+    skip_gemini_min_candidates: int = _env_int("AI_SKIP_GEMINI_MIN_CANDIDATES", 20)
+    skip_visual_rerank_top_score: float = _env_float("AI_SKIP_VISUAL_RERANK_TOP_SCORE", 0.75)
+    skip_visual_rerank_avg_score: float = _env_float("AI_SKIP_VISUAL_RERANK_AVG_SCORE", 0.72)
+    search_cache_ttl_seconds: int = _env_int("AI_SEARCH_CACHE_TTL_SECONDS", 3600)
+    search_cache_max_size: int = _env_int("AI_SEARCH_CACHE_MAX_SIZE", 500)
     google_custom_search_provider: str = _env_str("GOOGLE_CUSTOM_SEARCH_PROVIDER", "google")
     google_custom_search_api_key: str | None = _env_optional_str(
         "GOOGLE_CSE_API_KEY",

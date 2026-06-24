@@ -43,6 +43,11 @@ NAVER_SHOPPING_PROVIDER=backend
 NAVER_SHOPPING_DISPLAY=30
 NAVER_SHOPPING_SORT=sim
 AI_NAVER_SEARCH_MAX_WORKERS=5
+AI_SKIP_GEMINI_MIN_CANDIDATES=20
+AI_SKIP_VISUAL_RERANK_TOP_SCORE=0.75
+AI_SKIP_VISUAL_RERANK_AVG_SCORE=0.72
+AI_SEARCH_CACHE_TTL_SECONDS=3600
+AI_SEARCH_CACHE_MAX_SIZE=500
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 GEMINI_SEARCH_MODEL=gemini-3.5-flash
 GEMINI_SEARCH_ENDPOINT=https://generativelanguage.googleapis.com/v1beta/interactions
@@ -91,6 +96,11 @@ Performance notes:
 
 - OCR and visual feature analysis run in parallel in the `frame_analyzer` node.
 - Naver multi-source searches run concurrently with `AI_NAVER_SEARCH_MAX_WORKERS`.
+- Gemini Grounding is skipped when Naver candidates are already enough.
+- GPT visual reranking is skipped when text scores are strong enough.
+- Naver and Gemini search results use in-memory TTL cache.
+- Set `AI_SEARCH_CACHE_TTL_SECONDS=0` to disable the in-memory search cache.
+- GMS OpenAI JSON parsing is more tolerant of extra text around JSON.
 - LangGraph node logs include `elapsed_ms` for basic performance debugging.
 
 `POST /api/ai/generate-commerce-query` remains available for compatibility and direct query-generation debugging.

@@ -13,13 +13,17 @@ from app.services.prompts.visual_prompt import _visual_rerank_messages
 from app.services.scoring.category_rules import _clamp
 
 
-def _fallback_visual_rerank(candidates: list[ProductCandidate]) -> list[ProductCandidate]:
+def _fallback_visual_rerank(
+    candidates: list[ProductCandidate],
+    *,
+    visual_reason: str = "mock visual score copied from text/category score",
+) -> list[ProductCandidate]:
     reranked = [
         _copy_candidate(
             candidate,
             visual_score=candidate.text_score,
             final_score=candidate.text_score,
-            visual_reason="mock visual score copied from text/category score",
+            visual_reason=visual_reason,
         )
         for candidate in candidates
     ]

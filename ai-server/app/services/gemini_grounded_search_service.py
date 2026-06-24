@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.schemas.analysis_graph_schema import ProductCandidate
+from app.services.cache import search_cache
 
 
 GEMINI_GROUNDED_SEARCH_SOURCE = "GEMINI_GROUNDED_SEARCH"
@@ -17,6 +18,14 @@ def search_gemini_grounded_products(query: str, *, display: int = 5) -> list[Pro
         _print_gemini_search_log(query, [], note="GEMINI_API_KEY is not configured")
         return []
 
+    cache_key = ("GEMINI_GROUNDED_SEARCH", query, display, settings.gemini_search_model)
+    cached_results = _get_cached_results(cache_key)
+    if cached_results is not None:
+        _print_cache_log("hit", query)
+        return cached_results
+
+    _print_cache_log("miss", query)
+
     try:
         payload = _call_gemini_interactions(query, display=display)
         candidates = _parse_gemini_candidates(payload, query=query, display=display)
@@ -24,6 +33,7 @@ def search_gemini_grounded_products(query: str, *, display: int = 5) -> list[Pro
         _print_gemini_search_log(query, [], note=f"Gemini grounded search skipped: {_error_message(exc)}")
         return []
 
+    _set_cached_results(cache_key, candidates)
     _print_gemini_search_log(query, candidates)
     return candidates
 
@@ -281,6 +291,33 @@ def _print_gemini_search_log(
     print(
         "\n[SyncShopper Gemini Grounded Search] "
         f"query='{_truncate(query, 120)}' result_count={len(results)} samples={samples}{suffix}",
+        flush=True,
+    )
+
+
+def _get_cached_results(key: tuple[str, str, int, str]) -> list[ProductCandidate] | None:
+    if settings.search_cache_ttl_seconds <= 0 or settings.search_cache_max_size <= 0:
+        return None
+
+    return search_cache.get(key)
+
+
+def _set_cached_results(key: tuple[str, str, int, str], results: list[ProductCandidate]) -> None:
+    search_cache.set(
+        key,
+        results,
+        ttl_seconds=settings.search_cache_ttl_seconds,
+        max_size=settings.search_cache_max_size,
+    )
+
+
+def _print_cache_log(status: str, query: str) -> None:
+    if settings.search_cache_ttl_seconds <= 0 or settings.search_cache_max_size <= 0:
+        return
+
+    print(
+        "\n[SyncShopper Search Cache] "
+        f"{status} source={GEMINI_GROUNDED_SEARCH_SOURCE} query='{_truncate(query, 120)}'",
         flush=True,
     )
 
