@@ -78,6 +78,11 @@ const router = createRouter({
               next('/mypage/password-check')
             }
           }
+        },
+        {
+          path: 'history',
+          name: 'history',
+          component: () => import('../views/mypage/HistoryView.vue'),
         }
       ]
     },

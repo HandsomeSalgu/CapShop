@@ -30,12 +30,14 @@ public class WishlistController {
     @Operation(summary = "Get my wishlist")
     @GetMapping
     public ApiResponse<PageResponse<WishlistProductResponse>> getMyWishlist(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
         return ApiResponse.success(
                 "Wishlist retrieved successfully.",
-                wishlistService.getMyWishlist(currentUserId(), page, size)
+                wishlistService.getMyWishlist(currentUserId(), keyword, category, page, size)
         );
     }
 

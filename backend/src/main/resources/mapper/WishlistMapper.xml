@@ -54,6 +54,15 @@
             ON w.product_id = p.product_id
         WHERE w.user_id = #{userId}
           AND p.visible_yn = 'Y'
+          <if test="keyword != null and keyword != ''">
+              AND (
+                  p.title LIKE CONCAT('%', #{keyword}, '%')
+                  OR p.brand LIKE CONCAT('%', #{keyword}, '%')
+              )
+          </if>
+          <if test="category != null and category != ''">
+              AND REPLACE(CONCAT_WS('>', p.category1_name, p.category2_name, p.category3_name, p.category4_name), ' ', '') LIKE CONCAT('%', REPLACE(#{category}, ' ', ''), '%')
+          </if>
         ORDER BY w.created_at DESC, w.wishlist_id DESC
         LIMIT #{size} OFFSET #{offset}
     </select>
@@ -65,6 +74,15 @@
             ON w.product_id = p.product_id
         WHERE w.user_id = #{userId}
           AND p.visible_yn = 'Y'
+          <if test="keyword != null and keyword != ''">
+              AND (
+                  p.title LIKE CONCAT('%', #{keyword}, '%')
+                  OR p.brand LIKE CONCAT('%', #{keyword}, '%')
+              )
+          </if>
+          <if test="category != null and category != ''">
+              AND REPLACE(CONCAT_WS('>', p.category1_name, p.category2_name, p.category3_name, p.category4_name), ' ', '') LIKE CONCAT('%', REPLACE(#{category}, ' ', ''), '%')
+          </if>
     </select>
 
 </mapper>

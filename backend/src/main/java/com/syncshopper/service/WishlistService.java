@@ -27,12 +27,14 @@ public class WishlistService {
     private final ProductMapper productMapper;
     private final UserEventService userEventService;
 
-    public PageResponse<WishlistProductResponse> getMyWishlist(Long userId, int page, int size) {
+    public PageResponse<WishlistProductResponse> getMyWishlist(Long userId, String keyword, String category, int page, int size) {
         PageRequest pageRequest = normalizePage(page, size);
 
-        long totalCount = wishlistMapper.countWishlistProducts(userId);
+        long totalCount = wishlistMapper.countWishlistProducts(userId, keyword, category);
         List<WishlistProductResponse> products = wishlistMapper.findWishlistProducts(
                 userId,
+                keyword,
+                category,
                 pageRequest.offset(),
                 pageRequest.size()
         );

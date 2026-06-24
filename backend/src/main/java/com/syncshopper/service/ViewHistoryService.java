@@ -18,12 +18,14 @@ public class ViewHistoryService {
 
     private final UserEventMapper userEventMapper;
 
-    public PageResponse<ViewHistoryResponse> getMyViewHistory(Long userId, int page, int size) {
+    public PageResponse<ViewHistoryResponse> getMyViewHistory(Long userId, String keyword, String category, int page, int size) {
         PageRequest pageRequest = normalizePage(page, size);
 
-        long totalCount = userEventMapper.countViewHistory(userId);
+        long totalCount = userEventMapper.countViewHistory(userId, keyword, category);
         List<ViewHistoryResponse> products = userEventMapper.findViewHistory(
                 userId,
+                keyword,
+                category,
                 pageRequest.offset(),
                 pageRequest.size()
         );

@@ -24,9 +24,15 @@ public interface WishlistMapper {
 
     List<WishlistProductResponse> findWishlistProducts(
             @Param("userId") Long userId,
+            @Param("keyword") String keyword,
+            @Param("category") String category,
             @Param("offset") int offset,
             @Param("size") int size
     );
 
-    long countWishlistProducts(@Param("userId") Long userId);
+    long countWishlistProducts(
+            @Param("userId") Long userId,
+            @Param("keyword") String keyword,
+            @Param("category") String category
+    );
 }

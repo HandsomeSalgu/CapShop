@@ -27,12 +27,14 @@ public class ViewHistoryController {
     @Operation(summary = "Get my recently viewed products")
     @GetMapping
     public ApiResponse<PageResponse<ViewHistoryResponse>> getMyViewHistory(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
         return ApiResponse.success(
                 "View history retrieved successfully.",
-                viewHistoryService.getMyViewHistory(currentUserId(), page, size)
+                viewHistoryService.getMyViewHistory(currentUserId(), keyword, category, page, size)
         );
     }
 

@@ -16,9 +16,15 @@ public interface UserEventMapper {
 
     List<ViewHistoryResponse> findViewHistory(
             @Param("userId") Long userId,
+            @Param("keyword") String keyword,
+            @Param("category") String category,
             @Param("offset") int offset,
             @Param("size") int size
     );
 
-    long countViewHistory(@Param("userId") Long userId);
+    long countViewHistory(
+            @Param("userId") Long userId,
+            @Param("keyword") String keyword,
+            @Param("category") String category
+    );
 }

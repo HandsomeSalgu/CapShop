@@ -11,10 +11,6 @@ const menus = [
 ]
 
 const handleMenuClick = (path) => {
-  if (path === '/mypage/history') {
-    alert('준비 중입니다')
-    return
-  }
   router.push(path)
 }
 </script>

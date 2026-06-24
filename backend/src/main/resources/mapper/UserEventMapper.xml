@@ -95,6 +95,15 @@
         INNER JOIN products p
             ON h.product_id = p.product_id
         WHERE p.visible_yn = 'Y'
+          <if test="keyword != null and keyword != ''">
+              AND (
+                  p.title LIKE CONCAT('%', #{keyword}, '%')
+                  OR p.brand LIKE CONCAT('%', #{keyword}, '%')
+              )
+          </if>
+          <if test="category != null and category != ''">
+              AND REPLACE(CONCAT_WS('>', p.category1_name, p.category2_name, p.category3_name, p.category4_name), ' ', '') LIKE CONCAT('%', REPLACE(#{category}, ' ', ''), '%')
+          </if>
         ORDER BY h.viewed_at DESC, p.product_id DESC
         LIMIT #{size} OFFSET #{offset}
     </select>
@@ -102,7 +111,10 @@
     <select id="countViewHistory" resultType="long">
         SELECT COUNT(1)
         FROM (
-            SELECT product_id
+            SELECT
+                product_id,
+                MAX(created_at) AS viewed_at,
+                COUNT(1) AS view_count
             FROM user_events
             WHERE user_id = #{userId}
               AND event_type = 'PRODUCT_DETAIL_VIEW'
@@ -112,6 +124,15 @@
         INNER JOIN products p
             ON h.product_id = p.product_id
         WHERE p.visible_yn = 'Y'
+          <if test="keyword != null and keyword != ''">
+              AND (
+                  p.title LIKE CONCAT('%', #{keyword}, '%')
+                  OR p.brand LIKE CONCAT('%', #{keyword}, '%')
+              )
+          </if>
+          <if test="category != null and category != ''">
+              AND REPLACE(CONCAT_WS('>', p.category1_name, p.category2_name, p.category3_name, p.category4_name), ' ', '') LIKE CONCAT('%', REPLACE(#{category}, ' ', ''), '%')
+          </if>
     </select>
 
 </mapper>
