@@ -61,11 +61,11 @@ public class ProductService {
 
     public List<ProductListResponse> getRelatedProducts(Long productId, int limit) {
         Product product = findVisibleProduct(productId);
-        if (product.getCategoryId() == null) {
+        if (product.getCategoryName() == null) {
             return List.of();
         }
 
-        return productMapper.findRelatedProducts(productId, product.getCategoryId(), normalizeLimit(limit)).stream()
+        return productMapper.findRelatedProducts(productId, product.getCategoryName(), normalizeLimit(limit)).stream()
                 .map(ProductListResponse::from)
                 .toList();
     }

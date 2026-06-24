@@ -101,14 +101,14 @@
                 + COALESCE(p.review_count, 0) * 0.05
                 + CASE WHEN category_signal.category_name IS NOT NULL THEN category_signal.weight ELSE 0 END
                 + CASE WHEN brand_signal.brand IS NOT NULL THEN brand_signal.weight ELSE 0 END
-                + CASE WHEN wishlist_signal.category_id IS NOT NULL THEN 8 ELSE 0 END
+                + CASE WHEN wishlist_signal.category_name IS NOT NULL THEN 8 ELSE 0 END
             ) AS score,
             CASE
                 WHEN category_signal.category_name IS NOT NULL
                     THEN CONCAT('Recommended from your recent interest in ', p.category_name, '.')
                 WHEN brand_signal.brand IS NOT NULL
                     THEN CONCAT('Recommended from your recent interest in ', p.brand, '.')
-                WHEN wishlist_signal.category_id IS NOT NULL
+                WHEN wishlist_signal.category_name IS NOT NULL
                     THEN 'Recommended from products similar to your wishlist.'
                 ELSE 'Recommended from your activity and product popularity.'
             END AS reason
@@ -156,19 +156,19 @@
         ) brand_signal
             ON p.brand = brand_signal.brand
         LEFT JOIN (
-            SELECT DISTINCT wp.category_id
+            SELECT DISTINCT wp.category_name
             FROM wishlists w
             INNER JOIN products wp
                 ON w.product_id = wp.product_id
             WHERE w.user_id = #{userId}
-              AND wp.category_id IS NOT NULL
+              AND wp.category_name IS NOT NULL
         ) wishlist_signal
-            ON p.category_id = wishlist_signal.category_id
+            ON p.category_name = wishlist_signal.category_name
         WHERE p.visible_yn = 'Y'
           AND (
               category_signal.category_name IS NOT NULL
               OR brand_signal.brand IS NOT NULL
-              OR wishlist_signal.category_id IS NOT NULL
+              OR wishlist_signal.category_name IS NOT NULL
           )
         ORDER BY score DESC, p.review_count DESC, p.rating DESC, p.product_id DESC
         LIMIT #{limit}
@@ -198,13 +198,13 @@
     <select id="findTopKeywordsByUserId" resultType="com.syncshopper.domain.recommendation.UserKeywordScore">
         SELECT category_name AS keyword, SUM(score) AS totalScore
         FROM (
-            SELECT category_name, 10 AS score
+            SELECT REPLACE(category2_name, ' ', '') AS category_name, 10 AS score
             FROM user_preferences
             WHERE user_id = #{userId}
             
             UNION ALL
             
-            SELECT COALESCE(ue.category_name, p.category_name) AS category_name,
+            SELECT REPLACE(COALESCE(ue.category_name, p.category_name), ' ', '') AS category_name,
                    CASE 
                        WHEN ue.event_type = 'PRODUCT_CLICK' THEN 1
                        WHEN ue.event_type = 'PRODUCT_DETAIL_VIEW' THEN 2
@@ -223,14 +223,14 @@
               
             UNION ALL
             
-            SELECT p.category_name, 5 AS score
+            SELECT REPLACE(p.category_name, ' ', ''), 5 AS score
             FROM wishlists w
             JOIN products p ON w.product_id = p.product_id
             WHERE w.user_id = #{userId} AND p.category_name IS NOT NULL
             
             UNION ALL
             
-            SELECT p.category_name, 10 AS score
+            SELECT REPLACE(p.category_name, ' ', ''), 10 AS score
             FROM affiliate_clicks ac
             JOIN products p ON ac.product_id = p.product_id
             WHERE ac.user_id = #{userId} 

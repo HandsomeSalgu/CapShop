@@ -61,7 +61,6 @@ public class SecurityConfig {
                                                                                 ErrorCode.FORBIDDEN)))
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-                                                .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/commerce/**").permitAll()
                                                 .requestMatchers(

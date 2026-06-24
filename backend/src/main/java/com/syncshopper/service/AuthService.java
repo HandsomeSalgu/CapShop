@@ -2,7 +2,6 @@ package com.syncshopper.service;
 
 import com.syncshopper.common.exception.CustomException;
 import com.syncshopper.common.exception.ErrorCode;
-import com.syncshopper.domain.product.Category;
 import com.syncshopper.domain.user.AuthProvider;
 import com.syncshopper.domain.user.User;
 import com.syncshopper.domain.user.UserPreference;
@@ -11,7 +10,7 @@ import com.syncshopper.dto.request.LoginRequest;
 import com.syncshopper.dto.request.SignupRequest;
 import com.syncshopper.dto.response.LoginResponse;
 import com.syncshopper.dto.response.UserResponse;
-import com.syncshopper.mapper.CategoryMapper;
+
 import com.syncshopper.mapper.UserPreferenceMapper;
 import com.syncshopper.security.JwtBlacklistService;
 import com.syncshopper.security.JwtTokenProvider;
@@ -32,16 +31,14 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtBlacklistService jwtBlacklistService;
     private final EmailVerificationService emailVerificationService;
-    private final CategoryMapper categoryMapper;
     private final UserPreferenceMapper userPreferenceMapper;
 
-    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, JwtBlacklistService jwtBlacklistService, EmailVerificationService emailVerificationService, CategoryMapper categoryMapper, UserPreferenceMapper userPreferenceMapper) {
+    public AuthService(UserService userService, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, JwtBlacklistService jwtBlacklistService, EmailVerificationService emailVerificationService, UserPreferenceMapper userPreferenceMapper) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.jwtBlacklistService = jwtBlacklistService;
         this.emailVerificationService = emailVerificationService;
-        this.categoryMapper = categoryMapper;
         this.userPreferenceMapper = userPreferenceMapper;
     }
 
@@ -84,18 +81,15 @@ public class AuthService {
         }
 
         // Save User Preferences
-        List<String> preferredCategories = request.getPreferredCategories();
+        List<com.syncshopper.dto.request.CategoryPreferenceRequest> preferredCategories = request.getPreferredCategories();
         if (preferredCategories != null && !preferredCategories.isEmpty()) {
-            for (String categoryName : preferredCategories) {
-                Category category = categoryMapper.findByName(categoryName);
-                if (category != null) {
-                    UserPreference userPreference = UserPreference.builder()
-                            .userId(user.getUserId())
-                            .categoryId(category.getCategoryId())
-                            .categoryName(category.getName())
-                            .build();
-                    userPreferenceMapper.insertUserPreference(userPreference);
-                }
+            for (com.syncshopper.dto.request.CategoryPreferenceRequest pref : preferredCategories) {
+                UserPreference userPreference = UserPreference.builder()
+                        .userId(user.getUserId())
+                        .category1Name(pref.getCategory1Name())
+                        .category2Name(pref.getCategory2Name())
+                        .build();
+                userPreferenceMapper.insertUserPreference(userPreference);
             }
         }
 

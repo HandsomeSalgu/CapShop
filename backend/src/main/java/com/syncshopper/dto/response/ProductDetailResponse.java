@@ -19,7 +19,6 @@ public class ProductDetailResponse {
     private Long productId;
     private String title;
     private String brand;
-    private Long categoryId;
     private String categoryName;
     private Integer price;
     private String imageUrl;
@@ -34,7 +33,6 @@ public class ProductDetailResponse {
                 .productId(product.getProductId())
                 .title(product.getTitle())
                 .brand(product.getBrand())
-                .categoryId(product.getCategoryId())
                 .categoryName(product.getCategoryName())
                 .price(product.getPrice())
                 .imageUrl(product.getImageUrl())

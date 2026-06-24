@@ -15,8 +15,6 @@ import lombok.Setter;
 @Schema(description = "Product search condition")
 public class ProductSearchCondition {
 
-    @Schema(description = "Category ID", example = "1")
-    private Long categoryId;
 
     @Schema(description = "Keyword for title, brand, or category name", example = "Nike")
     private String keyword;

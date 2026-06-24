@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import CustomSelect from '@/components/common/CustomSelect.vue'
+import { categories } from '@/data/categories.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -260,22 +261,16 @@ const activeSelection = ref({
   type: 'major'
 })
 
-const categoryData = {
-  'IT / 전자기기': ['스마트폰 / 태블릿', '노트북 / PC', '음향기기', '스마트워치 / 웨어러블', '카메라 / 촬영장비'],
-  '패션 / 의류': ['상의', '하의', '아우터', '신발', '가방', '패션소품'],
-  '뷰티 / 스킨케어': ['스킨케어', '남성 화장품', '메이크업 / 베이스', '헤어 / 바디케어'],
-  '게임 / 취미': ['게임 타이틀', '게이밍 기어', '악기', '피규어 / 굿즈'],
-  '스포츠 / 아웃도어': ['아웃도어 의류', '클라이밍 / 등산', '캠핑 용품', '스포츠 용품 / 잡화', '수상 스포츠 / 서핑'],
-  '인테리어 / 리빙': ['가구', '조명', '홈데코 / 소품', '침구 / 패브릭', '주방용품'],
-  '식품 / e쿠폰': ['가공식품 / 간식', '음료 / 커피', '모바일 교환권']
-}
-
 const currentCategoryList = computed(() => {
   if (activeSelection.value.type === 'major') {
-    return Object.keys(categoryData)
+    return categories.map(c => c.name)
   } else {
-    const selectedMajor = selectedCategories.value[activeSelection.value.index].major
-    return selectedMajor ? categoryData[selectedMajor] : []
+    const selectedMajorName = selectedCategories.value[activeSelection.value.index].major
+    const majorObj = categories.find(c => c.name === selectedMajorName)
+    if (majorObj) {
+      return majorObj.subCategories.map(s => s.name)
+    }
+    return []
   }
 })
 
@@ -307,7 +302,10 @@ const submitSignup = async () => {
 
   const selectedMinorCategories = selectedCategories.value
     .filter(cat => cat.minor !== null)
-    .map(cat => cat.minor)
+    .map(cat => ({
+      category1Name: cat.major,
+      category2Name: cat.minor
+    }))
 
   try {
     const payload = {

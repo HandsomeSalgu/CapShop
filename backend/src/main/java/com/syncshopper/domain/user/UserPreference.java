@@ -16,10 +16,8 @@ import java.time.LocalDateTime;
 public class UserPreference {
     private Long preferenceId;
     private Long userId;
-    private Long categoryId;
-    private String categoryName;
+    private String category1Name;
+    private String category2Name;
     private String brand;
-    private Integer priceMin;
-    private Integer priceMax;
     private LocalDateTime createdAt;
 }

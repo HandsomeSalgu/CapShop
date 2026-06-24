@@ -23,7 +23,7 @@ DROP TABLE IF EXISTS detections;
 DROP TABLE IF EXISTS posts;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS user_preferences;
-DROP TABLE IF EXISTS categories;
+
 DROP TABLE IF EXISTS users;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -61,25 +61,7 @@ CREATE TABLE users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- =========================================================
--- 2. categories
--- 상품 / 관심사 카테고리
--- =========================================================
 
-CREATE TABLE categories (
-    category_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    parent_id BIGINT NULL,
-    visible_yn CHAR(1) NOT NULL DEFAULT 'Y',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_categories_parent
-        FOREIGN KEY (parent_id) REFERENCES categories(category_id)
-        ON DELETE SET NULL,
-
-    INDEX idx_categories_parent_id (parent_id),
-    INDEX idx_categories_visible_yn (visible_yn)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
 -- =========================================================
@@ -90,24 +72,18 @@ CREATE TABLE categories (
 CREATE TABLE user_preferences (
     preference_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    category_id BIGINT NULL,
-    category_name VARCHAR(50) NULL,
+    category1_name VARCHAR(50) NULL,
+    category2_name VARCHAR(50) NULL,
     brand VARCHAR(100) NULL,
-    price_min INT NULL,
-    price_max INT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_user_preferences_user
         FOREIGN KEY (user_id) REFERENCES users(user_id)
         ON DELETE CASCADE,
 
-    CONSTRAINT fk_user_preferences_category
-        FOREIGN KEY (category_id) REFERENCES categories(category_id)
-        ON DELETE SET NULL,
-
     INDEX idx_user_preferences_user_id (user_id),
-    INDEX idx_user_preferences_category_id (category_id),
-    INDEX idx_user_preferences_category_name (category_name),
+    INDEX idx_user_preferences_category1_name (category1_name),
+    INDEX idx_user_preferences_category2_name (category2_name),
     INDEX idx_user_preferences_brand (brand)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -121,8 +97,11 @@ CREATE TABLE products (
     product_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     brand VARCHAR(100) NULL,
-    category_id BIGINT NULL,
     category_name VARCHAR(50) NULL,
+    category1_name VARCHAR(50) NULL,
+    category2_name VARCHAR(50) NULL,
+    category3_name VARCHAR(50) NULL,
+    category4_name VARCHAR(50) NULL,
     price INT NULL,
     image_url TEXT NULL,
     affiliate_url TEXT NULL,
@@ -136,12 +115,8 @@ CREATE TABLE products (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_products_category
-        FOREIGN KEY (category_id) REFERENCES categories(category_id)
-        ON DELETE SET NULL,
-
-    INDEX idx_products_category_id (category_id),
     INDEX idx_products_category_name (category_name),
+    INDEX idx_products_category1_name (category1_name),
     INDEX idx_products_brand (brand),
     INDEX idx_products_source (source),
     INDEX idx_products_external_product_id (external_product_id),
@@ -483,109 +458,6 @@ CREATE TABLE affiliate_clicks (
     INDEX idx_affiliate_clicks_source (source),
     INDEX idx_affiliate_clicks_clicked_at (clicked_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =========================================================
--- Initial Category Data
--- =========================================================
-
-INSERT INTO categories (category_id, name, parent_id, visible_yn) VALUES
--- 1. IT / 전자기기
-(1, 'IT / 전자기기', NULL, 'Y'),
-(11, '스마트폰 / 태블릿', 1, 'Y'),
-(12, '노트북 / PC', 1, 'Y'),
-(13, '음향기기', 1, 'Y'),
-(14, '스마트워치 / 웨어러블', 1, 'Y'),
-(15, '카메라 / 촬영장비', 1, 'Y'),
-
--- 2. 패션 / 의류
-(2, '패션 / 의류', NULL, 'Y'),
-(21, '상의', 2, 'Y'),
-(22, '하의', 2, 'Y'),
-(23, '아우터', 2, 'Y'),
-(24, '신발', 2, 'Y'),
-(25, '가방', 2, 'Y'),
-(26, '패션소품', 2, 'Y'),
-
--- 3. 뷰티 / 스킨케어
-(3, '뷰티 / 스킨케어', NULL, 'Y'),
-(31, '스킨케어', 3, 'Y'),
-(32, '남성 화장품', 3, 'Y'),
-(33, '메이크업 / 베이스', 3, 'Y'),
-(34, '헤어 / 바디케어', 3, 'Y'),
-
--- 4. 게임 / 취미
-(4, '게임 / 취미', NULL, 'Y'),
-(41, '게임 타이틀', 4, 'Y'),
-(42, '게이밍 기어', 4, 'Y'),
-(43, '악기', 4, 'Y'),
-(44, '피규어 / 굿즈', 4, 'Y'),
-
--- 5. 스포츠 / 아웃도어
-(5, '스포츠 / 아웃도어', NULL, 'Y'),
-(51, '아웃도어 의류', 5, 'Y'),
-(52, '클라이밍 / 등산', 5, 'Y'),
-(53, '캠핑 용품', 5, 'Y'),
-(54, '스포츠 용품 / 잡화', 5, 'Y'),
-(55, '수상 스포츠 / 서핑', 5, 'Y'),
-
--- 6. 인테리어 / 리빙
-(6, '인테리어 / 리빙', NULL, 'Y'),
-(61, '가구', 6, 'Y'),
-(62, '조명', 6, 'Y'),
-(63, '홈데코 / 소품', 6, 'Y'),
-(64, '침구 / 패브릭', 6, 'Y'),
-(65, '주방용품', 6, 'Y'),
-
--- 7. 식품 / e쿠폰
-(7, '식품 / e쿠폰', NULL, 'Y'),
-(71, '가공식품 / 간식', 7, 'Y'),
-(72, '음료 / 커피', 7, 'Y'),
-(73, '모바일 교환권', 7, 'Y');
-
-
--- =========================================================
--- Initial Product Data
--- =========================================================
-
-INSERT INTO products
-(product_id, title, brand, category_id, category_name, price, image_url, affiliate_url, description, source, review_count, rating, visible_yn, created_at, updated_at)
-VALUES
-(1, 'Nike Air Force 1', 'Nike', 24, '신발', 129000,
- 'https://example.com/nike-air-force.jpg',
- 'https://example.com/buy/nike-air-force',
- '클래식한 디자인의 Nike Air Force 1 스니커즈입니다.',
- 'MOCK', 120, 4.8, 'Y', NOW(), NOW()),
-
-(2, 'Adidas Samba OG', 'Adidas', 24, '신발', 139000,
- 'https://example.com/adidas-samba.jpg',
- 'https://example.com/buy/adidas-samba',
- '데일리 코디에 어울리는 Adidas Samba OG 스니커즈입니다.',
- 'MOCK', 95, 4.6, 'Y', NOW(), NOW()),
-
-(3, 'Apple AirPods Pro 2', 'Apple', 13, '음향기기', 329000,
- 'https://example.com/airpods-pro.jpg',
- 'https://example.com/buy/airpods-pro',
- '노이즈 캔슬링을 지원하는 Apple AirPods Pro 2입니다.',
- 'MOCK', 310, 4.9, 'Y', NOW(), NOW()),
-
-(4, 'Dyson Supersonic Hair Dryer', 'Dyson', 34, '헤어 / 바디케어', 499000,
- 'https://example.com/dyson-hair-dryer.jpg',
- 'https://example.com/buy/dyson-hair-dryer',
- '빠른 건조와 스타일링을 지원하는 Dyson 헤어드라이어입니다.',
- 'MOCK', 180, 4.7, 'Y', NOW(), NOW()),
-
-(5, 'Sony WH-1000XM5', 'Sony', 13, '음향기기', 459000,
- 'https://example.com/sony-wh1000xm5.jpg',
- 'https://example.com/buy/sony-wh1000xm5',
- '고성능 노이즈 캔슬링 무선 헤드폰입니다.',
- 'MOCK', 260, 4.8, 'Y', NOW(), NOW()),
-
-(6, 'New Balance 530', 'New Balance', 24, '신발', 119000,
- 'https://example.com/new-balance-530.jpg',
- 'https://example.com/buy/new-balance-530',
- '편안한 착화감의 New Balance 530 운동화입니다.',
- 'MOCK', 140, 4.5, 'Y', NOW(), NOW());
-
 
 -- =========================================================
 -- 확인용 조회

@@ -18,8 +18,11 @@ public class Product {
     private Long productId;
     private String title;
     private String brand;
-    private Long categoryId;
     private String categoryName;
+    private String category1Name;
+    private String category2Name;
+    private String category3Name;
+    private String category4Name;
     private Integer price;
     private String imageUrl;
     private String affiliateUrl;

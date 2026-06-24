@@ -7,19 +7,15 @@
     <insert id="insertUserPreference" useGeneratedKeys="true" keyProperty="preferenceId" parameterType="com.syncshopper.domain.user.UserPreference">
         INSERT INTO user_preferences (
             user_id,
-            category_id,
-            category_name,
+            category1_name,
+            category2_name,
             brand,
-            price_min,
-            price_max,
             created_at
         ) VALUES (
             #{userId},
-            #{categoryId},
-            #{categoryName},
+            #{category1Name},
+            #{category2Name},
             #{brand},
-            #{priceMin},
-            #{priceMax},
             NOW()
         )
     </insert>

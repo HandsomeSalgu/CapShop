@@ -32,7 +32,7 @@ public interface ProductMapper {
 
     List<Product> findRelatedProducts(
             @Param("productId") Long productId,
-            @Param("categoryId") Long categoryId,
+            @Param("categoryName") String categoryName,
             @Param("limit") int limit
     );
 }

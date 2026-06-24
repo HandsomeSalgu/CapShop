@@ -52,6 +52,6 @@ public class SignupRequest {
     @Schema(description = "Social Signup Token", example = "eyJhbGciOiJIUzI1...", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String signupToken;
 
-    @Schema(description = "Preferred Categories", example = "[\"스마트폰 / 태블릿\", \"상의\"]", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-    private List<String> preferredCategories;
+    @Schema(description = "Preferred Categories", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private List<CategoryPreferenceRequest> preferredCategories;
 }

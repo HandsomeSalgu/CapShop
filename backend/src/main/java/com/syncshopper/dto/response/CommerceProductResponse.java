@@ -18,6 +18,10 @@ public class CommerceProductResponse {
     private String brand;
     private String mallName;
     private String categoryName;
+    private String category1Name;
+    private String category2Name;
+    private String category3Name;
+    private String category4Name;
     private Integer price;
     private String imageUrl;
     private String thumbnailUrl;

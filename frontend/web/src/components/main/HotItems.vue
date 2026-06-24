@@ -1,38 +1,49 @@
 <script setup>
+import { ref, onMounted, computed } from 'vue'
+import axios from 'axios'
 import ProductCard from '@/components/product/ProductCard.vue'
 
-const hotProduct1 = { name: '베스트 랭킹 1위 상품', price: '₩ 890,000', placeholder: '상품 1' }
-const hotProducts = [
-  { id: 2, name: '베스트 랭킹 2위 상품', price: '₩ 65,000', placeholder: '상품 2' },
-  { id: 3, name: '베스트 랭킹 3위 상품', price: '₩ 42,000', placeholder: '상품 3' },
-  { id: 4, name: '베스트 랭킹 4위 상품', price: '₩ 55,000', placeholder: '상품 4' }
-]
+const hotProducts = ref([])
+
+onMounted(async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/products/hot?limit=4')
+    if (response.data.status === 'SUCCESS') {
+      hotProducts.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch hot products:', error)
+  }
+})
+
+const hotProduct1 = computed(() => hotProducts.value[0] || null)
+const otherHotProducts = computed(() => hotProducts.value.slice(1, 4))
 </script>
 
 <template>
   <section class="section">
     <div class="section-header">
       <h2>현재 제일 핫한 상품 리스트</h2>
-      <p>카테고리 별 4위까지 가장 핫한 랭킹 상품 노출</p>
-      <a href="#" class="more-btn">더보기</a>
+      <p>조회수와 저장수를 반영한 핫한 랭킹 상품 노출</p>
+      <a href="/products?sort=popular" class="more-btn">더보기</a>
     </div>
-    <div class="grid-hot">
-      <div class="hot-left">
+    <div class="grid-hot" v-if="hotProducts.length > 0">
+      <div class="hot-left" v-if="hotProduct1">
         <ProductCard
           class="first-card"
-          :name="hotProduct1.name"
+          :name="hotProduct1.title"
           :price="hotProduct1.price"
-          :imagePlaceholder="hotProduct1.placeholder"
+          :imageUrl="hotProduct1.imageUrl"
         />
       </div>
       <div class="hot-right">
         <ProductCard
           class="other-card"
-          v-for="item in hotProducts"
-          :key="item.id"
-          :name="item.name"
+          v-for="item in otherHotProducts"
+          :key="item.productId"
+          :name="item.title"
           :price="item.price"
-          :imagePlaceholder="item.placeholder"
+          :imageUrl="item.imageUrl"
         />
       </div>
     </div>

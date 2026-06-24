@@ -9,8 +9,11 @@
         <id property="productId" column="product_id"/>
         <result property="title" column="title"/>
         <result property="brand" column="brand"/>
-        <result property="categoryId" column="category_id"/>
         <result property="categoryName" column="category_name"/>
+        <result property="category1Name" column="category1_name"/>
+        <result property="category2Name" column="category2_name"/>
+        <result property="category3Name" column="category3_name"/>
+        <result property="category4Name" column="category4_name"/>
         <result property="price" column="price"/>
         <result property="imageUrl" column="image_url"/>
         <result property="affiliateUrl" column="affiliate_url"/>
@@ -26,7 +29,7 @@
     </resultMap>
 
     <sql id="ProductColumns">
-        product_id, title, brand, category_id, category_name, price, image_url,
+        product_id, title, brand, category_name, category1_name, category2_name, category3_name, category4_name, price, image_url,
         affiliate_url, mall_name, description, source, external_product_id, review_count, rating, visible_yn,
         created_at, updated_at
     </sql>
@@ -34,9 +37,7 @@
     <sql id="ProductSearchWhere">
         <where>
             visible_yn = 'Y'
-            <if test="categoryId != null">
-                AND category_id = #{categoryId}
-            </if>
+
             <if test="keyword != null and keyword != ''">
                 AND (
                     title LIKE CONCAT('%', #{keyword}, '%')
@@ -113,6 +114,10 @@
             title,
             brand,
             category_name,
+            category1_name,
+            category2_name,
+            category3_name,
+            category4_name,
             price,
             image_url,
             affiliate_url,
@@ -128,6 +133,10 @@
             #{title},
             #{brand},
             #{categoryName},
+            #{category1Name},
+            #{category2Name},
+            #{category3Name},
+            #{category4Name},
             #{price},
             #{imageUrl},
             #{affiliateUrl},
@@ -146,6 +155,10 @@
         SET title = #{title},
             brand = #{brand},
             category_name = #{categoryName},
+            category1_name = #{category1Name},
+            category2_name = #{category2Name},
+            category3_name = #{category3Name},
+            category4_name = #{category4Name},
             price = #{price},
             image_url = #{imageUrl},
             affiliate_url = #{affiliateUrl},
@@ -180,7 +193,7 @@
         FROM products
         WHERE visible_yn = 'Y'
           AND product_id != #{productId}
-          AND category_id = #{categoryId}
+          AND category_name = #{categoryName}
         ORDER BY rating DESC, review_count DESC, product_id DESC
         LIMIT #{limit}
     </select>
