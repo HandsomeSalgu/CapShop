@@ -31,6 +31,7 @@ public class RecommendationProductResponse {
     private Integer rankNo;
     private Double score;
     private String reason;
+    private String keyword;
     private String recommendationType;
     private LocalDateTime createdAt;
 }

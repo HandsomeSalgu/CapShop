@@ -27,6 +27,7 @@ public class UserEventService {
     private final ProductMapper productMapper;
     private final ProductUpsertService productUpsertService;
     private final ObjectMapper objectMapper;
+    private final org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
 
     @Transactional
     public UserEventResponse createUserEvent(Long userId, UserEventCreateRequest request) {
@@ -157,6 +158,15 @@ public class UserEventService {
                 .build();
 
         userEventMapper.insertUserEvent(userEvent);
+        
+        // 새로운 활동(로그)이 생기면 기존 AI 추천 캐시를 삭제하여 즉시 업데이트되도록 만듦
+        try {
+            String redisKey = "user:" + userId + ":recommend_keywords";
+            redisTemplate.delete(redisKey);
+        } catch (Exception e) {
+            System.err.println("Failed to delete redis cache for user: " + userId);
+        }
+        
         return userEvent;
     }
 
