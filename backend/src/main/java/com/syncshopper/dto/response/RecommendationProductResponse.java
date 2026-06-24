@@ -19,11 +19,13 @@ public class RecommendationProductResponse {
 
     private Long recommendationId;
     private Long productId;
+    private String externalProductId;
     private String title;
     private String brand;
     private String categoryName;
     private Integer price;
     private String imageUrl;
+    private String link;
     private Integer reviewCount;
     private Double rating;
     private Integer rankNo;

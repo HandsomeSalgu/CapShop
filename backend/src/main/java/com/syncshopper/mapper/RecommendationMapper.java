@@ -33,4 +33,6 @@ public interface RecommendationMapper {
     );
 
     List<RecommendationCandidate> findFallbackCandidates(@Param("limit") int limit);
+
+    List<com.syncshopper.domain.recommendation.UserKeywordScore> findTopKeywordsByUserId(@Param("userId") Long userId, @Param("limit") int limit);
 }

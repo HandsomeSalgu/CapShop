@@ -195,4 +195,51 @@
         LIMIT #{limit}
     </select>
 
+    <select id="findTopKeywordsByUserId" resultType="com.syncshopper.domain.recommendation.UserKeywordScore">
+        SELECT category_name AS keyword, SUM(score) AS totalScore
+        FROM (
+            SELECT category_name, 10 AS score
+            FROM user_preferences
+            WHERE user_id = #{userId}
+            
+            UNION ALL
+            
+            SELECT COALESCE(ue.category_name, p.category_name) AS category_name,
+                   CASE 
+                       WHEN ue.event_type = 'PRODUCT_CLICK' THEN 1
+                       WHEN ue.event_type = 'PRODUCT_DETAIL_VIEW' THEN 2
+                       WHEN ue.event_type = 'PRODUCT_SAVE' THEN 3
+                       WHEN ue.event_type = 'PRODUCT_IGNORE' THEN -3
+                       WHEN ue.event_type = 'WISHLIST_ADD' THEN 5
+                       WHEN ue.event_type = 'WISHLIST_REMOVE' THEN -5
+                       WHEN ue.event_type = 'AFFILIATE_CLICK' THEN 10
+                       ELSE 0
+                   END AS score
+            FROM user_events ue
+            LEFT JOIN products p ON ue.product_id = p.product_id
+            WHERE ue.user_id = #{userId} 
+              AND ue.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+              AND COALESCE(ue.category_name, p.category_name) IS NOT NULL
+              
+            UNION ALL
+            
+            SELECT p.category_name, 5 AS score
+            FROM wishlists w
+            JOIN products p ON w.product_id = p.product_id
+            WHERE w.user_id = #{userId} AND p.category_name IS NOT NULL
+            
+            UNION ALL
+            
+            SELECT p.category_name, 10 AS score
+            FROM affiliate_clicks ac
+            JOIN products p ON ac.product_id = p.product_id
+            WHERE ac.user_id = #{userId} 
+              AND ac.clicked_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+              AND p.category_name IS NOT NULL
+        ) AS combined_scores
+        GROUP BY category_name
+        ORDER BY totalScore DESC
+        LIMIT #{limit}
+    </select>
+
 </mapper>

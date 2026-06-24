@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppBanner from '@/components/common/AppBanner.vue'
-import { commerceApi } from '@/api/commerce'
+import { recommendationApi } from '@/api/recommendation'
 
 const router = useRouter()
 const recommendations = ref([])
@@ -11,31 +11,34 @@ const error = ref(null)
 
 // 임시 AI 추천 이유 데이터
 const aiReasons = [
-  "최근 유튜브에서 관련 제품 리뷰 영상을 많이 시청하셨으며, 선호하시는 스타일과 가장 일치하는 제품입니다.",
+  "회원님의 최근 쇼핑/클릭 로그를 분석하여 취향과 가장 일치하는 제품을 찾아냈습니다.",
   "설정하신 관심 카테고리와 연관성이 매우 높으며, 최근 가장 트렌디하게 떠오르는 인기 아이템입니다.",
-  "최근 검색하신 키워드와 일치하며, 사용자 리뷰가 압도적으로 긍정적인 베스트 상품입니다.",
-  "장바구니에 담으신 상품들과 함께 사용하기 좋은 조합으로, 추천 엔진이 분석한 최적의 제품입니다."
+  "회원님의 활동 기록과 일치하며, 사용자 리뷰가 압도적으로 긍정적인 베스트 상품입니다.",
+  "위시리스트에 담으신 관심사들을 토대로 AI가 분석한 최적의 맞춤형 제품입니다."
 ]
 
-const fetchMockRecommendations = async () => {
+const fetchRecommendations = async () => {
   isLoading.value = true
   error.value = null
   try {
-    // 네이버 쇼핑 API를 이용해 임시로 상품 4개 호출 ('스마트기기' 키워드로 예시)
-    const result = await commerceApi.searchProducts('스마트기기', 4, 1, 'sim')
+    const result = await recommendationApi.getMyRecommendations(10)
     
     recommendations.value = result.map((item, index) => ({
-      productId: item.productId || item.externalProductId,
+      productId: item.productId || item.externalProductId || `temp_${index}`,
+      externalProductId: item.externalProductId,
       title: item.title,
-      brand: item.brand || item.mallName || '쇼핑몰',
+      brand: item.brand || '쇼핑몰',
+      mallName: item.brand || '쇼핑몰',
       price: item.price,
       imageUrl: item.imageUrl,
       link: item.link || item.affiliateUrl || '',
-      categoryName: `${item.category1} > ${item.category2}`,
-      reason: aiReasons[index % aiReasons.length]
+      affiliateUrl: item.link || item.affiliateUrl || '',
+      categoryName: item.categoryName,
+      source: 'NAVER',
+      reason: item.reason || aiReasons[index % aiReasons.length]
     }))
   } catch (err) {
-    console.error('Mock data fetch failed:', err)
+    console.error('Recommendation fetch failed:', err)
     error.value = '추천 상품을 불러오는 데 실패했습니다.'
   } finally {
     isLoading.value = false
@@ -48,7 +51,7 @@ const formatPrice = (price) => {
 }
 
 const goToDetail = (product) => {
-  if (!product.productId) return
+  if (!product.productId || String(product.productId).startsWith('temp_')) return
   
   router.push({
     path: `/product/${product.productId}`,
@@ -60,7 +63,7 @@ const goToDetail = (product) => {
 }
 
 onMounted(() => {
-  fetchMockRecommendations()
+  fetchRecommendations()
 })
 </script>
 

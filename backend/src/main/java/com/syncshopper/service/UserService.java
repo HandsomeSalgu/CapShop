@@ -103,4 +103,8 @@ public class UserService {
     public void updatePassword(Long userId, String encodedPassword) {
         userMapper.updatePassword(userId, encodedPassword);
     }
+
+    public java.util.List<User> findAllActiveUsers() {
+        return userMapper.findAllActiveUsers();
+    }
 }

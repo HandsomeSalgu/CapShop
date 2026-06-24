@@ -148,4 +148,9 @@
         LIMIT 1
     </select>
 
+    <select id="findAllActiveUsers" resultMap="UserResultMap">
+        SELECT * FROM users
+        WHERE status = 'ACTIVE'
+    </select>
+
 </mapper>

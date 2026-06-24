@@ -39,4 +39,6 @@ public interface UserMapper {
     User findByNicknameAndPhone(@Param("nickname") String nickname, @Param("phone") String phone);
 
     User findByEmailAndNicknameAndPhone(@Param("email") String email, @Param("nickname") String nickname, @Param("phone") String phone);
+
+    List<User> findAllActiveUsers();
 }

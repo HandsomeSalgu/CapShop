@@ -29,6 +29,7 @@ class ProductCandidate(BaseModel):
     thumbnail: Optional[str] = None
     lprice: Optional[int] = None
     hprice: Optional[int] = None
+    price_text: Optional[str] = None
     mall_name: Optional[str] = None
     product_id: Optional[str] = None
     external_product_id: Optional[str] = None
@@ -45,6 +46,8 @@ class ProductCandidate(BaseModel):
     text_score: float = Field(0.0, ge=0.0, le=1.0)
     visual_score: float = Field(0.0, ge=0.0, le=1.0)
     final_score: float = Field(0.0, ge=0.0, le=1.0)
+    confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
+    reason: Optional[str] = None
     filter_reason: Optional[str] = None
     visual_reason: Optional[str] = None
 
