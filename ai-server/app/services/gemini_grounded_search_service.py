@@ -54,7 +54,11 @@ def _call_gemini_interactions(query: str, *, display: int) -> dict[str, Any]:
     }
 
     try:
-        with httpx.Client(timeout=settings.gemini_search_timeout_seconds) as client:
+        timeout = min(
+            settings.gemini_search_timeout_seconds,
+            settings.gemini_search_per_query_timeout_seconds,
+        )
+        with httpx.Client(timeout=timeout) as client:
             response = client.post(settings.gemini_search_endpoint, headers=headers, json=payload)
     except httpx.TimeoutException as exc:
         raise HTTPException(status_code=504, detail="Gemini grounded search request timed out") from exc

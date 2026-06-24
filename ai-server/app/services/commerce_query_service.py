@@ -77,10 +77,11 @@ def _build_query_groups(
     product = _resolve_product_term(request)
     category = _resolve_category_term(request, product)
     color = _resolve_color_term(request)
-    style = _resolve_style_term(request)
+    style_terms = _resolve_style_terms(request)
+    style = style_terms[0] if style_terms else _resolve_style_term(request)
     usage = _resolve_usage_term(request)
     english = _resolve_english_query(request, color, style, product)
-    visible_texts = _visible_text_candidates(request.logo_text)
+    visible_texts = _visible_text_candidates(request.logo_text or request.brand)
 
     exact_defaults: list[str] = []
     for visible_text in visible_texts:
@@ -88,16 +89,22 @@ def _build_query_groups(
             f"{visible_text} {product}",
             f"\"{visible_text}\" {product}",
             f"{visible_text} {category}",
+            _join_query(visible_text, style, product),
         ])
 
     visual_defaults = _compact_queries([
         _join_query(color, style, product),
+        *[_join_query(color, term, product) for term in style_terms[1:]],
+        *[_join_query(term, product) for term in style_terms],
         _join_query(color, "그래픽", product),
         _join_query(color, "프린트", product),
         _join_query(color, usage, product),
     ])
     category_defaults = _compact_queries([
+        _join_query(category, style, product),
         _join_query(category, color),
+        _join_query(product, color),
+        _join_query(style, product),
         _join_query("스포츠", "저지", color) if _looks_sports_item(request) else None,
         _join_query("축구", "유니폼", color) if _looks_sports_item(request) else None,
     ])
@@ -218,6 +225,27 @@ def _koreanize_search_query(
         return None
 
     replacements = [
+        (r"\bolive[- ]?green\b", "올리브 그린"),
+        (r"\bdark[- ]?green\b", "진녹색"),
+        (r"\bkhaki\b", "카키"),
+        (r"\brelaxed[- ]?fit\b", "루즈핏"),
+        (r"\bloose[- ]?fit\b", "루즈핏"),
+        (r"\bover[- ]?fit\b", "오버핏"),
+        (r"\boversized\b", "오버핏"),
+        (r"\bv[- ]?neck\b", "브이넥"),
+        (r"\bsnap[- ]?button\b", "스냅 버튼"),
+        (r"\bsnap\b", "스냅"),
+        (r"\bbutton\b", "버튼"),
+        (r"\bquilted\b", "퀼팅"),
+        (r"\bquilting\b", "퀼팅"),
+        (r"\bembroidered\b", "자수"),
+        (r"\bembroidery\b", "자수"),
+        (r"\bouterwear\b", "아우터"),
+        (r"\bjacket\b", "자켓"),
+        (r"\bjumper\b", "점퍼"),
+        (r"\bcoat\b", "코트"),
+        (r"\bcardigan\b", "가디건"),
+        (r"\bcasual\b", "캐주얼"),
         (r"\bshort[- ]?sleeve\b", "반팔"),
         (r"\bt[- ]?shirt\b", "반팔티"),
         (r"\btee\b", "티셔츠"),
@@ -345,6 +373,8 @@ def _visible_text_candidates(value: str | None) -> list[str]:
 
 def _resolve_product_term(request: CommerceQueryRequest) -> str:
     haystack = _request_haystack(request)
+    if _contains_any(haystack, ["jacket", "outerwear", "jumper", "coat", "자켓", "재킷", "점퍼", "아우터"]):
+        return "자켓"
     if _contains_any(haystack, ["t-shirt", "tee", "shirt", "short sleeve", "반팔", "티셔츠"]):
         return "반팔티"
     if _contains_any(haystack, ["jersey", "저지", "유니폼"]):
@@ -360,6 +390,8 @@ def _resolve_category_term(request: CommerceQueryRequest, product: str) -> str:
     haystack = _request_haystack(request)
     if _looks_sports_item(request):
         return "스포츠 저지"
+    if _contains_any(haystack, ["outerwear", "jacket", "jumper", "coat", "아우터", "자켓", "재킷", "점퍼", "코트"]):
+        return "아우터"
     if _contains_any(haystack, ["fashion", "shirt", "tee", "의류", "상의"]):
         return "티셔츠"
     return request.category_name or product
@@ -367,6 +399,10 @@ def _resolve_category_term(request: CommerceQueryRequest, product: str) -> str:
 
 def _resolve_color_term(request: CommerceQueryRequest) -> str | None:
     haystack = _request_haystack(request)
+    if _contains_any(haystack, ["olive green", "olive-green", "올리브 그린", "올리브그린"]):
+        return "올리브 그린"
+    if _contains_any(haystack, ["khaki", "카키"]):
+        return "카키"
     if _contains_any(haystack, ["orange", "주황", "오렌지"]):
         return "주황색"
     if _contains_any(haystack, ["black", "검정", "블랙"]):
@@ -377,16 +413,36 @@ def _resolve_color_term(request: CommerceQueryRequest) -> str | None:
         return "빨간색"
     if _contains_any(haystack, ["blue", "파랑", "블루"]):
         return "파란색"
+    if _contains_any(haystack, ["green", "초록", "그린"]):
+        return "초록색"
     return request.color
 
 
 def _resolve_style_term(request: CommerceQueryRequest) -> str | None:
+    style_terms = _resolve_style_terms(request)
+    if style_terms:
+        return style_terms[0]
+
     haystack = _request_haystack(request)
     if _contains_any(haystack, ["graphic", "print", "printed", "그래픽", "프린트"]):
         return "그래픽"
     if _contains_any(haystack, ["letter", "text", "logo", "레터링", "문구"]):
         return "레터링"
     return None
+
+
+def _resolve_style_terms(request: CommerceQueryRequest) -> list[str]:
+    haystack = _request_haystack(request)
+    return _compact_queries([
+        "퀼팅" if _contains_any(haystack, ["quilted", "quilting", "퀼팅", "누빔"]) else None,
+        "브이넥" if _contains_any(haystack, ["v-neck", "v neck", "브이넥", "v넥"]) else None,
+        "스냅 버튼" if _contains_any(haystack, ["snap button", "snap-button", "스냅 버튼", "스냅버튼"]) else None,
+        "자수" if _contains_any(haystack, ["embroidered", "embroidery", "자수"]) else None,
+        "그래픽" if _contains_any(haystack, ["graphic", "print", "printed", "그래픽", "프린트"]) else None,
+        "레터링" if _contains_any(haystack, ["letter", "text", "logo", "레터링", "문구"]) else None,
+        "캐주얼" if _contains_any(haystack, ["casual", "캐주얼"]) else None,
+        "루즈핏" if _contains_any(haystack, ["relaxed fit", "loose fit", "루즈핏"]) else None,
+    ])
 
 
 def _resolve_usage_term(request: CommerceQueryRequest) -> str | None:
@@ -407,18 +463,24 @@ def _resolve_english_query(
     haystack = _request_haystack(request)
     english_parts: list[str] = []
 
-    if _contains_any(haystack, ["orange", "주황", "오렌지"]):
+    if _contains_any(haystack, ["olive green", "olive-green", "올리브 그린", "올리브그린"]):
+        english_parts.append("olive green")
+    elif _contains_any(haystack, ["orange", "주황", "오렌지"]):
         english_parts.append("orange")
     elif color and re.search(r"[A-Za-z]", color):
         english_parts.append(color)
 
-    if _contains_any(haystack, ["graphic", "print", "그래픽", "프린트"]):
+    if _contains_any(haystack, ["quilted", "quilting", "퀼팅", "누빔"]):
+        english_parts.append("quilted")
+    elif _contains_any(haystack, ["graphic", "print", "그래픽", "프린트"]):
         english_parts.append("graphic")
     elif style and re.search(r"[A-Za-z]", style):
         english_parts.append(style)
 
     if _looks_sports_item(request):
         english_parts.extend(["sports", "jersey"])
+    elif product == "자켓":
+        english_parts.append("jacket")
     elif product in {"반팔티", "티셔츠"}:
         english_parts.append("t-shirt")
     elif re.search(r"[A-Za-z]", product):
@@ -446,25 +508,197 @@ def _request_haystack(request: CommerceQueryRequest) -> str:
 
 
 def _contains_any(value: str, terms: list[str]) -> bool:
-    return any(term.lower() in value for term in terms)
+    if not value:
+        return False
+
+    normalized = value.lower()
+    for term in terms:
+        needle = term.lower().strip()
+        if not needle:
+            continue
+        if re.search(r"[a-z0-9]", needle):
+            pattern = r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])"
+            if re.search(pattern, normalized):
+                return True
+        elif needle in normalized:
+            return True
+
+    return False
 
 
 def _build_fallback_primary_query(request: CommerceQueryRequest) -> str:
+    return _build_rule_based_primary_query(request)
+
+
+def _build_rule_based_primary_query(request: CommerceQueryRequest) -> str:
+    brand = _brand_query_term(request)
+    model = _model_query_term(request)
+    color = _resolve_color_term(request)
+    product = _resolve_product_term(request)
+    style_terms = _resolve_style_terms(request)
+
     parts: list[str] = []
 
-    if request.brand:
-        parts.append(request.brand)
+    if brand:
+        parts.append(brand)
 
-    if request.model_name:
-        parts.append(request.model_name)
-    elif request.target_name and request.target_name.lower() != "unknown product":
+    if model:
+        parts.append(model)
+
+    if color:
+        parts.append(color)
+
+    parts.extend(style_terms[:2])
+
+    if product:
+        parts.append(product)
+
+    if not parts and request.target_name and request.target_name.lower() != "unknown product":
         parts.append(request.target_name)
-    elif request.category_name:
-        parts.append(request.category_name)
-    else:
-        parts.append("상품")
 
-    return " ".join(parts).strip()
+    if not parts:
+        parts.append(request.category_name or "상품")
+
+    return _join_distinct_query_parts(parts) or "상품"
+
+
+def _build_rule_based_query_data(request: CommerceQueryRequest) -> dict[str, Any]:
+    brand = _brand_query_term(request)
+    model = _model_query_term(request)
+    color = _resolve_color_term(request)
+    product = _resolve_product_term(request)
+    category = _resolve_category_term(request, product)
+    style_terms = _resolve_style_terms(request)
+    primary_query = _build_rule_based_primary_query(request)
+    exact_base = _join_distinct_query_parts([brand, model]) or brand or model
+    key_style = style_terms[0] if style_terms else None
+
+    exact_text_queries = _compact_queries([
+        _join_distinct_query_parts([exact_base, product]),
+        _join_distinct_query_parts([f"\"{exact_base}\"" if exact_base else None, product]),
+        _join_distinct_query_parts([exact_base, key_style, product]),
+        _join_distinct_query_parts([brand, color, product]),
+        _join_distinct_query_parts([brand, category]),
+    ])
+    visual_queries = _compact_queries([
+        _join_distinct_query_parts([color, *style_terms[:2], product]),
+        _join_distinct_query_parts([color, key_style, product]),
+        _join_distinct_query_parts([color, "그래픽", product]),
+        _join_distinct_query_parts([color, "자수", product]),
+        _join_distinct_query_parts([color, "스냅 버튼", product]),
+        _join_distinct_query_parts([color, request.shape, product]),
+    ])
+    category_queries = _compact_queries([
+        _join_distinct_query_parts([category, key_style, product]),
+        _join_distinct_query_parts([product, color]),
+        _join_distinct_query_parts([key_style, product]),
+        _join_distinct_query_parts([category, color]),
+    ])
+    shopping_queries = _compact_queries([
+        primary_query,
+        _join_distinct_query_parts([primary_query, "구매"]),
+        _join_distinct_query_parts([primary_query, "가격"]),
+        *exact_text_queries,
+        *visual_queries,
+    ])
+    image_queries = _compact_queries([
+        _join_distinct_query_parts([primary_query, "이미지"]),
+        _join_distinct_query_parts([color, key_style, product, "사진"]),
+        _join_distinct_query_parts([color, product, "코디"]),
+        *visual_queries,
+        *exact_text_queries,
+    ])
+    blog_queries = _compact_queries([
+        *_with_suffix(exact_text_queries, "후기"),
+        *_with_suffix(visual_queries, "코디"),
+        *_with_suffix(category_queries, "추천"),
+    ])
+    cafe_queries = _compact_queries([
+        *_with_suffix(exact_text_queries, "정보"),
+        *_with_suffix(visual_queries, "어디서 사나요"),
+        *_with_suffix(category_queries, "커뮤니티"),
+    ])
+    web_queries = _compact_queries([
+        primary_query,
+        *exact_text_queries,
+        *visual_queries,
+        *category_queries,
+    ])
+    fallback_queries = _compact_queries([
+        _join_distinct_query_parts([brand, product]),
+        _join_distinct_query_parts([brand, category]),
+        _join_distinct_query_parts([color, key_style, product]),
+        _join_distinct_query_parts([key_style, product]),
+        _join_distinct_query_parts([category, product]),
+        request.target_name,
+        request.category_name,
+    ])
+
+    return {
+        "primary_query": primary_query,
+        "exact_text_queries": exact_text_queries,
+        "visual_queries": visual_queries,
+        "category_queries": category_queries,
+        "shopping_queries": shopping_queries,
+        "image_queries": image_queries,
+        "blog_queries": blog_queries,
+        "cafe_queries": cafe_queries,
+        "web_queries": web_queries,
+        "fallback_queries": fallback_queries,
+        "normalized_brand": request.brand or request.logo_text,
+        "normalized_model": request.model_name,
+        "normalized_category": category,
+        "query_confidence": max(0.0, min(request.confidence or 0.7, 1.0)),
+        "reason": "Rule-based commerce query generated from detection result.",
+    }
+
+
+def _brand_query_term(request: CommerceQueryRequest) -> str | None:
+    return _first_non_empty(request.brand, request.logo_text)
+
+
+def _model_query_term(request: CommerceQueryRequest) -> str | None:
+    model = request.model_name
+    brand = _brand_query_term(request)
+    if not model:
+        return None
+    if brand and model.strip().lower() == brand.strip().lower():
+        return None
+    return model.strip()
+
+
+def _first_non_empty(*values: str | None) -> str | None:
+    for value in values:
+        if value and value.strip():
+            return value.strip()
+    return None
+
+
+def _join_distinct_query_parts(parts: list[str | None]) -> str | None:
+    values: list[str] = []
+    seen: set[str] = set()
+    for part in parts:
+        if not part:
+            continue
+
+        normalized = re.sub(r"\s+", " ", str(part)).strip()
+        if not normalized:
+            continue
+
+        key = normalized.strip("\"'").lower()
+        if key in seen:
+            continue
+
+        values.append(normalized)
+        seen.add(key)
+
+    return " ".join(values).strip() or None
+
+
+def generate_rule_based_commerce_query(request: CommerceQueryRequest) -> CommerceQueryResponse:
+    data = _build_rule_based_query_data(request)
+    normalized = _normalize_response(data, request)
+    return _debug_response(request, normalized, provider="rule_based")
 
 
 def _generate_mock_commerce_query(request: CommerceQueryRequest) -> CommerceQueryResponse:

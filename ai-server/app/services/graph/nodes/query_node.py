@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.schemas.commerce_query_schema import CommerceQueryResponse
-from app.services.commerce_query_service import generate_commerce_query, _koreanize_search_query
+from app.services.commerce_query_service import generate_rule_based_commerce_query, _koreanize_search_query
 from app.services.gemini_client import call_chat_completion, extract_json_object
 from app.services.graph.debug import _model_to_dict, _print_graph_debug
 from app.services.graph.query_helpers import (
@@ -28,7 +28,7 @@ def _query_generator_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     request = state["request"]
     frame_analysis = state["frame_analysis"]
     commerce_request = _to_commerce_request(request, frame_analysis)
-    query = generate_commerce_query(commerce_request)
+    query = generate_rule_based_commerce_query(commerce_request)
     source_queries = _query_candidates_by_source(query, frame_analysis)
 
     return {

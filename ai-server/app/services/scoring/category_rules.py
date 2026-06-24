@@ -122,7 +122,18 @@ def _contains_any(text: str | None, terms: list[str]) -> bool:
         return False
 
     normalized = text.lower()
-    return any(term.lower() in normalized for term in terms)
+    for term in terms:
+        needle = term.lower().strip()
+        if not needle:
+            continue
+        if re.search(r"[a-z0-9]", needle):
+            pattern = r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])"
+            if re.search(pattern, normalized):
+                return True
+        elif needle in normalized:
+            return True
+
+    return False
 
 def _tokens(text: str) -> list[str]:
     return re.findall(r"[a-z0-9]+|[가-힣]+", text.lower())

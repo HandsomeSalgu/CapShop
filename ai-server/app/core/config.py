@@ -102,7 +102,7 @@ class Settings:
     naver_shopping_display: int = int(os.getenv("NAVER_SHOPPING_DISPLAY", "30"))
     naver_shopping_sort: str = os.getenv("NAVER_SHOPPING_SORT", "sim")
     naver_search_max_workers: int = _env_int("AI_NAVER_SEARCH_MAX_WORKERS", 5)
-    skip_gemini_min_candidates: int = _env_int("AI_SKIP_GEMINI_MIN_CANDIDATES", 20)
+    search_naver_ratio: float = _env_float("AI_SEARCH_NAVER_RATIO", 0.6)
     skip_visual_rerank_top_score: float = _env_float("AI_SKIP_VISUAL_RERANK_TOP_SCORE", 0.75)
     skip_visual_rerank_avg_score: float = _env_float("AI_SKIP_VISUAL_RERANK_AVG_SCORE", 0.72)
     search_cache_ttl_seconds: int = _env_int("AI_SEARCH_CACHE_TTL_SECONDS", 3600)
@@ -123,11 +123,14 @@ class Settings:
     google_custom_search_display: int = int(os.getenv("GOOGLE_CUSTOM_SEARCH_DISPLAY", "5"))
     google_custom_search_strict_errors: bool = _env_bool("GOOGLE_CUSTOM_SEARCH_STRICT_ERRORS", False)
     gemini_search_model: str = _env_str("GEMINI_SEARCH_MODEL", "gemini-2.5-flash")
+    gemini_search_max_queries: int = _env_int("GEMINI_SEARCH_MAX_QUERIES", 2)
+    gemini_search_max_workers: int = _env_int("GEMINI_SEARCH_MAX_WORKERS", 2)
     gemini_search_endpoint: str = _env_str(
         "GEMINI_SEARCH_ENDPOINT",
         "https://generativelanguage.googleapis.com/v1beta/interactions",
     )
-    gemini_search_timeout_seconds: float = _env_float("GEMINI_SEARCH_TIMEOUT_SECONDS", 20.0)
+    gemini_search_timeout_seconds: float = _env_float("GEMINI_SEARCH_TIMEOUT_SECONDS", 8.0)
+    gemini_search_per_query_timeout_seconds: float = _env_float("GEMINI_SEARCH_PER_QUERY_TIMEOUT_SECONDS", 8.0)
     analysis_max_retries: int = int(os.getenv("AI_ANALYSIS_MAX_RETRIES", "0"))
     db_host: str = _env_str("DB_HOST", "localhost")
     db_port: int = int(_env_str("DB_PORT", "3306"))

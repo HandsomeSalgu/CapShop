@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 
@@ -25,32 +26,44 @@ Return JSON with exactly these keys:
 """.strip()
 
 
-def build_result_judge_messages(
+def build_candidate_judge_messages(
     *,
     detected_product: dict[str, Any],
+    ocr_analysis: dict[str, Any] | None,
+    visual_analysis: dict[str, Any] | None,
     query: dict[str, Any],
     candidates: list[dict[str, Any]],
+    google_results: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    payload = {
+        "detected_product": detected_product,
+        "ocr_analysis": ocr_analysis,
+        "visual_analysis": visual_analysis,
+        "query": query,
+        "candidates": candidates,
+        "google_results": google_results,
+    }
     return [
         {
             "role": "developer",
             "content": (
-                "You are a product search result quality judge. "
-                "Decide whether the current result set is good enough. Return JSON only."
+                "You judge product identity and candidate quality for SyncShopper. "
+                "Be conservative. Do not invent exact models. Return JSON only."
             ),
         },
         {
             "role": "user",
             "content": (
-                "Judge these Naver search candidates for the detected product.\n"
-                "Good means at least 3 candidates are visually/textually similar enough "
-                "and the scores are not weak.\n\n"
-                f"Detected product: {detected_product}\n"
-                f"Query: {query}\n"
-                f"Candidates: {candidates}\n\n"
-                "Return JSON with exactly these keys: "
-                "{\"is_good\": boolean, \"score\": number, "
-                "\"enough_similar_count\": number, \"reason\": string}"
+                "Resolve identity and judge candidates. Good means at least 3 candidates "
+                "match the detected product by brand/model or key visual features.\n"
+                f"Input JSON: {json.dumps(payload, ensure_ascii=False, separators=(',', ':'))}\n"
+                "Return JSON with exactly these top-level keys: "
+                "{\"identification\": {\"target_name\": string, \"category_name\": string, "
+                "\"brand\": string | null, \"model_name\": string | null, \"color\": string | null, "
+                "\"shape\": string | null, \"logo_text\": string | null, \"key_features\": string[], "
+                "\"confidence\": number, \"evidence\": string[], \"reason\": string}, "
+                "\"quality\": {\"is_good\": boolean, \"score\": number, "
+                "\"enough_similar_count\": number, \"reason\": string}}"
             ),
         },
     ]

@@ -44,14 +44,17 @@ NAVER_SHOPPING_PROVIDER=backend
 NAVER_SHOPPING_DISPLAY=30
 NAVER_SHOPPING_SORT=sim
 AI_NAVER_SEARCH_MAX_WORKERS=5
-AI_SKIP_GEMINI_MIN_CANDIDATES=20
+AI_SEARCH_NAVER_RATIO=0.6
 AI_SKIP_VISUAL_RERANK_TOP_SCORE=0.75
 AI_SKIP_VISUAL_RERANK_AVG_SCORE=0.72
 AI_SEARCH_CACHE_TTL_SECONDS=3600
 AI_SEARCH_CACHE_MAX_SIZE=500
 GEMINI_SEARCH_MODEL=gemini-2.5-flash
+GEMINI_SEARCH_MAX_QUERIES=2
+GEMINI_SEARCH_MAX_WORKERS=2
 GEMINI_SEARCH_ENDPOINT=https://generativelanguage.googleapis.com/v1beta/interactions
-GEMINI_SEARCH_TIMEOUT_SECONDS=20
+GEMINI_SEARCH_TIMEOUT_SECONDS=8
+GEMINI_SEARCH_PER_QUERY_TIMEOUT_SECONDS=8
 AI_ANALYSIS_MAX_RETRIES=0
 ```
 
@@ -83,20 +86,20 @@ frame_analyzer
 -> query_generator
 -> naver_search
 -> google_search
--> search_identifier
 -> text_filter
 -> visual_reranker
--> result_judge
+-> candidate_judge
 -> final_formatter
 ```
 
-The graph always runs a single search pass. `result_judge` only evaluates quality for the final response and no longer routes back into another Naver/Google search cycle. `naver_search` calls the Spring Boot backend commerce API by default, so Naver API credentials stay in the backend service.
+The graph always runs a single search pass. `candidate_judge` resolves search-based product identity and evaluates candidate quality for the final response, without routing back into another Naver/Google search cycle. `naver_search` calls the Spring Boot backend commerce API by default, so Naver API credentials stay in the backend service.
 
 Performance notes:
 
 - OCR and visual feature analysis run in parallel in the `frame_analyzer` node.
 - Naver multi-source searches run concurrently with `AI_NAVER_SEARCH_MAX_WORKERS`.
-- Gemini Grounding is skipped when Naver candidates are already enough.
+- Naver and Gemini Grounding split the candidate budget with `AI_SEARCH_NAVER_RATIO` (default Naver 60%, Gemini 40%).
+- Gemini Grounding runs at most `GEMINI_SEARCH_MAX_QUERIES` queries in parallel and caps each query with `GEMINI_SEARCH_PER_QUERY_TIMEOUT_SECONDS`.
 - Gemini visual reranking is skipped when text scores are strong enough.
 - Naver and Gemini search results use in-memory TTL cache.
 - Set `AI_SEARCH_CACHE_TTL_SECONDS=0` to disable the in-memory search cache.

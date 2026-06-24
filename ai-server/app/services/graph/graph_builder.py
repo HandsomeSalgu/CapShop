@@ -7,10 +7,10 @@ from app.schemas.analysis_graph_schema import ShoppingAnalysisRequest, ShoppingA
 from app.services.graph.debug import _print_graph_debug, _print_graph_error
 from app.services.graph.nodes.filter_node import _text_filter_node
 from app.services.graph.nodes.frame_node import _frame_analyzer_node
-from app.services.graph.nodes.judge_node import _final_formatter_node, _result_judge_node
+from app.services.graph.nodes.judge_node import _candidate_judge_node, _final_formatter_node
 from app.services.graph.nodes.query_node import _query_generator_node
 from app.services.graph.nodes.rerank_node import _visual_reranker_node
-from app.services.graph.nodes.search_node import _google_search_node, _naver_search_node, _search_identifier_node
+from app.services.graph.nodes.search_node import _google_search_node, _naver_search_node
 from app.services.graph.state import ShoppingAnalysisState
 
 
@@ -41,21 +41,19 @@ def _build_graph():
     workflow.add_node("query_generator", _with_node_logging("query_generator", _query_generator_node))
     workflow.add_node("naver_search", _with_node_logging("naver_search", _naver_search_node))
     workflow.add_node("google_search", _with_node_logging("google_search", _google_search_node))
-    workflow.add_node("search_identifier", _with_node_logging("search_identifier", _search_identifier_node))
     workflow.add_node("text_filter", _with_node_logging("text_filter", _text_filter_node))
     workflow.add_node("visual_reranker", _with_node_logging("visual_reranker", _visual_reranker_node))
-    workflow.add_node("result_judge", _with_node_logging("result_judge", _result_judge_node))
+    workflow.add_node("candidate_judge", _with_node_logging("candidate_judge", _candidate_judge_node))
     workflow.add_node("final_formatter", _with_node_logging("final_formatter", _final_formatter_node))
 
     workflow.add_edge(START, "frame_analyzer")
     workflow.add_edge("frame_analyzer", "query_generator")
     workflow.add_edge("query_generator", "naver_search")
     workflow.add_edge("naver_search", "google_search")
-    workflow.add_edge("google_search", "search_identifier")
-    workflow.add_edge("search_identifier", "text_filter")
+    workflow.add_edge("google_search", "text_filter")
     workflow.add_edge("text_filter", "visual_reranker")
-    workflow.add_edge("visual_reranker", "result_judge")
-    workflow.add_edge("result_judge", "final_formatter")
+    workflow.add_edge("visual_reranker", "candidate_judge")
+    workflow.add_edge("candidate_judge", "final_formatter")
     workflow.add_edge("final_formatter", END)
 
     return workflow.compile()

@@ -20,6 +20,7 @@ def call_chat_completion(
     *,
     model: str | None = None,
     temperature: float = 0.1,
+    timeout_sec: float | None = None,
 ) -> str:
     if not settings.gemini_api_key:
         raise HTTPException(
@@ -35,7 +36,7 @@ def call_chat_completion(
     }
 
     try:
-        with httpx.Client(timeout=settings.gemini_timeout_sec) as client:
+        with httpx.Client(timeout=timeout_sec or settings.gemini_timeout_sec) as client:
             response = client.post(
                 _generate_content_url(resolved_model),
                 headers=headers,

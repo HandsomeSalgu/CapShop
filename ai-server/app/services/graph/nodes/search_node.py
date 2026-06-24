@@ -15,7 +15,6 @@ from app.services.graph.search_helpers import _google_result_key, _source_counts
 from app.services.graph.state import ShoppingAnalysisState
 from app.services.naver_shopping_service import search_naver_source
 from app.services.scoring.category_rules import NAVER_SEARCH_SOURCES
-from app.services.split_frame_analysis_service import apply_identification_to_frame, identify_from_search
 
 
 @dataclass(frozen=True)
@@ -29,7 +28,7 @@ def _naver_search_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     request = state["request"]
     source_queries = state.get("source_queries") or _query_candidates_by_source(state["query"], state["frame_analysis"])
     active_queries = _flatten_source_queries(source_queries)
-    limit = request.max_candidates
+    limit = _naver_candidate_limit(request.max_candidates)
     tried_queries = _unique([*(state.get("tried_queries") or []), *active_queries])
     active_sources = [source for source in NAVER_SEARCH_SOURCES if source_queries.get(source)]
     per_source_limit = max(3, math.ceil(limit / max(1, len(active_sources))))
@@ -112,11 +111,20 @@ def _run_naver_search_tasks(search_tasks: list[_NaverSearchTask]) -> dict[_Naver
 
 def _google_search_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     existing_candidates = state.get("search_candidates") or []
-    if len(existing_candidates) >= settings.skip_gemini_min_candidates:
+    request = state["request"]
+    queries = _select_gemini_queries(_google_query_candidates(state))
+    limit = _gemini_candidate_limit(request.max_candidates)
+    if not queries:
+        return {
+            "search_candidates": existing_candidates,
+            "google_search_results": [],
+            "source_counts": state.get("source_counts") or {},
+            "google_source_counts": {GEMINI_GROUNDED_SEARCH_SOURCE: 0},
+        }
+    if limit <= 0:
         print(
             "\n[SyncShopper Gemini Grounded Search] "
-            "skipped because Naver candidates are enough "
-            f"count={len(existing_candidates)} threshold={settings.skip_gemini_min_candidates}",
+            "skipped because Gemini candidate budget is zero",
             flush=True,
         )
         return {
@@ -126,30 +134,23 @@ def _google_search_node(state: ShoppingAnalysisState) -> dict[str, Any]:
             "google_source_counts": {GEMINI_GROUNDED_SEARCH_SOURCE: 0},
         }
 
-    request = state["request"]
-    queries = _google_query_candidates(state)
-    if not queries:
-        return {
-            "search_candidates": existing_candidates,
-            "google_search_results": [],
-            "source_counts": state.get("source_counts") or {},
-            "google_source_counts": {GEMINI_GROUNDED_SEARCH_SOURCE: 0},
-        }
-
-    limit = min(12, request.max_candidates)
-    per_query_display = max(1, min(settings.google_custom_search_display, math.ceil(limit / len(queries))))
+    per_query_display = max(
+        1,
+        min(10, max(settings.google_custom_search_display, math.ceil(limit / len(queries)))),
+    )
     candidates_by_key: dict[str, ProductCandidate] = {
         _candidate_key(candidate): candidate
         for candidate in existing_candidates
     }
     gemini_candidates: list[ProductCandidate] = []
     results_by_key: dict[str, GoogleSearchResult] = {}
+    query_results = _run_gemini_search_queries(queries, display=per_query_display)
 
     for query in queries:
         if len(gemini_candidates) >= limit:
             break
 
-        for candidate in search_gemini_grounded_products(query, display=per_query_display):
+        for candidate in query_results.get(query, []):
             key = _candidate_key(candidate)
             if key in candidates_by_key:
                 continue
@@ -177,6 +178,56 @@ def _google_search_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     }
 
 
+def _select_gemini_queries(queries: list[str]) -> list[str]:
+    max_queries = max(1, settings.gemini_search_max_queries)
+    return queries[:max_queries]
+
+
+def _run_gemini_search_queries(queries: list[str], *, display: int) -> dict[str, list[ProductCandidate]]:
+    if not queries:
+        return {}
+
+    max_workers = max(1, min(len(queries), settings.gemini_search_max_workers))
+    results: dict[str, list[ProductCandidate]] = {}
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            query: executor.submit(search_gemini_grounded_products, query, display=display)
+            for query in queries
+        }
+
+        for query, future in futures.items():
+            try:
+                results[query] = future.result()
+            except Exception as exc:
+                results[query] = []
+                print(
+                    "\n[SyncShopper Gemini Grounded Search] "
+                    f"failed query='{query}' error_type={exc.__class__.__name__} message={str(exc)}",
+                    flush=True,
+                )
+
+    return results
+
+
+def _naver_candidate_limit(max_candidates: int) -> int:
+    return max(1, min(max_candidates, math.ceil(max_candidates * _naver_ratio())))
+
+
+def _gemini_candidate_limit(max_candidates: int) -> int:
+    naver_limit = _naver_candidate_limit(max_candidates)
+    return max(0, max_candidates - naver_limit)
+
+
+def _naver_ratio() -> float:
+    ratio = settings.search_naver_ratio
+    if ratio <= 0.0:
+        return 0.0
+    if ratio >= 1.0:
+        return 1.0
+    return ratio
+
+
 def _gemini_candidate_to_google_result(candidate: ProductCandidate) -> GoogleSearchResult:
     return GoogleSearchResult(
         title=candidate.title,
@@ -196,18 +247,3 @@ def _display_link(url: str | None) -> str | None:
 
     parsed = urlparse(url)
     return parsed.netloc or None
-
-
-def _search_identifier_node(state: ShoppingAnalysisState) -> dict[str, Any]:
-    identification = identify_from_search(
-        state["frame_analysis"],
-        state.get("ocr_analysis"),
-        state.get("visual_analysis"),
-        state.get("search_candidates") or [],
-        state.get("google_search_results") or [],
-    )
-    refined_frame_analysis = apply_identification_to_frame(state["frame_analysis"], identification)
-    return {
-        "search_identification": identification,
-        "frame_analysis": refined_frame_analysis,
-    }
