@@ -46,7 +46,7 @@ def _final_formatter_node(state: ShoppingAnalysisState) -> dict[str, Any]:
         selected = strong_candidates
         similar = []
         match_status = "GOOD_MATCH"
-        message = "Detected product has enough high-confidence Naver search matches."
+        message = "Detected product has enough high-confidence search matches."
     elif similar_candidates:
         selected = []
         similar = similar_candidates

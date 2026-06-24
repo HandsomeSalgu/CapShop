@@ -1,3 +1,9 @@
+"""Deprecated Google Custom Search fallback.
+
+LangGraph's main Google search path uses Gemini Grounding with Google Search.
+This module is kept for compatibility and manual fallback experiments.
+"""
+
 from typing import Any
 
 import httpx
@@ -29,7 +35,15 @@ def search_google_custom(query: str, *, display: int = 5) -> list[GoogleSearchRe
         _print_google_search_log(query, [], note="Google Custom Search credentials are not configured")
         return []
 
-    results = _search_google(query, display=display)
+    try:
+        results = _search_google(query, display=display)
+    except HTTPException as exc:
+        if settings.google_custom_search_strict_errors:
+            raise
+
+        _print_google_search_log(query, [], note=_google_error_note(exc))
+        return []
+
     _print_google_search_log(query, results)
     return results
 
@@ -51,9 +65,10 @@ def _search_google(query: str, *, display: int) -> list[GoogleSearchResult]:
         raise HTTPException(status_code=502, detail=f"Google Custom Search request failed: {str(exc)}") from exc
 
     if response.status_code >= 400:
+        error_detail = _google_api_error_detail(response)
         raise HTTPException(
             status_code=502,
-            detail=f"Google Custom Search API error: {response.status_code} {_truncate(response.text)}",
+            detail=f"Google Custom Search API error: {response.status_code} {error_detail}",
         )
 
     try:
@@ -107,7 +122,7 @@ def _print_google_search_log(
     note: str | None = None,
 ) -> None:
     samples = [_truncate(result.title, 80) for result in results[:3] if result.title]
-    suffix = f" note='{note}'" if note else ""
+    suffix = f" note='{_truncate(note, 240)}'" if note else ""
     print(
         "\n[SyncShopper Google Search] "
         f"query='{_truncate(query, 120)}' result_count={len(results)} samples={samples}{suffix}",
@@ -119,3 +134,43 @@ def _truncate(value: str, max_length: int = 500) -> str:
     if len(value) <= max_length:
         return value
     return f"{value[:max_length]}..."
+
+
+def _google_api_error_detail(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return _truncate(response.text)
+
+    if not isinstance(payload, dict):
+        return _truncate(response.text)
+
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return _truncate(response.text)
+
+    message = str(error.get("message") or "").strip()
+    status = str(error.get("status") or "").strip()
+    reason = _google_error_reason(error)
+    parts = [part for part in [status, reason, message] if part]
+    if not parts:
+        return _truncate(response.text)
+
+    return _truncate(" | ".join(parts))
+
+
+def _google_error_reason(error: dict[str, Any]) -> str | None:
+    errors = error.get("errors")
+    if not isinstance(errors, list):
+        return None
+
+    for item in errors:
+        if isinstance(item, dict) and item.get("reason"):
+            return str(item["reason"]).strip()
+
+    return None
+
+
+def _google_error_note(exc: HTTPException) -> str:
+    detail = str(exc.detail or exc)
+    return f"Google Custom Search skipped: {detail}"

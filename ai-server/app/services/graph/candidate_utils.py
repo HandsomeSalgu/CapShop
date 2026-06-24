@@ -58,4 +58,4 @@ def _unique(values: list[str | None]) -> list[str]:
 
 
 def _is_recommendable_product(candidate: ProductCandidate) -> bool:
-    return candidate.product_type == "NAVER_SHOPPING" and bool(candidate.link)
+    return candidate.product_type in {"NAVER_SHOPPING", "GEMINI_GROUNDED_SEARCH"} and bool(candidate.link)

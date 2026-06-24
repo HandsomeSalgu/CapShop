@@ -42,12 +42,33 @@ BACKEND_COMMERCE_SEARCH_PATH=/api/commerce/search
 NAVER_SHOPPING_PROVIDER=backend
 NAVER_SHOPPING_DISPLAY=30
 NAVER_SHOPPING_SORT=sim
-GOOGLE_CUSTOM_SEARCH_PROVIDER=google
-GOOGLE_CUSTOM_SEARCH_API_KEY=YOUR_GOOGLE_CUSTOM_SEARCH_API_KEY
-GOOGLE_CUSTOM_SEARCH_CX=YOUR_GOOGLE_CUSTOM_SEARCH_ENGINE_ID
-GOOGLE_CUSTOM_SEARCH_DISPLAY=5
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+GEMINI_SEARCH_MODEL=gemini-3.5-flash
+GEMINI_SEARCH_ENDPOINT=https://generativelanguage.googleapis.com/v1beta/interactions
+GEMINI_SEARCH_TIMEOUT_SECONDS=20
 AI_ANALYSIS_MAX_RETRIES=1
 ```
+
+Deprecated Custom Search fallback variables:
+
+```env
+GOOGLE_CUSTOM_SEARCH_PROVIDER=google
+GOOGLE_CSE_API_KEY=YOUR_GOOGLE_CUSTOM_SEARCH_API_KEY
+GOOGLE_CSE_CX=YOUR_GOOGLE_CUSTOM_SEARCH_ENGINE_ID
+GOOGLE_CUSTOM_SEARCH_DISPLAY=5
+GOOGLE_CUSTOM_SEARCH_STRICT_ERRORS=false
+```
+
+`GOOGLE_CUSTOM_SEARCH_API_KEY` and `GOOGLE_CUSTOM_SEARCH_CX` are also accepted as
+legacy aliases.
+
+When `GOOGLE_CUSTOM_SEARCH_STRICT_ERRORS=false`, Google Custom Search API errors
+are logged and the analysis continues with empty Google results. Set it to
+`true` only when Google search failures should fail the whole request.
+
+Google Custom Search is deprecated in this server. The LangGraph Google search
+step uses Gemini Grounding with Google Search and merges those results into the
+same `ProductCandidate` list as Naver before filtering and reranking.
 
 `POST /api/ai/analyze-frame` is the integrated LangGraph API:
 

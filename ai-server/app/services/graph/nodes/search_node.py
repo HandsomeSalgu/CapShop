@@ -3,7 +3,10 @@ from typing import Any
 
 from app.core.config import settings
 from app.schemas.analysis_graph_schema import GoogleSearchResult, ProductCandidate
-from app.services.google_search_service import search_google_custom
+from app.services.gemini_grounded_search_service import (
+    GEMINI_GROUNDED_SEARCH_SOURCE,
+    search_gemini_grounded_products,
+)
 from app.services.graph.candidate_utils import _candidate_key, _copy_candidate, _unique
 from app.services.graph.query_helpers import _flatten_source_queries, _google_query_candidates, _query_candidates_by_source
 from app.services.graph.search_helpers import _google_result_key, _source_counts
@@ -60,32 +63,73 @@ def _naver_search_node(state: ShoppingAnalysisState) -> dict[str, Any]:
 def _google_search_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     request = state["request"]
     queries = _google_query_candidates(state)
+    existing_candidates = state.get("search_candidates") or []
     if not queries:
         return {
+            "search_candidates": existing_candidates,
             "google_search_results": [],
-            "google_source_counts": {"GOOGLE_CUSTOM_SEARCH": 0},
+            "source_counts": state.get("source_counts") or {},
+            "google_source_counts": {GEMINI_GROUNDED_SEARCH_SOURCE: 0},
         }
 
     limit = min(12, request.max_candidates)
     per_query_display = max(1, min(settings.google_custom_search_display, math.ceil(limit / len(queries))))
+    candidates_by_key: dict[str, ProductCandidate] = {
+        _candidate_key(candidate): candidate
+        for candidate in existing_candidates
+    }
+    gemini_candidates: list[ProductCandidate] = []
     results_by_key: dict[str, GoogleSearchResult] = {}
 
     for query in queries:
-        if len(results_by_key) >= limit:
+        if len(gemini_candidates) >= limit:
             break
 
-        for result in search_google_custom(query, display=per_query_display):
-            key = _google_result_key(result)
-            if key not in results_by_key:
-                results_by_key[key] = result
-            if len(results_by_key) >= limit:
+        for candidate in search_gemini_grounded_products(query, display=per_query_display):
+            key = _candidate_key(candidate)
+            if key in candidates_by_key:
+                continue
+
+            candidates_by_key[key] = candidate
+            gemini_candidates.append(candidate)
+
+            result = _gemini_candidate_to_google_result(candidate)
+            result_key = _google_result_key(result)
+            if result_key not in results_by_key:
+                results_by_key[result_key] = result
+
+            if len(gemini_candidates) >= limit:
                 break
 
     results = list(results_by_key.values())
+    source_counts = dict(state.get("source_counts") or {})
+    source_counts[GEMINI_GROUNDED_SEARCH_SOURCE] = len(gemini_candidates)
+
     return {
+        "search_candidates": list(candidates_by_key.values()),
         "google_search_results": results,
-        "google_source_counts": {"GOOGLE_CUSTOM_SEARCH": len(results)},
+        "source_counts": source_counts,
+        "google_source_counts": {GEMINI_GROUNDED_SEARCH_SOURCE: len(gemini_candidates)},
     }
+
+def _gemini_candidate_to_google_result(candidate: ProductCandidate) -> GoogleSearchResult:
+    return GoogleSearchResult(
+        title=candidate.title,
+        link=candidate.link,
+        display_link=_display_link(candidate.link),
+        snippet=candidate.snippet or candidate.reason,
+        image=candidate.image or candidate.thumbnail,
+        source_query=candidate.source_query,
+    )
+
+def _display_link(url: str | None) -> str | None:
+    if not url:
+        return None
+
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    return parsed.netloc or None
 
 def _search_identifier_node(state: ShoppingAnalysisState) -> dict[str, Any]:
     identification = identify_from_search(
