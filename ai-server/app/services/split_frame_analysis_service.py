@@ -14,70 +14,9 @@ from app.schemas.analysis_graph_schema import (
 )
 from app.schemas.detection_schema import AnalyzeFrameRequest, AnalyzeFrameResponse
 from app.services.gms_openai_client import call_chat_completion, extract_json_object
-
-
-OCR_SYSTEM_PROMPT = """
-You are the OCR specialist in SyncShopper's product detection graph.
-
-Focus only on text visible in the captured image. Do not identify the product from shape or context.
-Return JSON only.
-
-Return JSON with exactly these keys:
-{
-"raw_text": string | null,
-"visible_text_candidates": string[],
-"brand_text_candidates": string[],
-"model_text_candidates": string[],
-"confidence": number,
-"reason": string
-}
-""".strip()
-
-
-VISUAL_SYSTEM_PROMPT = """
-You are the visual feature specialist in SyncShopper's product detection graph.
-
-Focus only on the object's visual appearance: product type, category, color, shape, material, style, and distinctive visual features.
-Do not trust or transcribe visible text. Do not infer a brand unless it is visually unmistakable from a logo shape.
-Return JSON only.
-
-Return JSON with exactly these keys:
-{
-"product_type": string | null,
-"category_name": string | null,
-"color": string | null,
-"shape": string | null,
-"material": string | null,
-"style": string | null,
-"key_features": string[],
-"confidence": number,
-"reason": string
-}
-""".strip()
-
-
-SEARCH_IDENTIFICATION_PROMPT = """
-You are SyncShopper's product identity resolver.
-
-Use OCR candidates, visual features, Naver search snippets, and Google Custom Search snippets to infer what the product most likely is.
-Treat OCR text as candidates, not guaranteed truth. Prefer conservative identification over inventing a brand or exact model.
-Return JSON only.
-
-Return JSON with exactly these keys:
-{
-"target_name": string,
-"category_name": string,
-"brand": string | null,
-"model_name": string | null,
-"color": string | null,
-"shape": string | null,
-"logo_text": string | null,
-"key_features": string[],
-"confidence": number,
-"evidence": string[],
-"reason": string
-}
-""".strip()
+from app.services.prompts.judge_prompt import SEARCH_IDENTIFICATION_PROMPT
+from app.services.prompts.ocr_prompt import OCR_SYSTEM_PROMPT, build_ocr_user_prompt
+from app.services.prompts.visual_prompt import VISUAL_SYSTEM_PROMPT, build_visual_user_prompt
 
 
 def analyze_ocr(request: AnalyzeFrameRequest) -> OcrAnalysisResult:
@@ -89,7 +28,7 @@ def analyze_ocr(request: AnalyzeFrameRequest) -> OcrAnalysisResult:
 
     parsed = _call_image_json(
         OCR_SYSTEM_PROMPT,
-        _build_ocr_user_prompt(request),
+        build_ocr_user_prompt(request),
         request.image_base64,
         temperature=0.0,
     )
@@ -107,7 +46,7 @@ def analyze_visual_features(request: AnalyzeFrameRequest) -> VisualFeatureAnalys
 
     parsed = _call_image_json(
         VISUAL_SYSTEM_PROMPT,
-        _build_visual_user_prompt(request),
+        build_visual_user_prompt(request),
         request.image_base64,
         temperature=0.1,
     )
@@ -229,22 +168,6 @@ def _call_image_json(
         temperature=temperature,
     )
     return extract_json_object(raw_content)
-
-
-def _build_ocr_user_prompt(request: AnalyzeFrameRequest) -> str:
-    return (
-        "Read only visible product text from this captured YouTube frame area.\n"
-        f"video_id={request.video_id} timestamp_sec={request.timestamp_sec} "
-        f"subtitle_text={request.subtitle_text or ''}"
-    )
-
-
-def _build_visual_user_prompt(request: AnalyzeFrameRequest) -> str:
-    return (
-        "Describe only the purchasable product's visual features in this captured frame area.\n"
-        f"video_id={request.video_id} timestamp_sec={request.timestamp_sec} "
-        f"subtitle_text={request.subtitle_text or ''}"
-    )
 
 
 def _normalize_ocr(data: dict[str, Any]) -> OcrAnalysisResult:
