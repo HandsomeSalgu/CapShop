@@ -36,15 +36,37 @@ public class RecommendationService {
             keywords = java.util.Arrays.asList(cachedKeywords.split(","));
         }
         
-        // 2. Redis에 없으면 실시간 1회 조회 (Fallback)
+        // 2. Redis에 없으면 AI 서버(TF-IDF 모델) 호출
+        String reasonStr = "사용자 취향 기반 AI 추천입니다.";
         if (keywords == null || keywords.isEmpty()) {
-            List<com.syncshopper.domain.recommendation.UserKeywordScore> topKeywords = 
-                    recommendationMapper.findTopKeywordsByUserId(userId, 3);
-            if (topKeywords != null && !topKeywords.isEmpty()) {
-                keywords = topKeywords.stream()
-                        .map(com.syncshopper.domain.recommendation.UserKeywordScore::getKeyword)
-                        .toList();
-                // Redis에 캐싱 (Jackson 제네릭 에러 방지용 단일 String 변환)
+            try {
+                org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+                String aiServerUrl = "http://localhost:8000/api/ai/recommendations/" + userId;
+                java.util.Map responseMap = restTemplate.getForObject(aiServerUrl, java.util.Map.class);
+                
+                if (responseMap != null && responseMap.get("keywords") != null) {
+                    keywords = (java.util.List<String>) responseMap.get("keywords");
+                    if (responseMap.get("reason") != null) {
+                        reasonStr = (String) responseMap.get("reason");
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("AI Server call failed: " + e.getMessage());
+            }
+
+            // 3. AI 서버 연동 실패 시 기존 휴리스틱(DB) 로직으로 Fallback
+            if (keywords == null || keywords.isEmpty()) {
+                List<com.syncshopper.domain.recommendation.UserKeywordScore> topKeywords = 
+                        recommendationMapper.findTopKeywordsByUserId(userId, 3);
+                if (topKeywords != null && !topKeywords.isEmpty()) {
+                    keywords = topKeywords.stream()
+                            .map(com.syncshopper.domain.recommendation.UserKeywordScore::getKeyword)
+                            .toList();
+                }
+            }
+
+            if (keywords != null && !keywords.isEmpty()) {
+                // Redis에 캐싱
                 String joinedKeywords = String.join(",", keywords);
                 redisTemplate.opsForValue().set(redisKey, joinedKeywords, 2, java.util.concurrent.TimeUnit.HOURS);
             }
@@ -53,9 +75,16 @@ public class RecommendationService {
         // 3. 네이버 API 호출하여 실시간 상품 반환
         if (keywords != null && !keywords.isEmpty()) {
             List<RecommendationProductResponse> results = new java.util.ArrayList<>();
-            int countPerKeyword = Math.max(1, normalizedLimit / keywords.size());
             
-            for (String keyword : keywords) {
+            int[] counts = new int[keywords.size()];
+            for (int i = 0; i < keywords.size(); i++) {
+                counts[i] = Math.max(1, normalizedLimit / keywords.size());
+            }
+            
+            for (int i = 0; i < keywords.size(); i++) {
+                String keyword = keywords.get(i);
+                int countPerKeyword = counts[i];
+                
                 com.syncshopper.dto.response.NaverShoppingSearchResponse searchResponse = 
                         naverShoppingClient.search(keyword, countPerKeyword, 1, "sim");
                 
@@ -70,7 +99,8 @@ public class RecommendationService {
                                 .imageUrl(item.getImage())
                                 .link(item.getLink())
                                 .recommendationType("AI_SEARCH")
-                                .reason("사용자 최근 관심 키워드 '" + keyword + "' 기반 실시간 추천입니다.")
+                                .keyword(keyword)
+                                .reason(reasonStr != null ? reasonStr : "사용자 최근 관심 키워드 '" + keyword + "' 기반 실시간 추천입니다.")
                                 .build());
                     }
                 }

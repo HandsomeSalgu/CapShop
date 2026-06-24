@@ -78,6 +78,10 @@ class Settings:
     )
     google_custom_search_display: int = int(os.getenv("GOOGLE_CUSTOM_SEARCH_DISPLAY", "5"))
     analysis_max_retries: int = int(os.getenv("AI_ANALYSIS_MAX_RETRIES", "1"))
-
+    db_host: str = _env_str("DB_HOST", "localhost")
+    db_port: int = int(_env_str("DB_PORT", "3306"))
+    db_user: str = _env_str("DB_USER", "root")
+    db_password: str = _env_str("DB_PASSWORD", "potato")
+    db_name: str = _env_str("DB_NAME", "syncshopper")
 
 settings = Settings()

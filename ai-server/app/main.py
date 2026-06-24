@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.api.commerce_query_router import router as commerce_query_router
 from app.api.detection_router import router as detection_router
+from app.api.recommendation_router import router as recommendation_router
 
 
 app = FastAPI(
@@ -21,3 +22,4 @@ def health():
 
 app.include_router(detection_router, prefix="/api/ai", tags=["AI Detection"])
 app.include_router(commerce_query_router, prefix="/api/ai", tags=["Commerce Query"])
+app.include_router(recommendation_router, prefix="/api/ai", tags=["Recommendation"])
