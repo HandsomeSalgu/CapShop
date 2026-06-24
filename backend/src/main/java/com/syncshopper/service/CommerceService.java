@@ -11,16 +11,14 @@ import com.syncshopper.dto.search.NaverSearchApiResponse;
 import com.syncshopper.dto.search.SearchResultItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import org.springframework.cache.annotation.Cacheable;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -33,7 +31,7 @@ public class CommerceService {
     private final NaverShoppingClient naverShoppingClient;
     private final NaverSearchClient naverSearchClient;
     private final SearchResultNormalizer searchResultNormalizer;
-    private final ProductUpsertService productUpsertService;
+    private final CommerceProductPersistenceService commerceProductPersistenceService;
 
     @Cacheable(value = "commerceSearch", key = "#query + '_' + #display + '_' + #start + '_' + #sort")
     public List<CommerceProductResponse> searchProducts(String query, Integer display, Integer start, String sort) {
@@ -89,7 +87,6 @@ public class CommerceService {
     }
 
     @Cacheable(value = "commerceTop3", key = "#query")
-    @Transactional
     public List<CommerceProductResponse> getTop3Products(String query) {
         validateQuery(query);
 
@@ -98,10 +95,11 @@ public class CommerceService {
             return List.of();
         }
 
-        return response.getItems().stream()
+        List<CommerceProductResponse> products = response.getItems().stream()
                 .limit(TOP3_LIMIT)
-                .map(this::toPersistedCommerceProductResponse)
+                .map(this::toCommerceProductResponse)
                 .toList();
+        return commerceProductPersistenceService.persistTop3(products);
     }
 
     public List<CommerceProductResponse> searchTop3(AiCommerceQueryResponse queryResponse) {
@@ -127,7 +125,7 @@ public class CommerceService {
             }
 
             for (NaverShoppingItemResponse item : response.getItems()) {
-                CommerceProductResponse product = toPersistedCommerceProductResponse(item);
+                CommerceProductResponse product = toCommerceProductResponse(item);
                 productsByKey.putIfAbsent(deduplicateKey(product), product);
             }
 
@@ -140,8 +138,9 @@ public class CommerceService {
                 .limit(TOP3_LIMIT)
                 .filter(product -> product != null)
                 .toList();
-        log.info("Commerce Top3 final productCount={}", products.size());
-        return products;
+        List<CommerceProductResponse> persistedProducts = commerceProductPersistenceService.persistProducts(products);
+        log.info("Commerce Top3 final productCount={}", persistedProducts.size());
+        return persistedProducts;
     }
 
     public List<CommerceProductResponse> persistProducts(List<CommerceProductResponse> products) {
@@ -149,10 +148,7 @@ public class CommerceService {
             return List.of();
         }
 
-        return products.stream()
-                .filter(Objects::nonNull)
-                .map(this::ensurePersistedCommerceProduct)
-                .toList();
+        return commerceProductPersistenceService.persistProducts(products);
     }
 
     private CommerceProductResponse toCommerceProductResponse(NaverShoppingItemResponse item) {
@@ -187,21 +183,6 @@ public class CommerceService {
                 .queryText(item.getQueryText())
                 .build();
     }
-
-    private CommerceProductResponse toPersistedCommerceProductResponse(NaverShoppingItemResponse item) {
-        CommerceProductResponse product = toCommerceProductResponse(item);
-        return ensurePersistedCommerceProduct(product);
-    }
-
-    private CommerceProductResponse ensurePersistedCommerceProduct(CommerceProductResponse product) {
-        if (product.getProductId() != null) {
-            return product;
-        }
-
-        product.setProductId(productUpsertService.upsertCommerceProduct(product));
-        return product;
-    }
-
 
     private String deduplicateKey(CommerceProductResponse product) {
         if (product.getAffiliateUrl() != null && !product.getAffiliateUrl().isBlank()) {
