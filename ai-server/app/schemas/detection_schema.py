@@ -25,6 +25,12 @@ class AnalyzeFrameRequest(BaseModel):
         description="Subtitle or surrounding text",
         examples=["오늘은 Nike 운동화를 소개합니다."],
     )
+    user_hint: Optional[str] = Field(
+        None,
+        max_length=160,
+        description="Optional user-provided clue for the target product",
+        examples=["black jacket"],
+    )
 
 
 class AnalyzeFrameResponse(BaseModel):

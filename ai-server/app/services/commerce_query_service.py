@@ -498,6 +498,8 @@ def _resolve_style_term(request: CommerceQueryRequest) -> str | None:
         return style_terms[0]
 
     haystack = _request_haystack(request)
+    if _contains_any(haystack, ["plaid", "checkered", "checked", "check pattern", "tartan", "gingham", "\uCCB4\uD06C", "\uACA9\uC790"]):
+        return "\uCCB4\uD06C"
     if _contains_any(haystack, ["graphic", "print", "printed", "그래픽", "프린트"]):
         return "그래픽"
     if _contains_any(haystack, ["letter", "text", "logo", "레터링", "문구"]):
@@ -508,6 +510,9 @@ def _resolve_style_term(request: CommerceQueryRequest) -> str | None:
 def _resolve_style_terms(request: CommerceQueryRequest) -> list[str]:
     haystack = _request_haystack(request)
     return _compact_queries([
+        "\uCCB4\uD06C" if _contains_any(haystack, ["plaid", "checkered", "checked", "check pattern", "tartan", "gingham", "\uCCB4\uD06C", "\uACA9\uC790"]) else None,
+        "\uC2A4\uD2B8\uB77C\uC774\uD504" if _contains_any(haystack, ["striped", "stripe pattern", "stripes", "\uC2A4\uD2B8\uB77C\uC774\uD504", "\uC904\uBB34\uB2AC"]) else None,
+        "\uD558\uC6B0\uC2A4\uD22C\uC2A4" if _contains_any(haystack, ["houndstooth", "\uD558\uC6B0\uC2A4\uD22C\uC2A4"]) else None,
         "퀼팅" if _contains_any(haystack, ["quilted", "quilting", "퀼팅", "누빔"]) else None,
         "브이넥" if _contains_any(haystack, ["v-neck", "v neck", "브이넥", "v넥"]) else None,
         "스냅 버튼" if _contains_any(haystack, ["snap button", "snap-button", "스냅 버튼", "스냅버튼"]) else None,
@@ -577,6 +582,7 @@ def _request_haystack(request: CommerceQueryRequest) -> str:
         request.shape,
         request.logo_text,
         " ".join(request.key_features or []),
+        request.user_hint,
         request.subtitle_text,
     ] if part).lower()
 
@@ -600,11 +606,23 @@ def _contains_any(value: str, terms: list[str]) -> bool:
     return False
 
 
+def _clean_query_text(value: str | None) -> str | None:
+    if not value:
+        return None
+
+    cleaned = re.sub(r"\s+", " ", str(value)).strip()
+    return cleaned[:160] or None
+
+
 def _build_fallback_primary_query(request: CommerceQueryRequest) -> str:
     return _build_rule_based_primary_query(request)
 
 
 def _build_rule_based_primary_query(request: CommerceQueryRequest) -> str:
+    user_hint = _clean_query_text(request.user_hint)
+    if user_hint:
+        return user_hint
+
     brand = _brand_query_term(request)
     model = _model_query_term(request)
     color = _resolve_color_term(request)
@@ -800,6 +818,7 @@ def generate_rule_based_commerce_query(request: CommerceQueryRequest) -> Commerc
 def _generate_mock_commerce_query(request: CommerceQueryRequest) -> CommerceQueryResponse:
     primary_query = _koreanize_search_query(_build_fallback_primary_query(request) or "상품", request)
     fallback_candidates = [
+        request.user_hint,
         request.target_name,
         " ".join(part for part in [request.brand, request.target_name] if part),
         " ".join(part for part in [request.brand, request.category_name] if part),
@@ -877,6 +896,7 @@ def _print_query_debug(
             "brand": request.brand,
             "model_name": request.model_name,
             "confidence": request.confidence,
+            "user_hint": request.user_hint,
             "subtitle_text": _truncate(request.subtitle_text or "", 300),
             "video_id": request.video_id,
             "timestamp_sec": request.timestamp_sec,

@@ -10,6 +10,8 @@ from app.services.split_frame_analysis_service import (
     koreanize_visual_analysis,
     synthesize_initial_detection,
 )
+from app.services.gemini_vision_detection_service import analyze_frame_with_gemini_vision
+from app.schemas.analysis_graph_schema import OcrAnalysisResult, VisualFeatureAnalysisResult
 from app.utils.image_utils import is_valid_base64_image
 
 
@@ -20,6 +22,25 @@ def _frame_analyzer_node(state: ShoppingAnalysisState) -> dict[str, Any]:
             status_code=400,
             detail="image_base64 must be a valid data:image base64 string",
         )
+
+    if request.search_mode == "fast":
+        frame_analysis = analyze_frame_with_gemini_vision(request)
+        return {
+            "ocr_analysis": OcrAnalysisResult(
+                confidence=0.0,
+                reason="Fast mode uses direct Gemini image identification instead of OCR.",
+            ),
+            "visual_analysis": VisualFeatureAnalysisResult(
+                product_type=frame_analysis.category_name,
+                category_name=frame_analysis.category_name,
+                color=frame_analysis.color,
+                shape=frame_analysis.shape,
+                key_features=frame_analysis.key_features,
+                confidence=frame_analysis.confidence,
+                reason="Fast mode direct Gemini image identification.",
+            ),
+            "frame_analysis": frame_analysis,
+        }
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         ocr_future = executor.submit(analyze_ocr, request)

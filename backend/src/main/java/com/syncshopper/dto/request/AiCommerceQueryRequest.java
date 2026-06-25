@@ -30,6 +30,9 @@ public class AiCommerceQueryRequest {
     @JsonProperty("subtitle_text")
     private String subtitleText;
 
+    @JsonProperty("user_hint")
+    private String userHint;
+
     @JsonProperty("video_id")
     private String videoId;
 

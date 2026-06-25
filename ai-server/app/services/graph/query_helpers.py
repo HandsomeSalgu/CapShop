@@ -31,6 +31,7 @@ def _to_commerce_request(
         key_features=frame_analysis.key_features,
         confidence=frame_analysis.confidence,
         subtitle_text=request.subtitle_text,
+        user_hint=request.user_hint,
         video_id=request.video_id,
         timestamp_sec=request.timestamp_sec,
     )
@@ -265,6 +266,10 @@ def _color_query_term(frame_analysis: AnalyzeFrameResponse) -> str | None:
 
 def _style_query_term(frame_analysis: AnalyzeFrameResponse) -> str | None:
     haystack = _target_text_from_frame(frame_analysis).lower()
+    if _contains_any(haystack, ["plaid", "checkered", "checked", "check pattern", "tartan", "gingham", "\uCCB4\uD06C", "\uACA9\uC790"]):
+        return "\uCCB4\uD06C"
+    if _contains_any(haystack, ["striped", "stripe pattern", "stripes", "\uC2A4\uD2B8\uB77C\uC774\uD504", "\uC904\uBB34\uB2AC"]):
+        return "\uC2A4\uD2B8\uB77C\uC774\uD504"
     if _contains_any(haystack, GRAPHIC_MATCH_TERMS):
         return "그래픽"
     return None

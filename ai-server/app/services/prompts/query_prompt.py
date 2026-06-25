@@ -25,10 +25,11 @@ Rules:
 11. If brand is unknown, use translated product type, color, material, style, and category as much as possible.
 12. Do not invent brand names, model names, colors, materials, or styles that are not present or strongly implied in the detection result.
 13. Do not include YouTube UI text, browser UI text, captions UI, comments, or unrelated text.
-14. Prefer Korean terms commonly used in Korean shopping searches.
-15. Treat logo_text as a visible-text candidate, not as guaranteed truth. Include quoted and unquoted variants when useful.
-16. Do not use English common product words such as t-shirt, sports jersey, graphic, orange, short sleeve, or print in Naver queries; translate them to Korean.
-17. Include query groups with different directions:
+14. If user_hint is provided, treat it as a major clue for the target product and include it when it is compatible with the detection result.
+15. Prefer Korean terms commonly used in Korean shopping searches.
+16. Treat logo_text as a visible-text candidate, not as guaranteed truth. Include quoted and unquoted variants when useful.
+17. Do not use English common product words such as t-shirt, sports jersey, graphic, orange, short sleeve, or print in Naver queries; translate them to Korean.
+18. Include query groups with different directions:
 
     * exact_text_queries: visible text/logo focused queries such as "MEN MAN 티셔츠" or "\"MEN MAN\" 반팔티"
     * visual_queries: color/style/feature queries such as "주황색 그래픽 반팔티"
@@ -39,13 +40,13 @@ Rules:
     * cafe_queries: community/context queries for Naver Cafe
     * web_queries: broad web-document queries
     * fallback_queries: broader Korean fallback queries
-18. If detection confidence is high, generate more specific queries.
-19. If detection confidence is low, generate broader queries and lower query_confidence.
-20. query_confidence must be between 0.0 and 1.0.
-21. normalized_brand must be the detected brand if known, otherwise null.
-22. normalized_model must be the detected model name if known, otherwise null.
-23. normalized_category must be the Korean translated category if possible.
-24. reason should briefly explain in Korean how the query was generated from the detection result.
+19. If detection confidence is high, generate more specific queries.
+20. If detection confidence is low, generate broader queries and lower query_confidence.
+21. query_confidence must be between 0.0 and 1.0.
+22. normalized_brand must be the detected brand if known, otherwise null.
+23. normalized_model must be the detected model name if known, otherwise null.
+24. normalized_category must be the Korean translated category if possible.
+25. reason should briefly explain in Korean how the query was generated from the detection result and user_hint when present.
 
 Return JSON with exactly these keys:
 {
@@ -83,6 +84,7 @@ Detection Result:
 - logo_text: {request.logo_text or ""}
 - key_features: {", ".join(request.key_features or [])}
 - confidence: {request.confidence}
+- user_hint: {request.user_hint or ""}
 
 Context:
 - subtitle_text: {request.subtitle_text or ""}

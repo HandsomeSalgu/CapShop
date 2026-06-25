@@ -182,6 +182,12 @@ def _korean_material(haystack: str, fallback: str | None) -> str | None:
 
 def _korean_style(haystack: str, fallback: str | None) -> str | None:
     parts = []
+    if _contains_any_text(haystack, ["plaid", "checkered", "checked", "check pattern", "tartan", "gingham"]):
+        parts.append("\uCCB4\uD06C")
+    if _contains_any_text(haystack, ["striped", "stripe pattern", "stripes"]):
+        parts.append("\uC2A4\uD2B8\uB77C\uC774\uD504")
+    if _contains_any_text(haystack, ["houndstooth"]):
+        parts.append("\uD558\uC6B0\uC2A4\uD22C\uC2A4")
     if _contains_any_text(haystack, ["casual"]):
         parts.append("\uCE90\uC8FC\uC5BC")
     if _contains_any_text(haystack, ["button-up", "button up", "button-front"]):
@@ -197,6 +203,12 @@ def _korean_key_features(features: list[str], haystack: str) -> list[str]:
     labels = []
     feature_text = " ".join(features).lower() + " " + haystack
     candidates = [
+        (["plaid", "checkered", "checked", "check pattern", "tartan", "gingham"], "\uCCB4\uD06C \uD328\uD134"),
+        (["striped", "stripe pattern", "stripes"], "\uC2A4\uD2B8\uB77C\uC774\uD504 \uD328\uD134"),
+        (["houndstooth"], "\uD558\uC6B0\uC2A4\uD22C\uC2A4 \uD328\uD134"),
+        (["color-block", "color block", "colorblocking"], "\uCEEC\uB7EC\uBE14\uB85D"),
+        (["ribbed"], "\uB9BD \uC9DC\uC784"),
+        (["cable-knit", "cable knit"], "\uCF00\uC774\uBE14 \uB2C8\uD2B8"),
         (["collar", "collared"], "\uCE74\uB77C"),
         (["button-front", "button front", "button-up", "button up"], "\uBC84\uD2BC \uC5EC\uBC08"),
         (["long sleeve", "long-sleeve"], "\uAE34\uD314"),
