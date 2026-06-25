@@ -36,11 +36,12 @@ public class UserController {
     }
 
     @Operation(summary = "Update my profile")
-    @PatchMapping("/me")
+    @PatchMapping(value = "/me", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<UserProfileResponse> updateMyProfile(
-            @Valid @RequestBody UserProfileUpdateRequest request
+            @Valid @org.springframework.web.bind.annotation.RequestPart("request") UserProfileUpdateRequest request,
+            @org.springframework.web.bind.annotation.RequestPart(value = "profileImage", required = false) org.springframework.web.multipart.MultipartFile profileImage
     ) {
-        return ApiResponse.success("Profile updated.", userProfileService.updateMyProfile(currentUserId(), request));
+        return ApiResponse.success("Profile updated.", userProfileService.updateMyProfile(currentUserId(), request, profileImage));
     }
 
     @Operation(summary = "Change my password")

@@ -9,6 +9,13 @@ const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const isDropdownOpen = ref(false)
+const profileContainerRef = ref(null)
+
+const handleClickOutside = (event) => {
+  if (profileContainerRef.value && !profileContainerRef.value.contains(event.target)) {
+    isDropdownOpen.value = false
+  }
+}
 
 const isHomePage = computed(() => route.path === '/')
 
@@ -44,11 +51,13 @@ onMounted(() => {
   calculateHeaderHeight()
   window.addEventListener('resize', calculateHeaderHeight)
   window.addEventListener('scroll', handleScroll)
+  document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', calculateHeaderHeight)
   window.removeEventListener('scroll', handleScroll)
+  document.removeEventListener('click', handleClickOutside)
 })
 
 const handleLogout = () => {
@@ -96,7 +105,7 @@ const goToAdminPage = () => {
           </RouterLink>
           
           <template v-if="authStore.isLoggedIn">
-            <div class="profile-container" @click="isDropdownOpen = !isDropdownOpen">
+            <div class="profile-container" ref="profileContainerRef" @click="isDropdownOpen = !isDropdownOpen">
               <img 
                 v-if="authStore.userInfo?.profileImageUrl" 
                 :src="authStore.userInfo.profileImageUrl" 

@@ -26,15 +26,36 @@ public class UserProfileService {
     }
 
     @Transactional
-    public UserProfileResponse updateMyProfile(Long userId, UserProfileUpdateRequest request) {
+    public UserProfileResponse updateMyProfile(Long userId, UserProfileUpdateRequest request, org.springframework.web.multipart.MultipartFile profileImage) {
         User user = findUser(userId);
+        
+        String profileImageUrl = null;
+        if (profileImage != null && !profileImage.isEmpty()) {
+            try {
+                String originalFilename = profileImage.getOriginalFilename();
+                String extension = originalFilename != null && originalFilename.contains(".") 
+                        ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
+                        : ".jpg";
+                String savedFilename = java.util.UUID.randomUUID() + extension;
+
+                java.nio.file.Path uploadPath = java.nio.file.Paths.get("uploads/profiles");
+                if (!java.nio.file.Files.exists(uploadPath)) {
+                    java.nio.file.Files.createDirectories(uploadPath);
+                }
+                java.nio.file.Path filePath = uploadPath.resolve(savedFilename);
+                java.nio.file.Files.copy(profileImage.getInputStream(), filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                profileImageUrl = "/uploads/profiles/" + savedFilename;
+            } catch (java.io.IOException e) {
+                throw new RuntimeException("Failed to store profile image", e);
+            }
+        }
 
         User updateUser = User.builder()
                 .userId(userId)
                 .nickname(request.getNickname())
                 .phone(blankToNull(request.getPhone()))
                 .birthDate(request.getBirthDate())
-                .profileImageUrl(blankToNull(request.getProfileImageUrl()))
+                .profileImageUrl(profileImageUrl)
                 .build();
 
         if (StringUtils.hasText(request.getNewPassword())) {
