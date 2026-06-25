@@ -24,6 +24,10 @@ public class ProductListResponse {
     private String imageUrl;
     private Integer reviewCount;
     private Double rating;
+    private String affiliateUrl;
+    private String mallName;
+    private String externalProductId;
+    private String source;
 
     public static ProductListResponse from(Product product) {
         return ProductListResponse.builder()
@@ -35,6 +39,10 @@ public class ProductListResponse {
                 .imageUrl(product.getImageUrl())
                 .reviewCount(product.getReviewCount())
                 .rating(product.getRating())
+                .affiliateUrl(product.getAffiliateUrl())
+                .mallName(product.getMallName())
+                .externalProductId(product.getExternalProductId())
+                .source(product.getSource())
                 .build();
     }
 }
