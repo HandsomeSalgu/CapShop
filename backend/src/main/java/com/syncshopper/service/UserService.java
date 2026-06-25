@@ -21,13 +21,14 @@ public class UserService {
     }
 
     @Transactional
-    public User createLocalUser(String email, String encodedPassword, String nickname, String phone,
+    public User createLocalUser(String email, String encodedPassword, String nickname, String profileImageUrl, String phone,
             LocalDate birthDate) {
         User user = User.builder()
                 .email(email)
                 .password(encodedPassword)
                 .provider(AuthProvider.LOCAL)
                 .nickname(nickname)
+                .profileImageUrl(profileImageUrl)
                 .phone(phone)
                 .birthDate(birthDate)
                 .role(UserRole.USER)

@@ -44,7 +44,7 @@ onMounted(async () => {
 })
 
 const goToRecommendView = () => {
-  router.push('/recommend')
+  router.push('/ai-recommend')
 }
 
 const handleProductClick = (product) => {

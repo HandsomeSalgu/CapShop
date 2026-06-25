@@ -39,18 +39,12 @@ public class AuthController {
         this.emailVerificationService = emailVerificationService;
     }
 
-    @Operation(summary = "Signup", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = SignupRequest.class), examples = @ExampleObject(value = """
-            {
-              "email": "user@example.com",
-              "password": "password1234",
-              "nickname": "hwarang",
-              "phone": "01012345678",
-              "birthDate": "2000-01-01"
-            }
-            """))))
-    @PostMapping("/signup")
-    public ApiResponse<UserResponse> signup(@Valid @RequestBody SignupRequest request) {
-        return ApiResponse.success("Signup completed.", authService.signup(request));
+    @Operation(summary = "Signup")
+    @PostMapping(value = "/signup", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserResponse> signup(
+            @Valid @org.springframework.web.bind.annotation.RequestPart("request") SignupRequest request,
+            @org.springframework.web.bind.annotation.RequestPart(value = "profileImage", required = false) org.springframework.web.multipart.MultipartFile profileImage) {
+        return ApiResponse.success("Signup completed.", authService.signup(request, profileImage));
     }
 
     @Operation(summary = "Login", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginRequest.class), examples = @ExampleObject(value = """

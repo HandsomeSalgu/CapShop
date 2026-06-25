@@ -43,17 +43,49 @@ public class AuthService {
     }
 
     @Transactional
-    public UserResponse signup(SignupRequest request) {
+    public UserResponse signup(SignupRequest request, org.springframework.web.multipart.MultipartFile profileImage) {
         User user;
+        
+        String profileImageUrl = null;
+        if (profileImage != null && !profileImage.isEmpty()) {
+            try {
+                String uploadDir = "uploads/profiles/";
+                java.io.File dir = new java.io.File(uploadDir);
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+                String originalFilename = profileImage.getOriginalFilename();
+                String extension = originalFilename != null && originalFilename.contains(".") 
+                                   ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
+                                   : ".jpg";
+                String savedFilename = java.util.UUID.randomUUID().toString() + extension;
+                java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + savedFilename);
+                java.nio.file.Files.copy(profileImage.getInputStream(), filePath);
+                profileImageUrl = "/uploads/profiles/" + savedFilename;
+            } catch (java.io.IOException e) {
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            int randomNum = new java.util.Random().nextInt(5) + 1;
+            profileImageUrl = "/src/assets/images/basic_image/Basic_image" + randomNum + ".jpeg";
+        }
+
         if (request.getSignupToken() != null && !request.getSignupToken().isEmpty()) {
             Claims claims = jwtTokenProvider.parseSignupToken(request.getSignupToken());
             String email = claims.get("email", String.class);
             String providerStr = claims.get("provider", String.class);
             String providerId = claims.get("providerId", String.class);
-            String profileImageUrl = claims.get("profileImageUrl", String.class);
+            String tokenProfileImageUrl = claims.get("profileImageUrl", String.class);
 
             if (userService.existsByEmail(email)) {
                 throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+            }
+
+            // 만약 소셜 제공 이미지가 있고, 유저가 새로 올리지 않았다면 소셜 이미지 사용
+            if (profileImage == null || profileImage.isEmpty()) {
+                if (tokenProfileImageUrl != null && !tokenProfileImageUrl.isEmpty()) {
+                    profileImageUrl = tokenProfileImageUrl;
+                }
             }
 
             // 소셜 로그인은 비밀번호를 받지 않으므로 랜덤 더미 비밀번호를 생성하여 저장합니다.
@@ -78,6 +110,7 @@ public class AuthService {
                     request.getEmail(),
                     encodedPassword,
                     request.getNickname(),
+                    profileImageUrl,
                     request.getPhone(),
                     request.getBirthDate());
         }
