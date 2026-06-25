@@ -35,11 +35,11 @@ const handleLogin = async () => {
 }
 
 const loginWithGoogle = () => {
-  window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+  window.location.href = 'http://70.12.60.52:8080/oauth2/authorization/google';
 }
 
 const loginWithKakao = () => {
-  window.location.href = 'http://localhost:8080/oauth2/authorization/kakao';
+  window.location.href = 'http://70.12.60.52:8080/oauth2/authorization/kakao';
 }
 
 </script>

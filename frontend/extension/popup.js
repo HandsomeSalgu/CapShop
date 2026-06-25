@@ -1,5 +1,5 @@
-const DEFAULT_BACKEND_BASE_URL = "http://localhost:8080";
-const DEFAULT_FRONTEND_BASE_URL = "http://localhost:5173";
+const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
+const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
 
 document.addEventListener("DOMContentLoaded", () => {
   const loginSection = document.getElementById("loginSection");

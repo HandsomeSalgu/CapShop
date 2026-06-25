@@ -43,7 +43,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             String signupToken = jwtTokenProvider.createSignupToken(email, nickname, provider, providerId, profileImageUrl);
 
             // Redirect to frontend signup page
-            String redirectUri = UriComponentsBuilder.fromUriString("http://localhost:5173/signup")
+            String redirectUri = UriComponentsBuilder.fromUriString("http://70.12.60.52:5173/signup")
                     .queryParam("signupToken", signupToken)
                     .build()
                     .toUriString();

@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "SYNC_SHOPPER_OPEN_SIGNUP") {
-    chrome.tabs.create({ url: message.url || "http://localhost:5173/signup" });
+    chrome.tabs.create({ url: message.url || "http://70.12.60.52:5173/signup" });
     return false;
   }
 

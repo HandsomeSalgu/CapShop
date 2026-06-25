@@ -74,7 +74,7 @@ app:
     secret: ${JWT_SECRET:syncshopper-local-dev-secret-key-syncshopper-local-dev-secret-key}
     access-token-expiration: 3600000
   oauth2:
-    authorized-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth/callback}
+    authorized-redirect-uri: ${OAUTH2_REDIRECT_URI:http://70.12.60.52:5173/oauth/callback}
   ai:
     mock-enabled: false
     fastapi-base-url: http://localhost:8000

@@ -46,7 +46,7 @@ const scrollRightBtn = () => {
 
 onMounted(async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/products/best?limit=10')
+    const response = await axios.get('/api/products/best?limit=10')
     if (response.data.success) {
       hotProducts.value = response.data.data
       

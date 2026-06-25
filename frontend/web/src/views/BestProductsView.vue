@@ -37,7 +37,7 @@ const fetchBestProducts = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const response = await axios.get('http://localhost:8080/api/products/best?limit=20')
+    const response = await axios.get('/api/products/best?limit=20')
     if (response.data.success) {
       bestProducts.value = response.data.data
     }
