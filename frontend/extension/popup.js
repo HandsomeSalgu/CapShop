@@ -1,5 +1,6 @@
-const DEFAULT_BACKEND_BASE_URL = "http://localhost:8080";
-const DEFAULT_FRONTEND_BASE_URL = "http://localhost:5173";
+const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
+const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+const SOCIAL_LOGIN_PROVIDERS = ["google", "kakao"];
 
 document.addEventListener("DOMContentLoaded", () => {
   const loginSection = document.getElementById("loginSection");
@@ -7,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const loginIdInput = document.getElementById("loginId");
   const passwordInput = document.getElementById("password");
   const loginButton = document.getElementById("loginButton");
+  const googleLoginButton = document.getElementById("googleLoginButton");
+  const kakaoLoginButton = document.getElementById("kakaoLoginButton");
   const signupButton = document.getElementById("signupButton");
   const logoutButton = document.getElementById("logoutButton");
   const statusMessage = document.getElementById("statusMessage");
@@ -64,6 +67,14 @@ document.addEventListener("DOMContentLoaded", () => {
     openSignupPage();
   });
 
+  googleLoginButton.addEventListener("click", () => {
+    openSocialLoginPage("google");
+  });
+
+  kakaoLoginButton.addEventListener("click", () => {
+    openSocialLoginPage("kakao");
+  });
+
   logoutButton.addEventListener("click", async () => {
     await chrome.storage.local.remove(["accessToken", "authUser"]);
     showStatus("\uB85C\uADF8\uC544\uC6C3\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
@@ -110,6 +121,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function openSignupPage() {
     chrome.tabs.create({
       url: `${DEFAULT_FRONTEND_BASE_URL}/signup`
+    });
+  }
+
+  function openSocialLoginPage(provider) {
+    if (!SOCIAL_LOGIN_PROVIDERS.includes(provider)) {
+      return;
+    }
+
+    chrome.tabs.create({
+      url: `${DEFAULT_BACKEND_BASE_URL}/oauth2/authorization/${provider}`
     });
   }
 

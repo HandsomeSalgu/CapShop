@@ -1,7 +1,17 @@
 console.log("[SyncShopper] content script loaded");
 
-const DEFAULT_BACKEND_BASE_URL = "http://localhost:8080";
-const DEFAULT_FRONTEND_BASE_URL = "http://localhost:5173";
+const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
+const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+const SOCIAL_LOGIN_PROVIDERS = {
+  google: {
+    label: "\uAD6C\uAE00\uB85C \uB85C\uADF8\uC778",
+    icon: "G"
+  },
+  kakao: {
+    label: "\uCE74\uCE74\uC624\uB85C \uB85C\uADF8\uC778",
+    icon: "\uD1A1"
+  }
+};
 const DEFAULT_TOAST_DURATION_MS = 3000;
 const EXTENSION_RESULT_SOURCE_PAGE = "EXTENSION_RESULT_PANEL";
 const DEFAULT_ANALYSIS_PROGRESS_MESSAGE = "\u0041\u0049 \uBD84\uC11D\uC744 \uC900\uBE44\uD558\uACE0 \uC788\uC5B4\uC694...";
@@ -32,6 +42,14 @@ let currentCapturedDataUrl = null;
 let currentSearchMode = null;
 let currentSearchHint = "";
 let productSearchRequestToken = 0;
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local" || !changes.accessToken?.newValue) {
+    return;
+  }
+
+  handleStoredOAuthLogin();
+});
 
 const PET_ATLAS = {
   frameWidth: 128,
@@ -2232,6 +2250,30 @@ function showLoginPanel(onLoginSuccess) {
   loginButton.type = "button";
   loginButton.textContent = "\uB85C\uADF8\uC778";
 
+  const socialLoginGroup = document.createElement("div");
+  socialLoginGroup.id = "syncshopper-social-login-buttons";
+  socialLoginGroup.setAttribute("aria-label", "\uC18C\uC15C \uB85C\uADF8\uC778");
+
+  Object.entries(SOCIAL_LOGIN_PROVIDERS).forEach(([provider, config]) => {
+    const socialButton = document.createElement("button");
+    socialButton.type = "button";
+    socialButton.className = `syncshopper-social-login-button syncshopper-social-login-button-${provider}`;
+    socialButton.dataset.provider = provider;
+
+    const icon = document.createElement("span");
+    icon.className = "syncshopper-social-login-icon";
+    icon.textContent = config.icon;
+    icon.setAttribute("aria-hidden", "true");
+
+    const label = document.createElement("span");
+    label.textContent = config.label;
+
+    socialButton.appendChild(icon);
+    socialButton.appendChild(label);
+    socialButton.addEventListener("click", () => openSocialLoginPage(provider));
+    socialLoginGroup.appendChild(socialButton);
+  });
+
   const signupButton = document.createElement("button");
   signupButton.id = "syncshopper-signup-button";
   signupButton.type = "button";
@@ -2301,6 +2343,7 @@ function showLoginPanel(onLoginSuccess) {
   panel.appendChild(passwordInput);
   panel.appendChild(errorMessage);
   panel.appendChild(loginButton);
+  panel.appendChild(socialLoginGroup);
   panel.appendChild(signupButton);
   document.body.appendChild(panel);
   bindDraggableCapShopPanel(panel, "capshopLoginPanelPosition");
@@ -2343,6 +2386,33 @@ function openSignupPage() {
     type: "SYNC_SHOPPER_OPEN_SIGNUP",
     url: `${DEFAULT_FRONTEND_BASE_URL}/signup`
   });
+}
+
+function openSocialLoginPage(provider) {
+  if (!Object.prototype.hasOwnProperty.call(SOCIAL_LOGIN_PROVIDERS, provider)) {
+    return;
+  }
+
+  chrome.runtime.sendMessage({
+    type: "SYNC_SHOPPER_OPEN_SOCIAL_LOGIN",
+    url: `${DEFAULT_BACKEND_BASE_URL}/oauth2/authorization/${provider}`
+  });
+}
+
+function handleStoredOAuthLogin() {
+  const loginPanel = document.getElementById("syncshopper-login-panel");
+
+  if (loginPanel) {
+    loginPanel.remove();
+  }
+
+  showToast("\uB85C\uADF8\uC778\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
+
+  if (typeof pendingLoginSuccessCallback === "function") {
+    const callback = pendingLoginSuccessCallback;
+    pendingLoginSuccessCallback = null;
+    callback();
+  }
 }
 
 function showToast(message, type = "info") {

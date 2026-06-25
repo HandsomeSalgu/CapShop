@@ -136,6 +136,41 @@
       background: #fff2ce;
     }
 
+    .social-login-buttons {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .social-login-button {
+      margin-top: 0;
+      background: #ffffff;
+    }
+
+    .social-login-button.kakao {
+      background: #fee500;
+      border-color: #8d7f00;
+      color: #191600;
+    }
+
+    .social-login-button.google {
+      background: #ffffff;
+      color: #1f2937;
+    }
+
+    .social-login-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
     .danger-button {
       background: #ffe0e0;
     }
@@ -268,6 +303,16 @@
     <input id="password" type="password" autocomplete="current-password" placeholder="password" />
 
     <button id="loginButton" type="button">&#47196;&#44536;&#51064;</button>
+    <div class="social-login-buttons" aria-label="&#49548;&#49500; &#47196;&#44536;&#51064;">
+      <button id="googleLoginButton" class="social-login-button google" type="button">
+        <span class="social-login-icon" aria-hidden="true">G</span>
+        &#44396;&#44544;&#47196; &#47196;&#44536;&#51064;
+      </button>
+      <button id="kakaoLoginButton" class="social-login-button kakao" type="button">
+        <span class="social-login-icon" aria-hidden="true">&#53665;</span>
+        &#52852;&#52852;&#50724;&#47196; &#47196;&#44536;&#51064;
+      </button>
+    </div>
     <button id="signupButton" class="secondary-button" type="button">&#54924;&#50896;&#44032;&#51077;</button>
   </section>
 

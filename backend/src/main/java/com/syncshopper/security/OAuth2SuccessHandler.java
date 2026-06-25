@@ -19,13 +19,16 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final String authorizedRedirectUri;
+    private final String signupRedirectUri;
 
     public OAuth2SuccessHandler(
             JwtTokenProvider jwtTokenProvider,
-            @Value("${app.oauth2.authorized-redirect-uri}") String authorizedRedirectUri
+            @Value("${app.oauth2.authorized-redirect-uri}") String authorizedRedirectUri,
+            @Value("${app.oauth2.signup-redirect-uri}") String signupRedirectUri
     ) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.authorizedRedirectUri = authorizedRedirectUri;
+        this.signupRedirectUri = signupRedirectUri;
     }
 
     @Override
@@ -42,8 +45,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
             String signupToken = jwtTokenProvider.createSignupToken(email, nickname, provider, providerId, profileImageUrl);
 
-            // Redirect to frontend signup page
-            String redirectUri = UriComponentsBuilder.fromUriString("http://localhost:5173/signup")
+            String redirectUri = UriComponentsBuilder.fromUriString(signupRedirectUri)
                     .queryParam("signupToken", signupToken)
                     .build()
                     .toUriString();

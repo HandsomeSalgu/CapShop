@@ -49,7 +49,7 @@ public class SecurityConfig {
                                 .cors(cors -> {
                                 })
                                 .sessionManagement(session -> session
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                                 .formLogin(form -> form.disable())
                                 .httpBasic(httpBasic -> httpBasic.disable())
                                 .exceptionHandling(exception -> exception

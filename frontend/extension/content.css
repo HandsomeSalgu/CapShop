@@ -2072,3 +2072,58 @@
 #syncshopper-login-panel input {
   padding: 10px 12px;
 }
+
+#syncshopper-social-login-buttons {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.syncshopper-social-login-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--capshop-line);
+  border-radius: 12px;
+  color: var(--capshop-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.1;
+  box-shadow: none;
+  text-shadow: none;
+  cursor: pointer;
+  transition: filter 120ms ease;
+}
+
+.syncshopper-social-login-button:hover,
+.syncshopper-social-login-button:focus-visible {
+  filter: brightness(0.98);
+}
+
+.syncshopper-social-login-button-google {
+  background: #ffffff;
+}
+
+.syncshopper-social-login-button-kakao {
+  border-color: #8d7f00;
+  background: #fee500;
+  color: #191600;
+}
+
+.syncshopper-social-login-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}

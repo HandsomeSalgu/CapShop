@@ -1,7 +1,19 @@
 console.log("[SyncShopper] background service worker loaded");
 
+const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
+const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+const OAUTH_CALLBACK_URL = `${DEFAULT_FRONTEND_BASE_URL}/oauth/callback`;
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log("[SyncShopper] extension installed");
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (!changeInfo.url) {
+    return;
+  }
+
+  handleOAuthCallbackUrl(changeInfo.url);
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -30,7 +42,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "SYNC_SHOPPER_OPEN_SIGNUP") {
-    chrome.tabs.create({ url: message.url || "http://localhost:5173/signup" });
+    chrome.tabs.create({ url: message.url || `${DEFAULT_FRONTEND_BASE_URL}/signup` });
+    return false;
+  }
+
+  if (message.type === "SYNC_SHOPPER_OPEN_SOCIAL_LOGIN") {
+    chrome.tabs.create({ url: message.url || `${DEFAULT_BACKEND_BASE_URL}/oauth2/authorization/google` });
     return false;
   }
 
@@ -80,6 +97,59 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return true;
 });
+
+async function handleOAuthCallbackUrl(url) {
+  let callbackUrl = null;
+
+  try {
+    callbackUrl = new URL(url);
+  } catch {
+    return;
+  }
+
+  if (`${callbackUrl.origin}${callbackUrl.pathname}` !== OAUTH_CALLBACK_URL) {
+    return;
+  }
+
+  const accessToken = callbackUrl.searchParams.get("accessToken");
+
+  if (!accessToken) {
+    return;
+  }
+
+  try {
+    const authUser = await fetchAuthenticatedUser(accessToken);
+
+    await chrome.storage.local.set({
+      backendBaseUrl: DEFAULT_BACKEND_BASE_URL,
+      frontendBaseUrl: DEFAULT_FRONTEND_BASE_URL,
+      accessToken,
+      authUser
+    });
+
+    console.log("[SyncShopper] OAuth login token saved");
+  } catch (error) {
+    console.error("[SyncShopper] failed to save OAuth login token", error);
+  }
+}
+
+async function fetchAuthenticatedUser(accessToken) {
+  const response = await fetch(`${DEFAULT_BACKEND_BASE_URL}/api/auth/me`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load OAuth user: ${response.status}`);
+  }
+
+  const result = await response.json();
+  return result && typeof result === "object" && Object.prototype.hasOwnProperty.call(result, "data")
+    ? result.data
+    : result;
+}
 
 async function sendLoginRequest(message, sendResponse) {
   const { requestUrl, requestBody } = message;
