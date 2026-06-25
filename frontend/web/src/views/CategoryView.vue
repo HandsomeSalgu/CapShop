@@ -1,9 +1,11 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { categories } from '@/data/categories'
 import AppBanner from '@/components/common/AppBanner.vue'
 import { commerceApi } from '@/api/commerce'
+
+const route = useRoute()
 
 // State for active category selections
 const selectedMainCategory = ref(categories[0])
@@ -119,7 +121,24 @@ watch(sortOption, () => {
   resetAndFetch()
 })
 
+watch(() => route.query.q, (newQ) => {
+  if (newQ) {
+    customSearchQuery.value = newQ
+    selectedMainCategory.value = null
+    selectedSubCategory.value = null
+    selectedKeyword.value = null
+    resetAndFetch()
+  }
+})
+
 onMounted(() => {
+  if (route.query.q) {
+    customSearchQuery.value = route.query.q
+    selectedMainCategory.value = null
+    selectedSubCategory.value = null
+    selectedKeyword.value = null
+  }
+
   // 초기 로드 시 상품 가져오기
   resetAndFetch()
 

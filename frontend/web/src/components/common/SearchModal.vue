@@ -1,4 +1,7 @@
 <script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
 defineProps({
   modelValue: {
     type: Boolean,
@@ -7,9 +10,18 @@ defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
+const router = useRouter()
+const searchKeyword = ref('')
 
 const close = () => {
   emit('update:modelValue', false)
+  searchKeyword.value = ''
+}
+
+const performSearch = () => {
+  if (!searchKeyword.value.trim()) return
+  router.push({ path: '/category', query: { q: searchKeyword.value.trim() } })
+  close()
 }
 </script>
 
@@ -23,8 +35,13 @@ const close = () => {
       <button class="modal-close" @click="close">&times;</button>
       <h3>원하는 상품을 검색할 수 있습니다.</h3>
       <div class="search-form">
-        <input type="text" placeholder="검색어를 입력해주세요...">
-        <button type="button"><i class="fa-solid fa-magnifying-glass"></i></button>
+        <input 
+          type="text" 
+          placeholder="검색어를 입력해주세요..."
+          v-model="searchKeyword"
+          @keyup.enter="performSearch"
+        >
+        <button type="button" @click="performSearch"><i class="fa-solid fa-magnifying-glass"></i></button>
       </div>
     </div>
   </div>
