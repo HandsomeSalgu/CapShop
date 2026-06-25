@@ -39,6 +39,7 @@ class CommerceQueryRequest(BaseModel):
         examples=[0.91],
     )
     subtitle_text: Optional[str] = Field(None, description="Subtitle or surrounding text")
+    user_hint: Optional[str] = Field(None, max_length=160, description="User-provided clue for the target product")
     video_id: Optional[str] = Field(None, description="YouTube video ID")
     timestamp_sec: Optional[int] = Field(None, ge=0, description="Timestamp in seconds")
 

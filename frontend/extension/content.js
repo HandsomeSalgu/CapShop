@@ -30,6 +30,676 @@ let analysisProgressSequenceTimer = null;
 let analysisProgressSequenceIndex = 0;
 let currentCapturedDataUrl = null;
 let currentSearchMode = null;
+let currentSearchHint = "";
+
+const PET_ATLAS = {
+  frameWidth: 128,
+  frameHeight: 128,
+  size: 104,
+  image: "pet/pet_atlas.png",
+  animations: {
+    idle_seed: {
+      row: 0,
+      frames: 6,
+      fps: 4,
+      loop: true
+    },
+    capture_camera: {
+      row: 1,
+      frames: 6,
+      fps: 8,
+      loop: false
+    },
+    analyzing_detective: {
+      row: 2,
+      frames: 8,
+      fps: 8,
+      loop: true
+    },
+    searching_box: {
+      row: 3,
+      frames: 8,
+      fps: 10,
+      loop: true
+    },
+    reranking_cards: {
+      row: 4,
+      frames: 8,
+      fps: 8,
+      loop: true
+    },
+    success_cheer: {
+      row: 5,
+      frames: 6,
+      fps: 8,
+      loop: false
+    },
+    failed_cry: {
+      row: 6,
+      frames: 6,
+      fps: 4,
+      loop: false
+    },
+    hover_wave: {
+      row: 7,
+      frames: 4,
+      fps: 5,
+      loop: false
+    },
+    dragging_run: {
+      row: 8,
+      frames: 6,
+      fps: 12,
+      loop: true
+    }
+  }
+};
+
+const PET_STORAGE_KEY = "capshopPetPosition";
+const PET_DEFAULT_MESSAGES = {
+  capture_camera: "\uC88B\uC544, \uCC0D\uC5B4\uBCFC\uAC8C!",
+  analyzing_detective: "\uB2E8\uC11C\uB97C \uCC3E\uB294 \uC911!",
+  searching_box: "\uBE44\uC2B7\uD55C \uC0C1\uD488\uC744 \uCC3E\uB294 \uC911!",
+  reranking_cards: "\uAC00\uC7A5 \uBE44\uC2B7\uD55C \uC0C1\uD488\uC744 \uACE0\uB974\uB294 \uC911!",
+  success_cheer: "\uCC3E\uC558\uB2E4!",
+  failed_cry: "\uC774\uBC88\uC5D4 \uBABB \uCC3E\uC558\uC5B4...",
+  hover_wave: "\uB0A0 \uB20C\uB7EC\uBD10",
+  initial_greeting: "\uC548\uB155!!"
+};
+const PET_LONG_MOTION_OPTIONS = {
+  failed_cry: {
+    duration: 3600,
+    settleMs: 2600
+  },
+  success_cheer: {
+    duration: 2800,
+    settleMs: 2200
+  },
+  hover_wave: {
+    duration: 2600,
+    settleMs: 1800
+  }
+};
+
+let capShopPetRoot = null;
+let capShopPetSprite = null;
+let capShopPetBubble = null;
+let capShopPetController = null;
+let capShopPetStateManager = null;
+let capShopPetBubbleTimer = null;
+let capShopPetDragState = null;
+let capShopPetInitialGreetingShown = false;
+let capShopPanelDragState = null;
+
+function createPetController(spriteElement) {
+  let frame = 0;
+  let timer = null;
+  let currentAnimationName = null;
+  let currentDirection = "right";
+
+  function renderFrame(animation, frameIndex) {
+    const x = -(frameIndex * PET_ATLAS.size);
+    const y = -(animation.row * PET_ATLAS.size);
+    spriteElement.style.backgroundPosition = `${x}px ${y}px`;
+  }
+
+  function stop() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  function setDirection(direction) {
+    currentDirection = direction === "left" ? "left" : "right";
+    spriteElement.dataset.direction = currentDirection;
+  }
+
+  function play(animationName, options = {}) {
+    const animation = PET_ATLAS.animations[animationName] || PET_ATLAS.animations.idle_seed;
+    const fps = options.fps || animation.fps || 8;
+    currentAnimationName = animationName;
+    frame = 0;
+    stop();
+    renderFrame(animation, frame);
+
+    timer = setInterval(() => {
+      frame += 1;
+
+      if (frame >= animation.frames) {
+        if (!animation.loop) {
+          stop();
+          if (typeof options.onComplete === "function") {
+            options.onComplete(animationName);
+          }
+          return;
+        }
+
+        frame = 0;
+      }
+
+      renderFrame(animation, frame);
+    }, Math.max(50, Math.round(1000 / fps)));
+  }
+
+  function setSpeed(fps) {
+    if (currentAnimationName) {
+      play(currentAnimationName, { fps });
+    }
+  }
+
+  return {
+    play,
+    stop,
+    setDirection,
+    setSpeed
+  };
+}
+
+function showPetBubble(message, duration = 2200) {
+  ensureCapShopPet();
+
+  if (!capShopPetBubble || !message) {
+    hidePetBubble();
+    return;
+  }
+
+  if (capShopPetBubbleTimer) {
+    clearTimeout(capShopPetBubbleTimer);
+    capShopPetBubbleTimer = null;
+  }
+
+  capShopPetBubble.textContent = message;
+  capShopPetBubble.hidden = false;
+
+  if (duration > 0) {
+    capShopPetBubbleTimer = setTimeout(() => {
+      hidePetBubble();
+    }, duration);
+  }
+}
+
+function hidePetBubble() {
+  if (capShopPetBubbleTimer) {
+    clearTimeout(capShopPetBubbleTimer);
+    capShopPetBubbleTimer = null;
+  }
+
+  if (capShopPetBubble) {
+    capShopPetBubble.hidden = true;
+    capShopPetBubble.textContent = "";
+  }
+}
+
+function createPetStateManager(controller) {
+  let currentState = "idle_seed";
+  let previousWorkState = "idle_seed";
+  let overlayState = null;
+  let settleTimer = null;
+
+  function setPetState(state, options = {}) {
+    if (!PET_ATLAS.animations[state]) {
+      state = "idle_seed";
+    }
+
+    if (settleTimer) {
+      clearTimeout(settleTimer);
+      settleTimer = null;
+    }
+
+    if (options.openPanel) {
+      openCapShopPanel();
+    }
+
+    const isOverlay = state === "hover_wave" || state === "dragging_run";
+    if (isOverlay) {
+      overlayState = state;
+    } else {
+      previousWorkState = state;
+      overlayState = null;
+    }
+
+    currentState = state;
+    const animation = PET_ATLAS.animations[state];
+    const message = options.message || PET_DEFAULT_MESSAGES[state];
+    controller.play(state, {
+      onComplete: () => {
+        if (state === "hover_wave") {
+          overlayState = null;
+          setPetState(previousWorkState || "idle_seed");
+          return;
+        }
+
+        if (!animation.loop && state !== "idle_seed" && !options.holdFinalFrame) {
+          settleTimer = setTimeout(() => {
+            setPetState("idle_seed");
+          }, options.settleMs ?? 1200);
+        }
+      }
+    });
+
+    if (message) {
+      showPetBubble(message, options.duration ?? (animation.loop ? 2600 : 2200));
+    } else if (!isOverlay) {
+      hidePetBubble();
+    }
+  }
+
+  function restoreAfterOverlay() {
+    if (!overlayState) {
+      return;
+    }
+
+    overlayState = null;
+    setPetState(previousWorkState || "idle_seed");
+  }
+
+  return {
+    setPetState,
+    restoreAfterOverlay,
+    getCurrentState: () => currentState,
+    getPreviousWorkState: () => previousWorkState
+  };
+}
+
+function getDefaultPetPosition() {
+  return {
+    left: Math.max(12, window.innerWidth - PET_ATLAS.size - 24),
+    top: Math.max(12, window.innerHeight - PET_ATLAS.size - 28)
+  };
+}
+
+function clampPetPosition(left, top) {
+  const padding = 8;
+  const rootWidth = capShopPetRoot?.offsetWidth || PET_ATLAS.size;
+  const rootHeight = capShopPetRoot?.offsetHeight || PET_ATLAS.size;
+
+  return {
+    left: Math.min(Math.max(padding, left), Math.max(padding, window.innerWidth - rootWidth - padding)),
+    top: Math.min(Math.max(padding, top), Math.max(padding, window.innerHeight - rootHeight - padding))
+  };
+}
+
+function applyPetPosition(position) {
+  if (!capShopPetRoot) {
+    return;
+  }
+
+  const clamped = clampPetPosition(position.left, position.top);
+  capShopPetRoot.style.left = `${clamped.left}px`;
+  capShopPetRoot.style.top = `${clamped.top}px`;
+  capShopPetRoot.style.right = "auto";
+  capShopPetRoot.style.bottom = "auto";
+}
+
+function savePetPosition() {
+  if (!capShopPetRoot || typeof chrome === "undefined" || !chrome.storage?.local) {
+    return;
+  }
+
+  const rect = capShopPetRoot.getBoundingClientRect();
+  const position = clampPetPosition(rect.left, rect.top);
+  chrome.storage.local.set({
+    [PET_STORAGE_KEY]: position
+  });
+}
+
+function restorePetPosition() {
+  if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    applyPetPosition(getDefaultPetPosition());
+    return;
+  }
+
+  chrome.storage.local.get([PET_STORAGE_KEY], (result) => {
+    const saved = result && result[PET_STORAGE_KEY];
+    if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+      applyPetPosition(saved);
+      return;
+    }
+
+    applyPetPosition(getDefaultPetPosition());
+  });
+}
+
+function bindPetDragController(root) {
+  root.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const rect = root.getBoundingClientRect();
+    capShopPetDragState = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      moved: false
+    };
+
+    root.setPointerCapture(event.pointerId);
+  });
+
+  root.addEventListener("pointermove", (event) => {
+    if (!capShopPetDragState || capShopPetDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const dx = event.clientX - capShopPetDragState.lastX;
+    if (Math.abs(dx) > 1) {
+      capShopPetController.setDirection(dx < 0 ? "left" : "right");
+    }
+
+    if (!capShopPetDragState.moved && Math.hypot(event.clientX - capShopPetDragState.startX, event.clientY - capShopPetDragState.startY) > 3) {
+      capShopPetDragState.moved = true;
+      capShopPetStateManager.setPetState("dragging_run");
+    }
+
+    capShopPetDragState.lastX = event.clientX;
+    applyPetPosition({
+      left: event.clientX - capShopPetDragState.offsetX,
+      top: event.clientY - capShopPetDragState.offsetY
+    });
+  });
+
+  root.addEventListener("pointerup", (event) => {
+    if (!capShopPetDragState || capShopPetDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const wasMoved = capShopPetDragState.moved;
+    capShopPetDragState = null;
+    savePetPosition();
+    capShopPetStateManager.restoreAfterOverlay();
+
+    if (!wasMoved) {
+      toggleCapShopPanel();
+    }
+  });
+
+  root.addEventListener("pointercancel", () => {
+    capShopPetDragState = null;
+    savePetPosition();
+    capShopPetStateManager.restoreAfterOverlay();
+  });
+}
+
+function ensureCapShopPet() {
+  if (capShopPetRoot) {
+    return capShopPetRoot;
+  }
+
+  const root = document.createElement("button");
+  root.id = "capshop-pet-root";
+  root.type = "button";
+  root.setAttribute("aria-label", "CapShop pet launcher");
+  root.style.setProperty("--cs-pet-size", `${PET_ATLAS.size}px`);
+
+  const bubble = document.createElement("div");
+  bubble.id = "capshop-pet-bubble";
+  bubble.hidden = true;
+
+  const sprite = document.createElement("span");
+  sprite.id = "capshop-pet-sprite";
+  sprite.style.backgroundImage = `url("${chrome.runtime.getURL(PET_ATLAS.image)}")`;
+  sprite.style.backgroundSize = `${PET_ATLAS.size * 8}px ${PET_ATLAS.size * 9}px`;
+
+  root.appendChild(bubble);
+  root.appendChild(sprite);
+  document.body.appendChild(root);
+
+  capShopPetRoot = root;
+  capShopPetSprite = sprite;
+  capShopPetBubble = bubble;
+  capShopPetController = createPetController(sprite);
+  capShopPetStateManager = createPetStateManager(capShopPetController);
+
+  root.addEventListener("mouseenter", () => {
+    if (capShopPetDragState) {
+      return;
+    }
+
+    capShopPetStateManager.setPetState("hover_wave", {
+      message: PET_DEFAULT_MESSAGES.hover_wave,
+      ...PET_LONG_MOTION_OPTIONS.hover_wave
+    });
+  });
+
+  bindPetDragController(root);
+  restorePetPosition();
+  capShopPetStateManager.setPetState("idle_seed");
+  showInitialPetGreeting();
+
+  return root;
+}
+
+function showInitialPetGreeting() {
+  if (capShopPetInitialGreetingShown) {
+    return;
+  }
+
+  capShopPetInitialGreetingShown = true;
+  setTimeout(() => {
+    if (!capShopPetStateManager || capShopPetDragState) {
+      return;
+    }
+
+    capShopPetStateManager.setPetState("hover_wave", {
+      message: PET_DEFAULT_MESSAGES.initial_greeting,
+      ...PET_LONG_MOTION_OPTIONS.hover_wave
+    });
+  }, 500);
+}
+
+function openCapShopPanel() {
+  const resultPanel = document.getElementById("syncshopper-result-panel");
+  if (resultPanel) {
+    resultPanel.hidden = false;
+    return resultPanel;
+  }
+
+  const loginPanel = document.getElementById("syncshopper-login-panel");
+  if (loginPanel) {
+    loginPanel.hidden = false;
+    return loginPanel;
+  }
+
+  const launcher = createCaptureLauncher();
+  launcher.dataset.capshopOpen = "true";
+  launcher.hidden = false;
+  return launcher;
+}
+
+function closeCapShopPanel() {
+  stopAnalysisProgressSequence();
+
+  const resultPanel = document.getElementById("syncshopper-result-panel");
+  if (resultPanel) {
+    resultPanel.remove();
+  }
+
+  const loginPanel = document.getElementById("syncshopper-login-panel");
+  if (loginPanel) {
+    loginPanel.remove();
+  }
+
+  const launcher = document.getElementById("syncshopper-capture-launcher");
+  if (launcher) {
+    launcher.dataset.capshopOpen = "false";
+    launcher.hidden = true;
+  }
+
+  updateCaptureLauncherVisibility();
+}
+
+function toggleCapShopPanel() {
+  const visiblePanel = [document.getElementById("syncshopper-result-panel"), document.getElementById("syncshopper-login-panel"), document.getElementById("syncshopper-capture-launcher")]
+    .find((element) => element && !element.hidden);
+
+  if (visiblePanel) {
+    closeCapShopPanel();
+    return;
+  }
+
+  openCapShopPanel();
+}
+
+function setPetState(state, options = {}) {
+  ensureCapShopPet();
+  capShopPetStateManager.setPetState(state, options);
+}
+
+function bindDraggableCapShopPanel(panel, storageKey) {
+  if (!panel || panel.dataset.capshopPanelDraggable === "true") {
+    return;
+  }
+
+  panel.dataset.capshopPanelDraggable = "true";
+  panel.classList.add("syncshopper-draggable-panel");
+  restoreDraggablePanelPosition(panel, storageKey);
+
+  panel.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || shouldSkipPanelDrag(event.target)) {
+      return;
+    }
+
+    const rect = panel.getBoundingClientRect();
+    capShopPanelDragState = {
+      panel,
+      storageKey,
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top
+    };
+
+    panel.classList.add("syncshopper-panel-dragging");
+    panel.setPointerCapture(event.pointerId);
+  });
+
+  panel.addEventListener("pointermove", (event) => {
+    if (!capShopPanelDragState || capShopPanelDragState.panel !== panel || capShopPanelDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    applyDraggablePanelPosition(panel, {
+      left: event.clientX - capShopPanelDragState.offsetX,
+      top: event.clientY - capShopPanelDragState.offsetY
+    });
+  });
+
+  panel.addEventListener("pointerup", (event) => {
+    if (!capShopPanelDragState || capShopPanelDragState.panel !== panel || capShopPanelDragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    finishPanelDrag();
+  });
+
+  panel.addEventListener("pointercancel", finishPanelDrag);
+}
+
+function shouldSkipPanelDrag(target) {
+  return Boolean(target?.closest?.("button, input, textarea, select, a, img, .syncshopper-product-card"));
+}
+
+function finishPanelDrag() {
+  if (!capShopPanelDragState) {
+    return;
+  }
+
+  const { panel, storageKey } = capShopPanelDragState;
+  panel.classList.remove("syncshopper-panel-dragging");
+  saveDraggablePanelPosition(panel, storageKey);
+  capShopPanelDragState = null;
+}
+
+function clampDraggablePanelPosition(panel, left, top) {
+  const padding = 8;
+  const rect = panel.getBoundingClientRect();
+
+  return {
+    left: Math.min(Math.max(padding, left), Math.max(padding, window.innerWidth - rect.width - padding)),
+    top: Math.min(Math.max(padding, top), Math.max(padding, window.innerHeight - rect.height - padding))
+  };
+}
+
+function applyDraggablePanelPosition(panel, position) {
+  const clamped = clampDraggablePanelPosition(panel, position.left, position.top);
+  panel.style.left = `${clamped.left}px`;
+  panel.style.top = `${clamped.top}px`;
+  panel.style.right = "auto";
+  panel.style.bottom = "auto";
+}
+
+function saveDraggablePanelPosition(panel, storageKey) {
+  if (!storageKey || typeof chrome === "undefined" || !chrome.storage?.local) {
+    return;
+  }
+
+  const rect = panel.getBoundingClientRect();
+  const position = clampDraggablePanelPosition(panel, rect.left, rect.top);
+  chrome.storage.local.set({
+    [storageKey]: position
+  });
+}
+
+function restoreDraggablePanelPosition(panel, storageKey) {
+  if (!storageKey || typeof chrome === "undefined" || !chrome.storage?.local) {
+    return;
+  }
+
+  chrome.storage.local.get([storageKey], (result) => {
+    const saved = result && result[storageKey];
+    if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+      applyDraggablePanelPosition(panel, saved);
+    }
+  });
+}
+
+function exposeCapShopPetApi() {
+  window.CapShopPet = {
+    setState: setPetState,
+    showBubble: showPetBubble,
+    openPanel: openCapShopPanel,
+    closePanel: closeCapShopPanel,
+    togglePanel: toggleCapShopPanel
+  };
+
+  window.CapShopPetDemo = {
+    run() {
+      runPetDemo([
+        ["idle_seed"],
+        ["capture_camera", { message: PET_DEFAULT_MESSAGES.capture_camera }],
+        ["analyzing_detective", { message: PET_DEFAULT_MESSAGES.analyzing_detective }],
+        ["searching_box", { message: "\uBE44\uC2B7\uD55C \uC0C1\uD488\uC744 \uCC3E\uB294 \uC911!" }],
+        ["reranking_cards", { message: PET_DEFAULT_MESSAGES.reranking_cards }],
+        ["success_cheer", { message: PET_DEFAULT_MESSAGES.success_cheer, openPanel: true, ...PET_LONG_MOTION_OPTIONS.success_cheer }],
+        ["idle_seed"]
+      ]);
+    },
+    fail() {
+      runPetDemo([
+        ["idle_seed"],
+        ["capture_camera", { message: PET_DEFAULT_MESSAGES.capture_camera }],
+        ["analyzing_detective", { message: PET_DEFAULT_MESSAGES.analyzing_detective }],
+        ["searching_box", { message: "\uBE44\uC2B7\uD55C \uC0C1\uD488\uC744 \uCC3E\uB294 \uC911!" }],
+        ["failed_cry", { message: PET_DEFAULT_MESSAGES.failed_cry, ...PET_LONG_MOTION_OPTIONS.failed_cry }],
+        ["idle_seed"]
+      ]);
+    }
+  };
+}
+
+function runPetDemo(steps) {
+  let delay = 0;
+  steps.forEach(([state, options = {}]) => {
+    setTimeout(() => {
+      setPetState(state, options);
+    }, delay);
+    delay += state === "idle_seed" ? 700 : Math.max(1800, (options.settleMs || 0) + 400);
+  });
+}
 
 function createCaptureButton() {
   const existingButton = document.getElementById("syncshopper-capture-button");
@@ -49,6 +719,10 @@ function createCaptureButton() {
 
     if (!prepareVideoForCapture()) {
       showToast("\uC601\uC0C1 \uD654\uBA74\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+      setPetState("failed_cry", {
+        message: PET_DEFAULT_MESSAGES.failed_cry,
+        ...PET_LONG_MOTION_OPTIONS.failed_cry
+      });
       return;
     }
 
@@ -99,6 +773,7 @@ function createCaptureLauncher() {
   launcher.appendChild(button);
   document.body.appendChild(launcher);
   captureLauncher = launcher;
+  bindDraggableCapShopPanel(launcher, "capshopCaptureLauncherPosition");
 
   return captureLauncher;
 }
@@ -122,7 +797,13 @@ function isSupportedYouTubePage() {
 
 function updateCaptureLauncherVisibility() {
   if (isSupportedYouTubePage()) {
-    showCaptureButton();
+    ensureCapShopPet();
+
+    const launcher = document.getElementById("syncshopper-capture-launcher");
+    if (launcher && launcher.dataset.capshopOpen !== "true") {
+      launcher.hidden = true;
+    }
+
     return;
   }
 
@@ -204,6 +885,11 @@ function startVideoObserver() {
 function startAreaSelection() {
   removeAreaSelectionOverlay();
   hideCaptureButton();
+  setPetState("capture_camera", {
+    message: PET_DEFAULT_MESSAGES.capture_camera,
+    holdFinalFrame: true,
+    duration: 2400
+  });
 
   let isDragging = false;
   let startX = 0;
@@ -248,16 +934,22 @@ function startAreaSelection() {
 
     console.log("[SyncShopper] selected rect", rect);
 
-    removeAreaSelectionOverlay();
-
     if (rect.width < 30 || rect.height < 30) {
       console.warn("[SyncShopper] selected area is too small");
+      removeAreaSelectionOverlay();
       showToast("\uC120\uD0DD \uC601\uC5ED\uC774 \uB108\uBB34 \uC791\uC2B5\uB2C8\uB2E4.", "warning");
+      setPetState("failed_cry", {
+        message: PET_DEFAULT_MESSAGES.failed_cry,
+        ...PET_LONG_MOTION_OPTIONS.failed_cry
+      });
       updateCaptureLauncherVisibility();
       return;
     }
 
     try {
+      removeAreaSelectionOverlay();
+      await waitForNextPaint();
+
       const fullPageDataUrl = await requestVisibleTabCapture();
 
       console.log("[SyncShopper] captured full tab dataUrl", fullPageDataUrl.slice(0, 100));
@@ -267,6 +959,7 @@ function startAreaSelection() {
       console.log("[SyncShopper] cropped dataUrl", croppedDataUrl.slice(0, 100));
 
       previewCroppedImage(croppedDataUrl);
+      setPetState("idle_seed");
 
       showToast("\uCEA1\uCCD0 \uC601\uC5ED \uC120\uD0DD \uC644\uB8CC", "success");
 
@@ -274,6 +967,10 @@ function startAreaSelection() {
       console.error("[SyncShopper] capture process failed", error);
       updateCapturePanelResult({
         error: error.message || "\uBD84\uC11D \uC2E4\uD328"
+      });
+      setPetState("failed_cry", {
+        message: PET_DEFAULT_MESSAGES.failed_cry,
+        ...PET_LONG_MOTION_OPTIONS.failed_cry
       });
 
       if (!document.getElementById("syncshopper-toast")) {
@@ -441,9 +1138,7 @@ function createCaptureResultPanel() {
   closeButton.textContent = "\u00D7";
   closeButton.setAttribute("aria-label", "SyncShopper \uACB0\uACFC \uD328\uB110 \uB2EB\uAE30");
   closeButton.addEventListener("click", () => {
-    stopAnalysisProgressSequence();
-    panel.remove();
-    updateCaptureLauncherVisibility();
+    closeCapShopPanel();
   });
 
   const previewTitle = document.createElement("h3");
@@ -463,8 +1158,17 @@ function createCaptureResultPanel() {
   panel.appendChild(previewImage);
   panel.appendChild(resultContent);
   document.body.appendChild(panel);
+  bindDraggableCapShopPanel(panel, "capshopResultPanelPosition");
 
   return panel;
+}
+
+function waitForNextPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(resolve);
+    });
+  });
 }
 
 function updateCapturePanelResult(result) {
@@ -477,6 +1181,26 @@ function updateCapturePanelResult(result) {
 
   stopAnalysisProgressSequence();
   resultContent.replaceChildren(renderResultForPanel(result));
+  updatePetStateForAnalysisResult(result);
+}
+
+function updatePetStateForAnalysisResult(result) {
+  const analysis = result && typeof result === "object" && result.data ? result.data : result;
+  const products = analysis && typeof analysis === "object" && Array.isArray(analysis.products) ? analysis.products : [];
+
+  if (!analysis || typeof analysis !== "object" || analysis.error || products.length === 0) {
+    setPetState("failed_cry", {
+      message: PET_DEFAULT_MESSAGES.failed_cry,
+      ...PET_LONG_MOTION_OPTIONS.failed_cry
+    });
+    return;
+  }
+
+  setPetState("success_cheer", {
+    message: PET_DEFAULT_MESSAGES.success_cheer,
+    openPanel: true,
+    ...PET_LONG_MOTION_OPTIONS.success_cheer
+  });
 }
 
 function renderSearchModeChoice(croppedDataUrl) {
@@ -503,16 +1227,37 @@ function renderSearchModeChoice(croppedDataUrl) {
   note.className = "syncshopper-search-mode-note";
   note.textContent = searchModeDescription("default");
 
-  buttonRow.appendChild(createSearchModeButton("\uBE60\uB978 \uAC80\uC0C9", "fast", croppedDataUrl, note));
-  buttonRow.appendChild(createSearchModeButton("\uC815\uBC00 \uAC80\uC0C9", "precise", croppedDataUrl, note));
+  const hintLabel = document.createElement("label");
+  hintLabel.className = "syncshopper-section-label";
+  hintLabel.setAttribute("for", "syncshopper-search-hint");
+  hintLabel.textContent = "\uD78C\uD2B8";
+
+  const hintInput = document.createElement("input");
+  hintInput.id = "syncshopper-search-hint";
+  hintInput.className = "syncshopper-query-input syncshopper-hint-input";
+  hintInput.type = "text";
+  hintInput.maxLength = 160;
+  hintInput.value = currentSearchHint || "";
+  hintInput.placeholder = "\uC608: \uAC80\uC815 \uC7AC\uD0B7, \uB098\uC774\uD0A4, \uC18C\uD615 \uAC00\uBC29";
+
+  const hintNote = document.createElement("p");
+  hintNote.className = "syncshopper-search-mode-note";
+  hintNote.textContent = "\uC785\uB825\uD558\uBA74 AI\uAC00 \uC774 \uD78C\uD2B8\uB97C \uC8FC\uC694 \uB2E8\uC11C\uB85C \uD65C\uC6A9\uD569\uB2C8\uB2E4.";
+
+  buttonRow.appendChild(createSearchModeButton("\uBE60\uB978 \uAC80\uC0C9", "fast", croppedDataUrl, note, hintInput));
+  buttonRow.appendChild(createSearchModeButton("\uC815\uBC00 \uAC80\uC0C9", "precise", croppedDataUrl, note, hintInput));
 
   wrapper.appendChild(title);
+  wrapper.appendChild(hintLabel);
+  wrapper.appendChild(hintInput);
+  wrapper.appendChild(hintNote);
   wrapper.appendChild(buttonRow);
   wrapper.appendChild(note);
   resultContent.replaceChildren(wrapper);
+  hintInput.focus();
 }
 
-function createSearchModeButton(label, searchMode, croppedDataUrl, noteElement = null) {
+function createSearchModeButton(label, searchMode, croppedDataUrl, noteElement = null, hintInput = null) {
   const button = document.createElement("button");
   button.className = `syncshopper-search-mode-button syncshopper-search-mode-button-${searchMode}`;
   button.type = "button";
@@ -530,7 +1275,7 @@ function createSearchModeButton(label, searchMode, croppedDataUrl, noteElement =
     updateSearchModeDescription(noteElement, "default");
   });
   button.addEventListener("click", () => {
-    startDetectionAnalysis(croppedDataUrl, searchMode);
+    startDetectionAnalysis(croppedDataUrl, searchMode, hintInput?.value || "");
   });
   return button;
 }
@@ -555,14 +1300,15 @@ function searchModeDescription(searchMode) {
   return "\uBC84\uD2BC\uC5D0 \uB9C8\uC6B0\uC2A4\uB97C \uC62C\uB9AC\uBA74 \uAC80\uC0C9 \uBC29\uC2DD\uC758 \uCC28\uC774\uB97C \uBCFC \uC218 \uC788\uC2B5\uB2C8\uB2E4.";
 }
 
-async function startDetectionAnalysis(croppedDataUrl, searchMode) {
+async function startDetectionAnalysis(croppedDataUrl, searchMode, userHint = "") {
   currentCapturedDataUrl = croppedDataUrl;
   currentSearchMode = searchMode;
+  currentSearchHint = sanitizeSearchHint(userHint);
   showToast(`${searchMode === "fast" ? "\uBE60\uB978 \uAC80\uC0C9" : "\uC815\uBC00 \uAC80\uC0C9"}\uC744 \uC2DC\uC791\uD569\uB2C8\uB2E4.`, "info");
   renderAnalysisProgress(DEFAULT_ANALYSIS_PROGRESS_MESSAGE);
 
   try {
-    const analysisResult = await sendDetectionAnalyzeRequest(croppedDataUrl, searchMode);
+    const analysisResult = await sendDetectionAnalyzeRequest(croppedDataUrl, searchMode, currentSearchHint);
     updateCapturePanelResult(analysisResult);
   } catch (error) {
     console.error("[SyncShopper] analysis process failed", error);
@@ -596,11 +1342,43 @@ function renderAnalysisProgress(message) {
   }
 }
 
+function sanitizeSearchHint(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, 160);
+}
+
+function setPetProgressForAnalysisIndex(index) {
+  if (index <= 0) {
+    setPetState("analyzing_detective", {
+      message: PET_DEFAULT_MESSAGES.analyzing_detective
+    });
+    return;
+  }
+
+  if (index === 1) {
+    setPetState("searching_box", {
+      message: "\uAC80\uC0C9\uC5B4\uB97C \uB9CC\uB4E4\uACE0 \uC788\uC5B4!"
+    });
+    return;
+  }
+
+  if (index <= 2) {
+    setPetState("searching_box", {
+      message: "\uBE44\uC2B7\uD55C \uC0C1\uD488\uC744 \uCC3E\uB294 \uC911!"
+    });
+    return;
+  }
+
+  setPetState("reranking_cards", {
+    message: PET_DEFAULT_MESSAGES.reranking_cards
+  });
+}
+
 function startAnalysisProgressSequence() {
   stopAnalysisProgressSequence();
 
   analysisProgressSequenceIndex = 0;
   renderAnalysisProgress(ANALYSIS_PROGRESS_MESSAGES[analysisProgressSequenceIndex]);
+  setPetProgressForAnalysisIndex(analysisProgressSequenceIndex);
 
   analysisProgressSequenceTimer = setInterval(() => {
     analysisProgressSequenceIndex += 1;
@@ -613,6 +1391,7 @@ function startAnalysisProgressSequence() {
     }
 
     renderAnalysisProgress(ANALYSIS_PROGRESS_MESSAGES[analysisProgressSequenceIndex]);
+    setPetProgressForAnalysisIndex(analysisProgressSequenceIndex);
   }, ANALYSIS_PROGRESS_STEP_MS);
 }
 
@@ -853,13 +1632,20 @@ function createAlternateSearchModeButton() {
   button.type = "button";
   button.textContent = nextMode === "fast" ? "\uBE60\uB978 \uAC80\uC0C9" : "\uC815\uBC00 \uAC80\uC0C9";
   button.addEventListener("click", () => {
-    startDetectionAnalysis(currentCapturedDataUrl, nextMode);
+    startDetectionAnalysis(currentCapturedDataUrl, nextMode, currentSearchHint);
   });
   return button;
 }
 
 function createNaverSearchQueryBlock(analysis) {
-  const query = analysis.commerceQuery?.primary_query || analysis.commerceQuery?.fallback_queries?.[0] || analysis.targetName || analysis.detection?.targetName || "";
+  const detectionTargetName = analysis.detection?.targetName || analysis.targetName || "";
+  const commerceQuery = analysis.commerceQuery || {};
+  const query = getAppliedRecommendationQuery(analysis)
+    || commerceQuery.primary_query
+    || commerceQuery.primaryQuery
+    || commerceQuery.fallback_queries?.[0]
+    || commerceQuery.fallbackQueries?.[0]
+    || detectionTargetName;
 
   const block = document.createElement("section");
   block.className = "syncshopper-query-block";
@@ -900,14 +1686,34 @@ function createNaverSearchQueryBlock(analysis) {
     searchButton.disabled = true;
     searchButton.textContent = "\uAC80\uC0C9\uC911";
     setProductResultsLoading();
+    setPetState("searching_box", {
+      message: "\uBE44\uC2B7\uD55C \uC0C1\uD488\uC744 \uCC3E\uB294 \uC911!"
+    });
 
     try {
       const products = await requestCommerceTop3Products(trimmedQuery);
       updateProductResults(products, createSearchAnalysisPatch(trimmedQuery));
-      showToast("\uC0C1\uD488\uC744 \uB2E4\uC2DC \uBD88\uB7EC\uC654\uC2B5\uB2C8\uB2E4.", "success");
+      if (products.length > 0) {
+        setPetState("success_cheer", {
+          message: PET_DEFAULT_MESSAGES.success_cheer,
+          openPanel: true,
+          ...PET_LONG_MOTION_OPTIONS.success_cheer
+        });
+        showToast("\uC0C1\uD488\uC744 \uB2E4\uC2DC \uBD88\uB7EC\uC654\uC2B5\uB2C8\uB2E4.", "success");
+      } else {
+        setPetState("failed_cry", {
+          message: PET_DEFAULT_MESSAGES.failed_cry,
+          ...PET_LONG_MOTION_OPTIONS.failed_cry
+        });
+        showToast("\uD45C\uC2DC\uD560 \uC0C1\uD488\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+      }
     } catch (error) {
       console.error("[SyncShopper] commerce search failed", error);
       updateProductResults([], createSearchAnalysisPatch(trimmedQuery));
+      setPetState("failed_cry", {
+        message: PET_DEFAULT_MESSAGES.failed_cry,
+        ...PET_LONG_MOTION_OPTIONS.failed_cry
+      });
       showToast(error.message || "\uC0C1\uD488 \uAC80\uC0C9\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "error");
     } finally {
       searchButton.disabled = false;
@@ -929,6 +1735,15 @@ function createNaverSearchQueryBlock(analysis) {
   block.appendChild(row);
 
   return block;
+}
+
+function getAppliedRecommendationQuery(analysis) {
+  const products = Array.isArray(analysis?.products) ? analysis.products : [];
+  const productQuery = products
+    .map((product) => product?.queryText || product?.query_text || product?.sourceQuery || product?.source_query)
+    .find((query) => query && String(query).trim());
+
+  return productQuery ? String(productQuery).trim() : "";
 }
 
 function createProductResultsBlock(analysis, products) {
@@ -1370,6 +2185,7 @@ function showLoginPanel(onLoginSuccess) {
   panel.appendChild(loginButton);
   panel.appendChild(signupButton);
   document.body.appendChild(panel);
+  bindDraggableCapShopPanel(panel, "capshopLoginPanelPosition");
 
   loginIdInput.focus();
 }
@@ -1436,7 +2252,7 @@ function showToast(message, type = "info") {
   }, DEFAULT_TOAST_DURATION_MS);
 }
 
-async function sendDetectionAnalyzeRequest(croppedDataUrl, searchMode = "precise") {
+async function sendDetectionAnalyzeRequest(croppedDataUrl, searchMode = "precise", userHint = "") {
   const videoId = getYouTubeVideoId();
 
   if (!videoId) {
@@ -1469,7 +2285,8 @@ async function sendDetectionAnalyzeRequest(croppedDataUrl, searchMode = "precise
     timestampSec,
     imageBase64: croppedDataUrl,
     subtitleText: null,
-    searchMode
+    searchMode,
+    userHint: sanitizeSearchHint(userHint)
   };
   const requestUrl = `${backendBaseUrl.replace(/\/$/, "")}/api/detections/analyze`;
 
@@ -1478,7 +2295,8 @@ async function sendDetectionAnalyzeRequest(croppedDataUrl, searchMode = "precise
     videoId,
     timestampSec,
     imageSize: croppedDataUrl.length,
-    searchMode
+    searchMode,
+    hasUserHint: Boolean(requestBody.userHint)
   });
 
   startAnalysisProgressSequence();
@@ -1602,6 +2420,8 @@ function requestDetectionAnalyze({ requestUrl, accessToken, requestBody }) {
 }
 
 function initSyncShopperExtension() {
+  exposeCapShopPetApi();
+  ensureCapShopPet();
   updateCaptureLauncherVisibility();
 
   const found = findAndBindVideo();

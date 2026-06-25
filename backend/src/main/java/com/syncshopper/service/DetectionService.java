@@ -242,6 +242,7 @@ public class DetectionService {
                     .modelName(detection.getModelName())
                     .confidence(detection.getConfidence())
                     .subtitleText(request.getSubtitleText())
+                    .userHint(request.getUserHint())
                     .videoId(request.getVideoId())
                     .timestampSec(request.getTimestampSec())
                     .build());
@@ -344,6 +345,7 @@ public class DetectionService {
         payload.put("videoId", request.getVideoId());
         payload.put("timestampSec", request.getTimestampSec());
         payload.put("subtitleText", request.getSubtitleText());
+        payload.put("userHint", request.getUserHint());
         payload.put("searchMode", request.getSearchMode());
         payload.put("imageHash", imageHash);
         return payload;
