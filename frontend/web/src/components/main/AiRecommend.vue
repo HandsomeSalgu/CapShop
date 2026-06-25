@@ -3,12 +3,19 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductCard from '@/components/product/ProductCard.vue'
 import { recommendationApi } from '@/api/recommendation'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const products = ref([])
 const isLoading = ref(true)
 
 onMounted(async () => {
+  if (!authStore.isLoggedIn) {
+    isLoading.value = false;
+    return;
+  }
+
   try {
     const data = await recommendationApi.getMyRecommendations(3)
     if (data && data.length > 0) {
@@ -61,10 +68,15 @@ const handleProductClick = (product) => {
     <div class="section-header">
       <h2>AI 추천 상품 리스트</h2>
       <p>사용자 활동 및 관심사를 분석하여 제공하는 맞춤 추천 서비스입니다.</p>
-      <a href="#" class="more-btn" @click.prevent="goToRecommendView">더보기</a>
+      <a href="#" class="more-btn" @click.prevent="goToRecommendView" v-if="authStore.isLoggedIn">더보기</a>
     </div>
     
-    <div v-if="isLoading" class="loading-state">
+    <div v-if="!authStore.isLoggedIn" class="login-required-state">
+      <p>해당 기능은 로그인 한 회원만 가능합니다.</p>
+      <button @click="router.push('/login')" class="login-btn">로그인하러 가기</button>
+    </div>
+
+    <div v-else-if="isLoading" class="loading-state">
       <div class="spinner"></div>
       <p>AI가 맞춤 상품을 분석 중입니다...</p>
     </div>
@@ -116,6 +128,41 @@ const handleProductClick = (product) => {
   text-transform: uppercase;
   border-bottom: 1px solid var(--primary-color);
   padding-bottom: 2px;
+}
+
+.login-required-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.login-required-state p {
+  font-size: 16px;
+  color: var(--text-color, #333);
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.login-btn {
+  padding: 12px 30px;
+  background-color: var(--primary-color, #000);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
 }
 
 .grid-3 {
