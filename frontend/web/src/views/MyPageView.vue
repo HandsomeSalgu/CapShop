@@ -6,7 +6,7 @@ const route = useRoute()
 const router = useRouter()
 
 const menus = [
-  { path: '/mypage/password-check', activePaths: ['/mypage/password-check', '/mypage/profile'], name: '회원 정보 수정' },
+  { path: '/mypage/profile', activePaths: ['/mypage/profile'], name: '회원 정보 수정' },
   { path: '/mypage/history', activePaths: ['/mypage/history'], name: '위시리스트/상품확인기록' }
 ]
 

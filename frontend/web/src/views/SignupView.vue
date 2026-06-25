@@ -237,7 +237,7 @@ const goStep3 = () => {
     formErrorMsg.value = '이메일 중복 확인을 진행해주세요.'
     return
   }
-  if (passwordMsgType.value !== 'success' || passwordConfirmMsgType.value !== 'success') {
+  if (!isSocialSignup.value && (passwordMsgType.value !== 'success' || passwordConfirmMsgType.value !== 'success')) {
     formErrorMsg.value = '비밀번호를 올바르게 입력해주세요.'
     return
   }
@@ -310,7 +310,7 @@ const submitSignup = async () => {
   try {
     const payload = {
       email: email.value,
-      password: password.value,
+      password: isSocialSignup.value ? 'SocialDummyPass123!' : password.value,
       nickname: name.value,
       phone: phone.value,
       birthDate: birthDateStr,
@@ -423,7 +423,7 @@ const goLogin = () => {
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" v-if="!isSocialSignup">
         <div class="label-row">
           <label>비밀번호</label>
           <span v-if="passwordMsg" :class="passwordMsgType === 'error' ? 'msg-error' : 'msg-success'">
@@ -433,7 +433,7 @@ const goLogin = () => {
         <input type="password" v-model="password" @blur="validatePassword" placeholder="비밀번호 입력(문자, 숫자, 특수문자 포함 8~20자)" class="form-input">
       </div>
 
-      <div class="form-group">
+      <div class="form-group" v-if="!isSocialSignup">
         <div class="label-row">
           <label>비밀번호 확인</label>
           <span v-if="passwordConfirmMsg" :class="passwordConfirmMsgType === 'error' ? 'msg-error' : 'msg-success'">

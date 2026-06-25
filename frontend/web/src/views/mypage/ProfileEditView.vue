@@ -10,6 +10,7 @@ onBeforeRouteLeave(() => {
 const router = useRouter()
 
 // Data for logged-in user
+const isSocialLogin = ref(false)
 const email = ref('')
 const name = ref('')
 const phone = ref('')
@@ -73,6 +74,7 @@ const fetchMyProfile = async () => {
     email.value = data.email
     name.value = data.nickname
     phone.value = data.phone
+    isSocialLogin.value = data.provider !== 'LOCAL'
     
     if (data.birthDate) {
       const [year, month, day] = data.birthDate.split('-')
@@ -90,7 +92,7 @@ onMounted(() => {
 })
 
 const submitEdit = async () => {
-  if (password.value) {
+  if (!isSocialLogin.value && password.value) {
     if (passwordMsgType.value !== 'success') {
       formErrorMsg.value = '새 비밀번호를 올바르게 입력해주세요.'
       return
@@ -158,7 +160,7 @@ const cancelEdit = () => {
       <input type="text" :value="email" disabled class="form-input readonly-input">
     </div>
 
-    <div class="form-group">
+    <div class="form-group" v-if="!isSocialLogin">
       <div class="label-row">
         <label>새 비밀번호</label>
         <span v-if="passwordMsg" :class="passwordMsgType === 'error' ? 'msg-error' : 'msg-success'">
@@ -168,7 +170,7 @@ const cancelEdit = () => {
       <input type="password" v-model="password" @blur="validatePassword" placeholder="비밀번호 입력(문자, 숫자, 특수문자 포함 8~20자)" class="form-input">
     </div>
 
-    <div class="form-group">
+    <div class="form-group" v-if="!isSocialLogin">
       <div class="label-row">
         <label>새 비밀번호 확인</label>
         <span v-if="passwordConfirmMsg" :class="passwordConfirmMsgType === 'error' ? 'msg-error' : 'msg-success'">

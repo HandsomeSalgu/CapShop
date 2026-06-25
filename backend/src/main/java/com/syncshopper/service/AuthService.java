@@ -56,7 +56,9 @@ public class AuthService {
                 throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
             }
 
-            String encodedPassword = passwordEncoder.encode(request.getPassword());
+            // 소셜 로그인은 비밀번호를 받지 않으므로 랜덤 더미 비밀번호를 생성하여 저장합니다.
+            String dummyPassword = java.util.UUID.randomUUID().toString();
+            String encodedPassword = passwordEncoder.encode(dummyPassword);
             user = userService.createSocialUserWithDetails(
                     email,
                     encodedPassword,

@@ -60,24 +60,12 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/mypage/password-check'
-        },
-        {
-          path: 'password-check',
-          name: 'passwordCheck',
-          component: () => import('../views/mypage/PasswordCheckView.vue'),
+          redirect: '/mypage/profile'
         },
         {
           path: 'profile',
           name: 'profileEdit',
           component: () => import('../views/mypage/ProfileEditView.vue'),
-          beforeEnter: (to, from, next) => {
-            if (sessionStorage.getItem('passwordVerified') === 'true') {
-              next()
-            } else {
-              next('/mypage/password-check')
-            }
-          }
         },
         {
           path: 'history',
@@ -118,6 +106,18 @@ const router = createRouter({
       ]
     }
   ],
+})
+
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = !!localStorage.getItem('accessToken')
+  
+  const authRequiredRoutes = ['login', 'signup', 'findAccount']
+  
+  if (isAuthenticated && authRequiredRoutes.includes(to.name)) {
+    next('/')
+  } else {
+    next()
+  }
 })
 
 export default router
