@@ -25,7 +25,7 @@ Rules:
 11. If brand is unknown, use translated product type, color, material, style, and category as much as possible.
 12. Do not invent brand names, model names, colors, materials, or styles that are not present or strongly implied in the detection result.
 13. Do not include YouTube UI text, browser UI text, captions UI, comments, or unrelated text.
-14. If user_hint is provided, treat it as a major clue for the target product and include it when it is compatible with the detection result.
+14. If user_hint is provided, use it only as a clue to choose the target product. Do not copy user_hint directly into primary_query.
 15. Prefer Korean terms commonly used in Korean shopping searches.
 16. Treat logo_text as a visible-text candidate, not as guaranteed truth. Include quoted and unquoted variants when useful.
 17. Do not use English common product words such as t-shirt, sports jersey, graphic, orange, short sleeve, or print in Naver queries; translate them to Korean.
@@ -46,7 +46,8 @@ Rules:
 22. normalized_brand must be the detected brand if known, otherwise null.
 23. normalized_model must be the detected model name if known, otherwise null.
 24. normalized_category must be the Korean translated category if possible.
-25. reason should briefly explain in Korean how the query was generated from the detection result and user_hint when present.
+25. primary_query must be based on the detected product values above, translated into Korean shopping terms.
+26. reason should briefly explain in Korean how the query was generated from the detection result and user_hint when present.
 
 Return JSON with exactly these keys:
 {

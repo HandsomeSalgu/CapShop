@@ -619,10 +619,6 @@ def _build_fallback_primary_query(request: CommerceQueryRequest) -> str:
 
 
 def _build_rule_based_primary_query(request: CommerceQueryRequest) -> str:
-    user_hint = _clean_query_text(request.user_hint)
-    if user_hint:
-        return user_hint
-
     brand = _brand_query_term(request)
     model = _model_query_term(request)
     color = _resolve_color_term(request)

@@ -18,19 +18,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const password = passwordInput.value;
 
     if (!loginId) {
-      showStatus("아이디를 입력해주세요.", "error");
+      showStatus("\uC544\uC774\uB514\uB97C \uC785\uB825\uD574 \uC8FC\uC138\uC694.", "error");
       loginIdInput.focus();
       return;
     }
 
     if (!password) {
-      showStatus("비밀번호를 입력해주세요.", "error");
+      showStatus("\uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574 \uC8FC\uC138\uC694.", "error");
       passwordInput.focus();
       return;
     }
 
     loginButton.disabled = true;
-    loginButton.textContent = "로그인 중...";
+    loginButton.textContent = "\uB85C\uADF8\uC778 \uC911...";
     showStatus("");
 
     try {
@@ -44,13 +44,13 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       passwordInput.value = "";
-      showStatus("로그인되었습니다.", "success");
+      showStatus("\uB85C\uADF8\uC778\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
       refreshAuthView();
     } catch (error) {
-      showStatus(error.message || "로그인에 실패했습니다.", "error");
+      showStatus(error.message || "\uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "error");
     } finally {
       loginButton.disabled = false;
-      loginButton.textContent = "로그인";
+      loginButton.textContent = "\uB85C\uADF8\uC778";
     }
   });
 
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   logoutButton.addEventListener("click", async () => {
     await chrome.storage.local.remove(["accessToken", "authUser"]);
-    showStatus("로그아웃되었습니다.", "success");
+    showStatus("\uB85C\uADF8\uC544\uC6C3\uB418\uC5C8\uC2B5\uB2C8\uB2E4.", "success");
     refreshAuthView();
   });
 
@@ -97,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
 
           if (!response || !response.success) {
-            reject(new Error(response?.errorMessage || "로그인에 실패했습니다."));
+            reject(new Error(response?.errorMessage || "\uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4."));
             return;
           }
 
@@ -117,15 +117,15 @@ document.addEventListener("DOMContentLoaded", () => {
     statusMessage.textContent = message;
 
     if (type === "error") {
-      statusMessage.style.color = "#dc2626";
+      statusMessage.style.color = "#ff9ca8";
       return;
     }
 
     if (type === "success") {
-      statusMessage.style.color = "#16a34a";
+      statusMessage.style.color = "#8af49d";
       return;
     }
 
-    statusMessage.style.color = "#4b5563";
+    statusMessage.style.color = "#ffd9a8";
   }
 });

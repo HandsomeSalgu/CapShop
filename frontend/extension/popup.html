@@ -2,91 +2,142 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>SyncShopper Login</title>
+  <title>CapShop Login</title>
   <style>
+    :root {
+      --capshop-bg: #F3F0EC;
+      --capshop-bg-soft: #fffaf2;
+      --capshop-ink: #1b2033;
+      --capshop-line: #2d3347;
+      --capshop-navy: #222a44;
+      --capshop-green: #277a54;
+      --capshop-green-soft: #dff5df;
+      --capshop-mint: #81d8a0;
+      --capshop-coral: #ef8f8f;
+      --capshop-yellow: #f4c96b;
+      --capshop-shadow: rgba(27, 32, 51, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      width: 320px;
+      width: 328px;
       margin: 0;
-      padding: 16px;
-      font-family: Arial, sans-serif;
-      background: #ffffff;
-      color: #222222;
+      padding: 0;
+      border: 3px solid var(--capshop-line);
+      border-radius: 16px;
+      background:
+        linear-gradient(90deg, rgba(34, 42, 68, 0.06) 1px, transparent 1px),
+        linear-gradient(rgba(34, 42, 68, 0.06) 1px, transparent 1px),
+        var(--capshop-bg);
+      background-size: 18px 18px;
+      color: var(--capshop-ink);
+      font-family: "Galmuri11", "NeoDunggeunmo", "DungGeunMo", "Jua", "Gaegu", "Single Day", "Segoe UI Rounded", "Apple SD Gothic Neo", sans-serif;
+      letter-spacing: 0;
+      box-shadow: 0 0 0 3px var(--capshop-bg-soft) inset;
+    }
+
+    section {
+      padding: 18px;
     }
 
     h1 {
-      margin: 0 0 8px;
-      font-size: 18px;
+      margin: -18px -18px 16px;
+      padding: 14px 18px;
+      border-bottom: 3px solid var(--capshop-line);
+      border-radius: 13px 13px 0 0;
+      background: var(--capshop-navy);
+      color: var(--capshop-bg-soft);
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1.1;
+      text-shadow: 2px 2px 0 #12182a;
     }
 
     p {
-      margin: 0;
+      margin: 0 0 4px;
+      color: #3c4358;
       font-size: 13px;
       line-height: 1.45;
-      color: #4b5563;
+      word-break: keep-all;
     }
 
     label {
-      display: block;
-      margin: 12px 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 14px 0 7px;
+      color: var(--capshop-ink);
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 900;
+    }
+
+    label::before {
+      content: "";
+      width: 11px;
+      height: 11px;
+      border: 3px solid var(--capshop-line);
+      border-radius: 4px;
+      background: var(--capshop-coral);
+      box-shadow: 2px 2px 0 rgba(27, 32, 51, 0.14);
     }
 
     input {
       width: 100%;
-      box-sizing: border-box;
-      padding: 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 13px;
+      min-height: 44px;
+      padding: 9px 11px;
+      border: 3px solid var(--capshop-line);
+      border-radius: 12px;
+      background: var(--capshop-bg-soft);
+      color: var(--capshop-ink);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 800;
       outline: none;
+      box-shadow: 4px 4px 0 rgba(27, 32, 51, 0.12);
     }
 
     input:focus {
-      border-color: #16a34a;
-      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+      border-color: var(--capshop-green);
+      box-shadow: 0 0 0 4px rgba(129, 216, 160, 0.28), 4px 4px 0 rgba(27, 32, 51, 0.12);
     }
 
     button {
       width: 100%;
+      min-height: 44px;
       margin-top: 14px;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      background: #16a34a;
-      color: #ffffff;
+      padding: 9px 12px;
+      border: 3px solid var(--capshop-line);
+      border-radius: 12px;
+      background: var(--capshop-mint);
+      color: var(--capshop-ink);
+      font: inherit;
       font-size: 14px;
-      font-weight: 700;
+      font-weight: 900;
+      line-height: 1.1;
+      box-shadow: 4px 4px 0 var(--capshop-shadow);
       cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
     }
 
     button:hover {
-      background: #15803d;
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 var(--capshop-shadow);
     }
 
     button:disabled {
       cursor: not-allowed;
-      opacity: 0.7;
+      opacity: 0.68;
     }
 
     .secondary-button {
-      background: #ffffff;
-      color: #166534;
-      border: 1px solid #bbf7d0;
-    }
-
-    .secondary-button:hover {
-      background: #f0fdf4;
+      background: #fff2ce;
     }
 
     .danger-button {
-      background: #ffffff;
-      color: #dc2626;
-      border: 1px solid #fecaca;
-    }
-
-    .danger-button:hover {
-      background: #fef2f2;
+      background: #ffe0e0;
     }
 
     .hidden {
@@ -94,43 +145,138 @@
     }
 
     .status-box {
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: 8px;
-      background: #f0fdf4;
-      color: #166534;
+      padding: 12px;
+      border: 3px solid var(--capshop-line);
+      border-radius: 12px;
+      background: var(--capshop-green-soft);
+      color: var(--capshop-ink);
       font-size: 13px;
+      font-weight: 800;
       line-height: 1.45;
+      word-break: keep-all;
+      box-shadow: 4px 4px 0 rgba(27, 32, 51, 0.12);
     }
 
     #statusMessage {
-      margin-top: 10px;
-      font-size: 12px;
       min-height: 18px;
+      padding: 0 18px 16px;
+      color: var(--capshop-green);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.35;
+      word-break: keep-all;
+    }
+
+    body,
+    label::before,
+    input,
+    button,
+    .status-box {
+      border-width: 2px;
+    }
+
+    h1 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom-width: 2px;
+    }
+
+    h1::before {
+      content: "";
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+      background: url("icons/capshop_logo_white.png") center / contain no-repeat;
+      filter: drop-shadow(1px 2px 0 rgba(18, 24, 42, 0.28));
+    }
+
+    /* Flat theme: remove decorative shading and use thin gray borders. */
+    :root {
+      --capshop-line: #8b92a3;
+      --capshop-mint: #81d8a0;
+      --capshop-shadow: transparent;
+    }
+
+    body {
+      border: 1px solid var(--capshop-line);
+      background:
+        linear-gradient(90deg, rgba(70, 80, 106, 0.08) 1px, transparent 1px),
+        linear-gradient(rgba(70, 80, 106, 0.08) 1px, transparent 1px),
+        var(--capshop-bg);
+      background-size: 18px 18px;
+      box-shadow: none;
+    }
+
+    h1 {
+      border-bottom: 1px solid var(--capshop-line);
+      box-shadow: none;
+      text-shadow: none;
+    }
+
+    label::before,
+    input,
+    button,
+    .status-box {
+      border: 1px solid var(--capshop-line);
+      box-shadow: none;
+      text-shadow: none;
+    }
+
+    input:focus {
+      border-color: #6f7788;
+      box-shadow: none;
+    }
+
+    button:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    h1::before {
+      filter: none;
+    }
+
+    h1,
+    label {
+      gap: 8px;
+    }
+
+    input {
+      padding: 10px 12px;
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 12px;
+      color: var(--capshop-ink);
     }
   </style>
 </head>
 <body>
   <section id="loginSection">
-    <h1>SyncShopper 로그인</h1>
-    <p>유튜브 상품 캡쳐 분석을 사용하려면 먼저 로그인해주세요.</p>
+    <h1>CapShop &#47196;&#44536;&#51064;</h1>
+    <p>&#50976;&#53916;&#48652; &#50689;&#49345; &#49549; &#49345;&#54408;&#51012; &#52897;&#52432;&#54616;&#44256; &#44160;&#49353;&#54644;&#50836;.</p>
 
-    <label for="loginId">아이디</label>
-    <input id="loginId" type="text" autocomplete="username" placeholder="이메일을 입력하세요" />
+    <label for="loginId">&#50500;&#51060;&#46356;</label>
+    <input id="loginId" type="text" autocomplete="username" placeholder="email or id" />
 
-    <label for="password">비밀번호</label>
-    <input id="password" type="password" autocomplete="current-password" placeholder="비밀번호를 입력하세요" />
+    <label for="password">&#48708;&#48128;&#48264;&#54840;</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="password" />
 
-    <button id="loginButton" type="button">로그인</button>
-    <button id="signupButton" class="secondary-button" type="button">회원가입</button>
+    <button id="loginButton" type="button">&#47196;&#44536;&#51064;</button>
+    <button id="signupButton" class="secondary-button" type="button">&#54924;&#50896;&#44032;&#51077;</button>
   </section>
 
   <section id="loggedInSection" class="hidden">
-    <h1>로그인됨</h1>
+    <h1>&#47196;&#44536;&#51064; &#50756;&#47308;</h1>
     <div class="status-box">
-      이제 유튜브 영상에서 상품 캡쳐를 사용할 수 있습니다.
+      &#51060;&#51228; &#50976;&#53916;&#48652;&#50640;&#49436; &#49345;&#54408; &#52897;&#52432;&#47484; &#49324;&#50857;&#54624; &#49688; &#51080;&#50612;&#50836;.
     </div>
-    <button id="logoutButton" class="danger-button" type="button">로그아웃</button>
+    <button id="logoutButton" class="danger-button" type="button">&#47196;&#44536;&#50500;&#50883;</button>
   </section>
 
   <div id="statusMessage"></div>

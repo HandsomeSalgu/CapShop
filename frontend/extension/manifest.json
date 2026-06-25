@@ -25,7 +25,9 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "pet/*"
+        "pet/*",
+        "icons/capshop_logo_white.png",
+        "icons/capshop_icon.png"
       ],
       "matches": [
         "https://www.youtube.com/*"

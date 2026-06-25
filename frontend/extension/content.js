@@ -31,6 +31,7 @@ let analysisProgressSequenceIndex = 0;
 let currentCapturedDataUrl = null;
 let currentSearchMode = null;
 let currentSearchHint = "";
+let productSearchRequestToken = 0;
 
 const PET_ATLAS = {
   frameWidth: 128,
@@ -746,6 +747,22 @@ function createCaptureButton() {
   return captureButton;
 }
 
+function applyCapShopBrandTitle(titleElement, text) {
+  titleElement.textContent = "";
+
+  const icon = document.createElement("img");
+  icon.className = "syncshopper-brand-icon";
+  icon.src = chrome.runtime.getURL("icons/capshop_icon.png");
+  icon.alt = "";
+  icon.setAttribute("aria-hidden", "true");
+
+  const label = document.createElement("span");
+  label.textContent = text;
+
+  titleElement.appendChild(icon);
+  titleElement.appendChild(label);
+}
+
 function createCaptureLauncher() {
   const existingLauncher = document.getElementById("syncshopper-capture-launcher");
 
@@ -760,7 +777,7 @@ function createCaptureLauncher() {
 
   const title = document.createElement("div");
   title.className = "syncshopper-launcher-title";
-  title.textContent = "CapShop";
+  applyCapShopBrandTitle(title, "CapShop");
 
   const description = document.createElement("p");
   description.className = "syncshopper-launcher-description";
@@ -1130,7 +1147,7 @@ function createCaptureResultPanel() {
   panel.id = "syncshopper-result-panel";
 
   const title = document.createElement("h2");
-  title.textContent = "CapShop";
+  applyCapShopBrandTitle(title, "CapShop");
 
   const closeButton = document.createElement("button");
   closeButton.id = "syncshopper-result-close-button";
@@ -1139,6 +1156,15 @@ function createCaptureResultPanel() {
   closeButton.setAttribute("aria-label", "SyncShopper \uACB0\uACFC \uD328\uB110 \uB2EB\uAE30");
   closeButton.addEventListener("click", () => {
     closeCapShopPanel();
+  });
+
+  const minimizeButton = document.createElement("button");
+  minimizeButton.id = "syncshopper-result-minimize-button";
+  minimizeButton.type = "button";
+  minimizeButton.textContent = "-";
+  minimizeButton.setAttribute("aria-label", "SyncShopper \uACB0\uACFC \uD328\uB110 \uCD95\uC18C");
+  minimizeButton.addEventListener("click", () => {
+    toggleResultPanelCollapsed(panel, minimizeButton);
   });
 
   const previewTitle = document.createElement("h3");
@@ -1153,6 +1179,7 @@ function createCaptureResultPanel() {
   resultContent.textContent = "\uACB0\uACFC\uB97C \uAE30\uB2E4\uB9AC\uB294 \uC911...";
 
   panel.appendChild(closeButton);
+  panel.appendChild(minimizeButton);
   panel.appendChild(title);
   panel.appendChild(previewTitle);
   panel.appendChild(previewImage);
@@ -1161,6 +1188,21 @@ function createCaptureResultPanel() {
   bindDraggableCapShopPanel(panel, "capshopResultPanelPosition");
 
   return panel;
+}
+
+function toggleResultPanelCollapsed(panel, button) {
+  const collapsed = panel.dataset.collapsed === "true";
+  panel.dataset.collapsed = collapsed ? "false" : "true";
+
+  if (button) {
+    button.textContent = collapsed ? "-" : "+";
+    button.setAttribute(
+      "aria-label",
+      collapsed
+        ? "SyncShopper \uACB0\uACFC \uD328\uB110 \uCD95\uC18C"
+        : "SyncShopper \uACB0\uACFC \uD328\uB110 \uD3BC\uCE58\uAE30"
+    );
+  }
 }
 
 function waitForNextPaint() {
@@ -1181,7 +1223,7 @@ function updateCapturePanelResult(result) {
 
   stopAnalysisProgressSequence();
   resultContent.replaceChildren(renderResultForPanel(result));
-  updatePetStateForAnalysisResult(result);
+  loadProductsForRenderedNaverQuery(result);
 }
 
 function updatePetStateForAnalysisResult(result) {
@@ -1247,10 +1289,10 @@ function renderSearchModeChoice(croppedDataUrl) {
   buttonRow.appendChild(createSearchModeButton("\uBE60\uB978 \uAC80\uC0C9", "fast", croppedDataUrl, note, hintInput));
   buttonRow.appendChild(createSearchModeButton("\uC815\uBC00 \uAC80\uC0C9", "precise", croppedDataUrl, note, hintInput));
 
-  wrapper.appendChild(title);
   wrapper.appendChild(hintLabel);
   wrapper.appendChild(hintInput);
   wrapper.appendChild(hintNote);
+  wrapper.appendChild(title);
   wrapper.appendChild(buttonRow);
   wrapper.appendChild(note);
   resultContent.replaceChildren(wrapper);
@@ -1484,7 +1526,6 @@ function renderResultForPanel(result) {
   }
 
   const targetName = analysis.detection?.targetName || analysis.targetName || "\uC54C \uC218 \uC5C6\uB294 \uC0C1\uD488";
-  const products = Array.isArray(analysis.products) ? analysis.products : [];
 
   const detectionBlock = document.createElement("section");
   detectionBlock.className = "syncshopper-detection-summary";
@@ -1499,12 +1540,11 @@ function renderResultForPanel(result) {
 
   detectionBlock.appendChild(detectionLabel);
   detectionBlock.appendChild(detectionValue);
-  detectionBlock.appendChild(createAiDetectionEvidenceBlock(analysis));
   fragment.appendChild(detectionBlock);
   fragment.appendChild(createResultActionButtons());
   fragment.appendChild(createNaverSearchQueryBlock(analysis));
 
-  fragment.appendChild(createProductResultsBlock(analysis, products));
+  fragment.appendChild(createProductResultsBlock(analysis, null));
   return fragment;
 }
 
@@ -1638,14 +1678,7 @@ function createAlternateSearchModeButton() {
 }
 
 function createNaverSearchQueryBlock(analysis) {
-  const detectionTargetName = analysis.detection?.targetName || analysis.targetName || "";
-  const commerceQuery = analysis.commerceQuery || {};
-  const query = getAppliedRecommendationQuery(analysis)
-    || commerceQuery.primary_query
-    || commerceQuery.primaryQuery
-    || commerceQuery.fallback_queries?.[0]
-    || commerceQuery.fallbackQueries?.[0]
-    || detectionTargetName;
+  const query = resolveNaverSearchQuery(analysis);
 
   const block = document.createElement("section");
   block.className = "syncshopper-query-block";
@@ -1685,13 +1718,16 @@ function createNaverSearchQueryBlock(analysis) {
 
     searchButton.disabled = true;
     searchButton.textContent = "\uAC80\uC0C9\uC911";
-    setProductResultsLoading();
+    const searchRequestToken = setProductResultsLoading();
     setPetState("searching_box", {
       message: "\uBE44\uC2B7\uD55C \uC0C1\uD488\uC744 \uCC3E\uB294 \uC911!"
     });
 
     try {
       const products = await requestCommerceTop3Products(trimmedQuery);
+      if (!isLatestProductSearch(searchRequestToken)) {
+        return;
+      }
       updateProductResults(products, createSearchAnalysisPatch(trimmedQuery));
       if (products.length > 0) {
         setPetState("success_cheer", {
@@ -1708,6 +1744,9 @@ function createNaverSearchQueryBlock(analysis) {
         showToast("\uD45C\uC2DC\uD560 \uC0C1\uD488\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
       }
     } catch (error) {
+      if (!isLatestProductSearch(searchRequestToken)) {
+        return;
+      }
       console.error("[SyncShopper] commerce search failed", error);
       updateProductResults([], createSearchAnalysisPatch(trimmedQuery));
       setPetState("failed_cry", {
@@ -1737,6 +1776,33 @@ function createNaverSearchQueryBlock(analysis) {
   return block;
 }
 
+function resolveNaverSearchQuery(analysis) {
+  const commerceQuery = analysis?.commerceQuery || {};
+
+  return resolveDetectedSearchQuery(analysis)
+    || getAppliedRecommendationQuery(analysis)
+    || commerceQuery.primary_query
+    || commerceQuery.primaryQuery
+    || commerceQuery.fallback_queries?.[0]
+    || commerceQuery.fallbackQueries?.[0]
+    || "";
+}
+
+function resolveDetectedSearchQuery(analysis) {
+  const detection = analysis?.detection || {};
+  const targetName = detection.targetName || analysis?.targetName;
+
+  if (targetName && String(targetName).trim() && String(targetName).trim().toLowerCase() !== "unknown product") {
+    return String(targetName).trim();
+  }
+
+  return [
+    detection.brand || analysis?.brand,
+    detection.color || analysis?.color,
+    detection.categoryName || analysis?.categoryName
+  ].filter(Boolean).join(" ").trim();
+}
+
 function getAppliedRecommendationQuery(analysis) {
   const products = Array.isArray(analysis?.products) ? analysis.products : [];
   const productQuery = products
@@ -1752,7 +1818,7 @@ function createProductResultsBlock(analysis, products) {
 
   const productLabel = document.createElement("div");
   productLabel.className = "syncshopper-section-label";
-  productLabel.textContent = "\uCD94\uCC9C \uC0C1\uD488";
+  productLabel.textContent = "\uB124\uC774\uBC84 \uAC80\uC0C9 \uC0C1\uD488";
 
   const productList = document.createElement("div");
   productList.id = "syncshopper-product-list";
@@ -1760,19 +1826,71 @@ function createProductResultsBlock(analysis, products) {
 
   productBlock.appendChild(productLabel);
   productBlock.appendChild(productList);
-  renderProductList(productList, products, analysis);
+  if (products === null) {
+    productList.appendChild(createPanelMessage("\uC0C1\uD488\uC744 \uBD88\uB7EC\uC624\uB294 \uC911..."));
+  } else {
+    renderProductList(productList, products, analysis);
+  }
 
   return productBlock;
 }
 
-function setProductResultsLoading() {
-  const productList = document.getElementById("syncshopper-product-list");
+async function loadProductsForRenderedNaverQuery(result) {
+  const analysis = result && typeof result === "object" && result.data ? result.data : result;
 
-  if (!productList) {
+  if (!analysis || typeof analysis !== "object" || analysis.error) {
+    updatePetStateForAnalysisResult(result);
     return;
   }
 
+  const queryInput = document.getElementById("syncshopper-naver-search-query");
+  const query = (queryInput?.value || resolveNaverSearchQuery(analysis)).trim();
+
+  if (!query) {
+    updateProductResults([], null);
+    updatePetStateForAnalysisResult({ ...analysis, products: [] });
+    return;
+  }
+
+  const searchRequestToken = setProductResultsLoading();
+
+  try {
+    const products = await requestCommerceTop3Products(query);
+    if (!isLatestProductSearch(searchRequestToken)) {
+      return;
+    }
+    const analysisPatch = createSearchAnalysisPatch(query);
+    updateProductResults(products, analysisPatch);
+    updatePetStateForAnalysisResult({
+      ...mergeAnalysisContext(analysis, analysisPatch),
+      products
+    });
+  } catch (error) {
+    if (!isLatestProductSearch(searchRequestToken)) {
+      return;
+    }
+    console.error("[SyncShopper] initial commerce search failed", error);
+    updateProductResults([], createSearchAnalysisPatch(query));
+    updatePetStateForAnalysisResult({ ...analysis, products: [] });
+    showToast(error.message || "\uC0C1\uD488 \uAC80\uC0C9\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.", "error");
+  }
+}
+
+function setProductResultsLoading() {
+  productSearchRequestToken += 1;
+  const currentToken = productSearchRequestToken;
+  const productList = document.getElementById("syncshopper-product-list");
+
+  if (!productList) {
+    return currentToken;
+  }
+
   productList.replaceChildren(createPanelMessage("\uC0C1\uD488\uC744 \uBD88\uB7EC\uC624\uB294 \uC911..."));
+  return currentToken;
+}
+
+function isLatestProductSearch(searchRequestToken) {
+  return searchRequestToken === productSearchRequestToken;
 }
 
 function updateProductResults(products, analysisPatch = null) {
@@ -2081,7 +2199,7 @@ function showLoginPanel(onLoginSuccess) {
   });
 
   const title = document.createElement("h2");
-  title.textContent = "SyncShopper \uB85C\uADF8\uC778";
+  applyCapShopBrandTitle(title, "SyncShopper \uB85C\uADF8\uC778");
 
   const description = document.createElement("p");
   description.textContent = "\uC0C1\uD488 \uBD84\uC11D\uC744 \uC0AC\uC6A9\uD558\uB824\uBA74 \uB85C\uADF8\uC778\uD574 \uC8FC\uC138\uC694.";

@@ -4,6 +4,8 @@ import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 import CustomSelect from '@/components/common/CustomSelect.vue'
 import { categories } from '@/data/categories.js'
+import { Cropper } from 'vue-advanced-cropper'
+import 'vue-advanced-cropper/dist/style.css'
 
 const router = useRouter()
 const route = useRoute()
@@ -114,6 +116,49 @@ watch([birthYear, birthMonth], () => {
 })
 
 const formErrorMsg = ref('')
+
+const profileImageFile = ref(null)
+const profileImageUrl = ref('')
+const isCropperModalOpen = ref(false)
+const rawImage = ref(null)
+const cropperRef = ref(null)
+
+const onFileSelected = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      rawImage.value = e.target.result
+      isCropperModalOpen.value = true
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const applyCrop = () => {
+  if (cropperRef.value) {
+    const { canvas } = cropperRef.value.getResult()
+    if (canvas) {
+      profileImageUrl.value = canvas.toDataURL('image/jpeg')
+      canvas.toBlob((blob) => {
+        const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' })
+        profileImageFile.value = file
+      }, 'image/jpeg')
+    }
+  }
+  isCropperModalOpen.value = false
+}
+
+const cancelCrop = () => {
+  isCropperModalOpen.value = false
+  rawImage.value = null
+}
+
+const removeProfileImage = () => {
+  profileImageFile.value = null
+  profileImageUrl.value = ''
+  rawImage.value = null
+}
 
 const startTimer = () => {
   if (timerInterval) clearInterval(timerInterval)
@@ -308,7 +353,7 @@ const submitSignup = async () => {
     }))
 
   try {
-    const payload = {
+    const requestData = {
       email: email.value,
       password: isSocialSignup.value ? 'SocialDummyPass123!' : password.value,
       nickname: name.value,
@@ -318,7 +363,15 @@ const submitSignup = async () => {
     }
     
     if (signupToken.value) {
-      payload.signupToken = signupToken.value
+      requestData.signupToken = signupToken.value
+    }
+
+    const payload = new FormData()
+    const requestBlob = new Blob([JSON.stringify(requestData)], { type: 'application/json' })
+    payload.append('request', requestBlob)
+
+    if (profileImageFile.value) {
+      payload.append('profileImage', profileImageFile.value)
     }
 
     await axios.post('/api/auth/signup', payload)
@@ -399,6 +452,24 @@ const goLogin = () => {
       <div class="signup-header">
         <h2>회원가입</h2>
         <p class="subtitle">회원이 되어 다양한 혜택을 경험해보세요</p>
+      </div>
+
+      <div class="form-group profile-group" v-if="!isSocialSignup">
+        <div class="profile-upload-container">
+          <div class="profile-preview" v-if="profileImageUrl">
+            <img :src="profileImageUrl" alt="Profile Preview" />
+            <button class="btn-remove" @click="removeProfileImage" title="삭제">
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+          <div class="profile-upload-box" v-else>
+            <input type="file" id="profileImageInput" accept="image/*" @change="onFileSelected" class="file-input" />
+            <label for="profileImageInput" class="file-label">
+              <i class="fa-solid fa-camera"></i>
+              <span>프로필 등록</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -545,6 +616,25 @@ const goLogin = () => {
       <p class="subtitle">로그인을 하여 다양한 서비스 및 혜택을 누려보세요!</p>
       
       <button class="btn-primary btn-large" @click="goLogin">로그인 하러가기</button>
+    </div>
+
+    <!-- Image Cropper Modal -->
+    <div v-if="isCropperModalOpen" class="cropper-modal-overlay">
+      <div class="cropper-modal-content">
+        <h3>프로필 이미지 조정</h3>
+        <div class="cropper-container">
+          <Cropper
+            ref="cropperRef"
+            :src="rawImage"
+            :stencil-props="{ aspectRatio: 1 }"
+            class="cropper"
+          />
+        </div>
+        <div class="cropper-actions">
+          <button class="btn-outline" @click="cancelCrop">취소</button>
+          <button class="btn-primary" @click="applyCrop">적용하기</button>
+        </div>
+      </div>
     </div>
   </main>
 </template>
@@ -875,7 +965,135 @@ const goLogin = () => {
 .empty-options {
   grid-column: 1 / -1;
   text-align: center;
-  color: #888;
-  margin-top: 40px;
+  padding: 40px;
+  color: #999;
+  font-size: 0.95rem;
+}
+
+/* Profile Upload */
+.profile-group {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.profile-upload-container {
+  position: relative;
+}
+
+.profile-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-preview img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.btn-remove {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  color: #d9534f;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+
+.btn-remove:hover {
+  background: #ffebeb;
+}
+
+.profile-upload-box {
+  width: 120px;
+  height: 120px;
+  border: 1px dashed var(--border-color);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
+  background-color: #f9f9f9;
+  transition: border-color 0.3s;
+  overflow: hidden;
+}
+
+.profile-upload-box:hover {
+  border-color: var(--primary-color);
+}
+
+.file-input {
+  display: none;
+}
+
+.file-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  width: 100%;
+  height: 100%;
+  font-size: 13px;
+}
+
+.file-label i {
+  font-size: 24px;
+  color: var(--primary-color);
+}
+
+/* Cropper Modal */
+.cropper-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.cropper-modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+}
+
+.cropper-modal-content h3 {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.cropper-container {
+  height: 300px;
+  margin-bottom: 20px;
+}
+
+.cropper {
+  height: 100%;
+}
+
+.cropper-actions {
+  display: flex;
+  gap: 10px;
 }
 </style>
