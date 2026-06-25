@@ -1,5 +1,7 @@
-const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
-const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+// previous: const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
+// previous: const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+const DEFAULT_BACKEND_BASE_URL = "http://localhost:8080";
+const DEFAULT_FRONTEND_BASE_URL = "http://localhost:5173";
 const SOCIAL_LOGIN_PROVIDERS = ["google", "kakao"];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -136,17 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function showStatus(message, type = "info") {
     statusMessage.textContent = message;
-
-    if (type === "error") {
-      statusMessage.style.color = "#ff9ca8";
-      return;
-    }
-
-    if (type === "success") {
-      statusMessage.style.color = "#8af49d";
-      return;
-    }
-
-    statusMessage.style.color = "#ffd9a8";
+    statusMessage.className = message ? `status-${type}` : "";
   }
 });

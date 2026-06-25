@@ -9,7 +9,8 @@ const authStore = useAuthStore()
 const userId = ref('')
 const userPassword = ref('')
 const loginError = ref(false)
-const backendBaseUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://70.12.60.52:8080'
+// previous: const backendBaseUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://70.12.60.52:8080'
+const backendBaseUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8080'
 
 const handleLogin = async () => {
   try {

@@ -22,6 +22,12 @@
       box-sizing: border-box;
     }
 
+    html {
+      border-radius: 16px;
+      background: transparent;
+      overflow: hidden;
+    }
+
     body {
       width: 328px;
       margin: 0;
@@ -37,6 +43,7 @@
       font-family: "Galmuri11", "NeoDunggeunmo", "DungGeunMo", "Jua", "Gaegu", "Single Day", "Segoe UI Rounded", "Apple SD Gothic Neo", sans-serif;
       letter-spacing: 0;
       box-shadow: 0 0 0 3px var(--capshop-bg-soft) inset;
+      overflow: hidden;
     }
 
     section {
@@ -69,7 +76,7 @@
       align-items: center;
       gap: 7px;
       margin: 14px 0 7px;
-      color: var(--capshop-ink);
+      color: #000000;
       font-size: 13px;
       font-weight: 900;
     }
@@ -91,12 +98,17 @@
       border: 3px solid var(--capshop-line);
       border-radius: 12px;
       background: var(--capshop-bg-soft);
-      color: var(--capshop-ink);
+      color: #111827;
       font: inherit;
       font-size: 14px;
-      font-weight: 800;
+      font-weight: 900;
       outline: none;
       box-shadow: 4px 4px 0 rgba(27, 32, 51, 0.12);
+    }
+
+    input::placeholder {
+      color: #4b5563;
+      opacity: 1;
     }
 
     input:focus {
@@ -144,13 +156,19 @@
 
     .social-login-button {
       margin-top: 0;
+      gap: 12px;
+      padding: 14px 12px;
+      border-radius: 4px;
+      font-size: 15px;
+      font-weight: 500;
       background: #ffffff;
+      transition: opacity 120ms ease;
     }
 
     .social-login-button.kakao {
       background: #fee500;
-      border-color: #8d7f00;
-      color: #191600;
+      border-color: #fee500;
+      color: #000000;
     }
 
     .social-login-button.google {
@@ -159,16 +177,40 @@
     }
 
     .social-login-icon {
+      display: block;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+    }
+
+    i.social-login-icon {
+      position: relative;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 22px;
-      height: 22px;
-      border: 1px solid currentColor;
-      border-radius: 50%;
-      font-size: 12px;
-      font-weight: 900;
+      font-style: normal;
       line-height: 1;
+    }
+
+    i.social-login-icon::before {
+      content: "";
+      display: block;
+      width: 18px;
+      height: 14px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    i.social-login-icon::after {
+      content: "";
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      margin-top: 12px;
+      margin-left: -7px;
+      background: currentColor;
+      transform: rotate(35deg);
+      clip-path: polygon(0 0, 100% 0, 0 100%);
     }
 
     .danger-button {
@@ -196,10 +238,27 @@
       min-height: 18px;
       padding: 0 18px 16px;
       color: var(--capshop-green);
-      font-size: 12px;
-      font-weight: 800;
+      font-size: 13px;
+      font-weight: 900;
       line-height: 1.35;
       word-break: keep-all;
+    }
+
+    #statusMessage.status-error {
+      margin: 8px 18px 16px;
+      padding: 8px 10px;
+      border: 1px solid #ef8f8f;
+      border-radius: 6px;
+      background: #fff1f1;
+      color: #b42318;
+    }
+
+    #statusMessage.status-success {
+      color: #166534;
+    }
+
+    #statusMessage.status-info {
+      color: #1b2033;
     }
 
     body,
@@ -268,6 +327,10 @@
       box-shadow: none;
     }
 
+    .social-login-button:hover {
+      opacity: 0.8;
+    }
+
     h1::before {
       filter: none;
     }
@@ -305,11 +368,11 @@
     <button id="loginButton" type="button">&#47196;&#44536;&#51064;</button>
     <div class="social-login-buttons" aria-label="&#49548;&#49500; &#47196;&#44536;&#51064;">
       <button id="googleLoginButton" class="social-login-button google" type="button">
-        <span class="social-login-icon" aria-hidden="true">G</span>
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgd2lkdGg9IjQ4cHgiIGhlaWdodD0iNDhweCI+PHBhdGggZmlsbD0iI0ZGQzEwNyIgZD0iTTQzLjYxMSwyMC4wODNINDJWMjBIMjR2OGgxMS4zMDNjLTEuNjQ5LDQuNjU3LTYuMDgsOC0xMS4zMDMsOGMtNi42MjcsMC0xMi01LjM3My0xMi0xMmMwLTYuNjI3LDUuMzczLTEyLDEyLTEyYzMuMDU5LDAsNS44NDIsMS4xNTQsNy45NjEsMy4wMzlsNS42NTctNS42NTdDMzQuMDQ2LDYuMDUzLDI5LjI2OCw0LDI0LDRDMTIuOTU1LDQsNCwxMi45NTUsNCwyNGMwLDExLjA0NSw4Ljk1NSwyMCwyMCwyMGMxMS4wNDUsMCwyMC04Ljk1NSwyMC0yMEM0NCwyMi42NTksNDMuODYyLDIxLjM1LDQzLjYxMSwyMC4wODN6Ii8+PHBhdGggZmlsbD0iI0ZGM0QwMCIgZD0iTTYuMzA2LDE0LjY5MWw2LjU3MSw0LjgxOUMxNC42NTUsMTUuMTA4LDE4Ljk2MSwxMiwyNCwxMmMzLjA1OSwwLDUuODQyLDEuMTU0LDcuOTYxLDMuMDMxbDUuNjU3LTUuNjU3QzM0LjA0Niw2LjA1MywyOS4yNjgsNCwyNCw0QzE2LjMxOCw0LDkuNjU2LDguMzM3LDYuMzA2LDE0LjY5MXoiLz48cGF0aCBmaWxsPSIjNENBRjUwIiBkPSJNMjQsNDRjNS4xNjYsMCw5Ljg2LTEuOTc3LDEzLjQwOS01LjE5MmwtNi4xOS01LjIzOEMyOS4yMTEsMzUuMDkxLDI2LjcxNSwzNiwyNCwzNmMtNS4yMDIsMC05LjYxOS0zLjMxNy0xMS4yODMtNy45NDZsLTYuNTIyLDUuMDI1QzkuNTA1LDM5LjU1NiwxNi4yMjcsNDQsMjQsNDR6Ii8+PHBhdGggZmlsbD0iIzE5NzZEMiIgZD0iTTQzLjYxMSwyMC4wODNINDJWMjBIMjR2OGgxMS4zMDNjLTAuNzkyLDIuMjM3LTIuMjMxLDQuMTY2LTQuMDg3LDUuNTcxYzAuMDAxLTAuMDAxLDAuMDAyLTAuMDAxLDAuMDAzLTAuMDAybDYuMTksNS4yMzhDMzYuOTcxLDM5LjIwNSw0NCwzNCw0NCwyNEM0NCwyMi42NTksNDMuODYyLDIxLjM1LDQzLjYxMSwyMC4wODN6Ii8+PC9zdmc+" alt="Google" class="social-login-icon">
         &#44396;&#44544;&#47196; &#47196;&#44536;&#51064;
       </button>
       <button id="kakaoLoginButton" class="social-login-button kakao" type="button">
-        <span class="social-login-icon" aria-hidden="true">&#53665;</span>
+        <i class="fa-solid fa-comment social-login-icon" aria-hidden="true"></i>
         &#52852;&#52852;&#50724;&#47196; &#47196;&#44536;&#51064;
       </button>
     </div>

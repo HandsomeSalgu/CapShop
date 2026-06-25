@@ -372,8 +372,23 @@
 
 .syncshopper-search-mode-choice {
   display: grid;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.syncshopper-search-option-group {
+  display: grid;
+  gap: 0;
+}
+
+.syncshopper-search-option-group > .syncshopper-section-label,
+.syncshopper-search-option-group > .syncshopper-search-mode-title {
+  margin: 0 0 10px;
+}
+
+.syncshopper-search-option-group > .syncshopper-query-input,
+.syncshopper-search-option-group > .syncshopper-search-mode-buttons {
+  margin: 0 0 10px;
 }
 
 .syncshopper-search-mode-title {
@@ -460,7 +475,7 @@
 }
 
 .syncshopper-hint-input {
-  margin-top: -4px;
+  margin-top: 0;
 }
 
 .syncshopper-query-search-button {
@@ -485,6 +500,35 @@
 
 .syncshopper-product-results {
   margin-top: 2px;
+}
+
+.syncshopper-more-products-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--capshop-line);
+  border-radius: 8px;
+  background: var(--capshop-mint);
+  color: var(--capshop-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.syncshopper-more-products-button:hover,
+.syncshopper-more-products-button:focus-visible {
+  border-color: #2f6f49;
+  background: #58c97c;
+  color: #07140c;
+  filter: none;
 }
 
 .syncshopper-product-card {
@@ -686,8 +730,9 @@
 #syncshopper-login-error {
   min-height: 18px;
   margin-top: 8px;
-  color: #fecaca;
-  font-size: 12px;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 900;
   line-height: 1.4;
 }
 
@@ -1305,6 +1350,7 @@
 #syncshopper-login-panel {
   width: min(340px, calc(100vw - 32px));
   padding: 20px;
+  overflow: hidden;
 }
 
 #syncshopper-result-panel::before,
@@ -1755,6 +1801,7 @@
 #syncshopper-capture-button,
 #syncshopper-login-submit-button,
 #syncshopper-signup-button,
+.syncshopper-more-products-button,
 .syncshopper-query-input,
 #syncshopper-login-panel input,
 .syncshopper-product-card,
@@ -1951,7 +1998,8 @@
 .syncshopper-search-mode-button-fast,
 .syncshopper-query-search-button,
 #syncshopper-capture-button,
-#syncshopper-login-submit-button {
+#syncshopper-login-submit-button,
+.syncshopper-more-products-button {
   background: var(--capshop-mint);
   color: var(--capshop-ink);
 }
@@ -1964,7 +2012,8 @@
 .syncshopper-query-search-button:hover,
 #syncshopper-capture-button:hover,
 #syncshopper-login-submit-button:hover,
-#syncshopper-signup-button:hover {
+#syncshopper-signup-button:hover,
+.syncshopper-more-products-button:hover {
   transform: none;
   box-shadow: none;
   filter: none;
@@ -2043,6 +2092,21 @@
   gap: 12px;
 }
 
+.syncshopper-search-mode-choice {
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.syncshopper-search-option-group > .syncshopper-section-label,
+.syncshopper-search-option-group > .syncshopper-search-mode-title {
+  margin: 0 0 10px;
+}
+
+.syncshopper-search-option-group > .syncshopper-query-input,
+.syncshopper-search-option-group > .syncshopper-search-mode-buttons {
+  margin: 0 0 10px;
+}
+
 .syncshopper-search-mode-title,
 .syncshopper-section-label,
 #syncshopper-result-panel h3 {
@@ -2060,6 +2124,7 @@
 #syncshopper-capture-button,
 #syncshopper-login-submit-button,
 #syncshopper-signup-button,
+.syncshopper-more-products-button,
 .syncshopper-product-link {
   display: inline-flex;
   align-items: center;
@@ -2073,6 +2138,28 @@
   padding: 10px 12px;
 }
 
+#syncshopper-login-panel input {
+  color: #111827;
+  font-weight: 900;
+}
+
+#syncshopper-login-panel label {
+  color: #000000;
+  font-weight: 900;
+}
+
+#syncshopper-login-panel input::placeholder {
+  color: #4b5563;
+  opacity: 1;
+}
+
+#syncshopper-login-error:not(:empty) {
+  padding: 8px 10px;
+  border: 1px solid #ef8f8f;
+  border-radius: 6px;
+  background: #fff1f1;
+}
+
 #syncshopper-social-login-buttons {
   display: grid;
   gap: 8px;
@@ -2083,26 +2170,26 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
   min-height: 44px;
-  padding: 10px 12px;
+  padding: 14px 12px;
   border: 1px solid var(--capshop-line);
-  border-radius: 12px;
+  border-radius: 4px;
   color: var(--capshop-ink);
   font-family: inherit;
-  font-size: 14px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1.1;
   box-shadow: none;
   text-shadow: none;
   cursor: pointer;
-  transition: filter 120ms ease;
+  transition: opacity 120ms ease;
 }
 
 .syncshopper-social-login-button:hover,
 .syncshopper-social-login-button:focus-visible {
-  filter: brightness(0.98);
+  opacity: 0.8;
 }
 
 .syncshopper-social-login-button-google {
@@ -2110,20 +2197,70 @@
 }
 
 .syncshopper-social-login-button-kakao {
-  border-color: #8d7f00;
+  border-color: #fee500;
   background: #fee500;
-  color: #191600;
+  color: #000000;
 }
 
 .syncshopper-social-login-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+i.syncshopper-social-login-icon {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 900;
+  font-style: normal;
   line-height: 1;
+}
+
+i.syncshopper-social-login-icon::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 14px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+i.syncshopper-social-login-icon::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin-top: 12px;
+  margin-left: -7px;
+  background: currentColor;
+  transform: rotate(35deg);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.syncshopper-progress-spinner {
+  width: 18px;
+  height: 18px;
+  border-width: 4px;
+  border-color: #b7f0c6;
+  border-top-color: #168044;
+  border-right-color: #168044;
+}
+
+.syncshopper-progress-indicator {
+  color: #111827;
+  font-weight: 900;
+}
+
+.syncshopper-progress-cursor {
+  color: #168044;
+}
+
+.syncshopper-more-products-button:hover,
+.syncshopper-more-products-button:focus-visible {
+  border-color: #2f6f49;
+  background: #58c97c;
+  color: #07140c;
+  filter: none;
 }

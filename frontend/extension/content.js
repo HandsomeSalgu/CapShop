@@ -1,15 +1,20 @@
 console.log("[SyncShopper] content script loaded");
 
-const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
-const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+// previous: const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
+// previous: const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+const DEFAULT_BACKEND_BASE_URL = "http://localhost:8080";
+const DEFAULT_FRONTEND_BASE_URL = "http://localhost:5173";
 const SOCIAL_LOGIN_PROVIDERS = {
   google: {
     label: "\uAD6C\uAE00\uB85C \uB85C\uADF8\uC778",
-    icon: "G"
+    iconType: "image",
+    iconAlt: "Google",
+    iconSrc: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgd2lkdGg9IjQ4cHgiIGhlaWdodD0iNDhweCI+PHBhdGggZmlsbD0iI0ZGQzEwNyIgZD0iTTQzLjYxMSwyMC4wODNINDJWMjBIMjR2OGgxMS4zMDNjLTEuNjQ5LDQuNjU3LTYuMDgsOC0xMS4zMDMsOGMtNi42MjcsMC0xMi01LjM3My0xMi0xMmMwLTYuNjI3LDUuMzczLTEyLDEyLTEyYzMuMDU5LDAsNS44NDIsMS4xNTQsNy45NjEsMy4wMzlsNS42NTctNS42NTdDMzQuMDQ2LDYuMDUzLDI5LjI2OCw0LDI0LDRDMTIuOTU1LDQsNCwxMi45NTUsNCwyNGMwLDExLjA0NSw4Ljk1NSwyMCwyMCwyMGMxMS4wNDUsMCwyMC04Ljk1NSwyMC0yMEM0NCwyMi42NTksNDMuODYyLDIxLjM1LDQzLjYxMSwyMC4wODN6Ii8+PHBhdGggZmlsbD0iI0ZGM0QwMCIgZD0iTTYuMzA2LDE0LjY5MWw2LjU3MSw0LjgxOUMxNC42NTUsMTUuMTA4LDE4Ljk2MSwxMiwyNCwxMmMzLjA1OSwwLDUuODQyLDEuMTU0LDcuOTYxLDMuMDMxbDUuNjU3LTUuNjU3QzM0LjA0Niw2LjA1MywyOS4yNjgsNCwyNCw0QzE2LjMxOCw0LDkuNjU2LDguMzM3LDYuMzA2LDE0LjY5MXoiLz48cGF0aCBmaWxsPSIjNENBRjUwIiBkPSJNMjQsNDRjNS4xNjYsMCw5Ljg2LTEuOTc3LDEzLjQwOS01LjE5MmwtNi4xOS01LjIzOEMyOS4yMTEsMzUuMDkxLDI2LjcxNSwzNiwyNCwzNmMtNS4yMDIsMC05LjYxOS0zLjMxNy0xMS4yODMtNy45NDZsLTYuNTIyLDUuMDI1QzkuNTA1LDM5LjU1NiwxNi4yMjcsNDQsMjQsNDR6Ii8+PHBhdGggZmlsbD0iIzE5NzZEMiIgZD0iTTQzLjYxMSwyMC4wODNINDJWMjBIMjR2OGgxMS4zMDNjLTAuNzkyLDIuMjM3LTIuMjMxLDQuMTY2LTQuMDg3LDUuNTcxYzAuMDAxLTAuMDAxLDAuMDAyLTAuMDAxLDAuMDAzLTAuMDAybDYuMTksNS4yMzhDMzYuOTcxLDM5LjIwNSw0NCwzNCw0NCwyNEM0NCwyMi42NTksNDMuODYyLDIxLjM1LDQzLjYxMSwyMC4wODN6Ii8+PC9zdmc+"
   },
   kakao: {
     label: "\uCE74\uCE74\uC624\uB85C \uB85C\uADF8\uC778",
-    icon: "\uD1A1"
+    iconType: "fontawesome",
+    iconClass: "fa-solid fa-comment"
   }
 };
 const DEFAULT_TOAST_DURATION_MS = 3000;
@@ -1304,15 +1309,23 @@ function renderSearchModeChoice(croppedDataUrl) {
   hintNote.className = "syncshopper-search-mode-note";
   hintNote.textContent = "\uC785\uB825\uD558\uBA74 AI\uAC00 \uC774 \uD78C\uD2B8\uB97C \uC8FC\uC694 \uB2E8\uC11C\uB85C \uD65C\uC6A9\uD569\uB2C8\uB2E4.";
 
+  const hintGroup = document.createElement("div");
+  hintGroup.className = "syncshopper-search-option-group";
+
+  const modeGroup = document.createElement("div");
+  modeGroup.className = "syncshopper-search-option-group";
+
   buttonRow.appendChild(createSearchModeButton("\uBE60\uB978 \uAC80\uC0C9", "fast", croppedDataUrl, note, hintInput));
   buttonRow.appendChild(createSearchModeButton("\uC815\uBC00 \uAC80\uC0C9", "precise", croppedDataUrl, note, hintInput));
 
-  wrapper.appendChild(hintLabel);
-  wrapper.appendChild(hintInput);
-  wrapper.appendChild(hintNote);
-  wrapper.appendChild(title);
-  wrapper.appendChild(buttonRow);
-  wrapper.appendChild(note);
+  hintGroup.appendChild(hintLabel);
+  hintGroup.appendChild(hintInput);
+  hintGroup.appendChild(hintNote);
+  modeGroup.appendChild(title);
+  modeGroup.appendChild(buttonRow);
+  modeGroup.appendChild(note);
+  wrapper.appendChild(hintGroup);
+  wrapper.appendChild(modeGroup);
   resultContent.replaceChildren(wrapper);
   hintInput.focus();
 }
@@ -1849,8 +1862,40 @@ function createProductResultsBlock(analysis, products) {
   } else {
     renderProductList(productList, products, analysis);
   }
+  productBlock.appendChild(createMoreProductsButton(analysis));
 
   return productBlock;
+}
+
+function createMoreProductsButton(analysis) {
+  const button = document.createElement("button");
+  button.className = "syncshopper-more-products-button";
+  button.type = "button";
+  button.textContent = "\uB354 \uB9CE\uC740 \uC0C1\uD488 \uBCF4\uB7EC\uAC00\uAE30";
+
+  button.addEventListener("click", () => {
+    const queryInput = document.getElementById("syncshopper-naver-search-query");
+    const query = (queryInput?.value || resolveNaverSearchQuery(analysis)).trim();
+
+    if (!query) {
+      showToast("\uAC80\uC0C9\uC5B4\uB97C \uC785\uB825\uD574 \uC8FC\uC138\uC694.", "warning");
+      queryInput?.focus();
+      return;
+    }
+
+    openCategorySearchPage(query);
+  });
+
+  return button;
+}
+
+function openCategorySearchPage(query) {
+  const url = `${DEFAULT_FRONTEND_BASE_URL.replace(/\/$/, "")}/category?q=${encodeURIComponent(query)}`;
+
+  chrome.runtime.sendMessage({
+    type: "SYNC_SHOPPER_OPEN_FRONTEND_PAGE",
+    url
+  });
 }
 
 async function loadProductsForRenderedNaverQuery(result) {
@@ -2260,9 +2305,14 @@ function showLoginPanel(onLoginSuccess) {
     socialButton.className = `syncshopper-social-login-button syncshopper-social-login-button-${provider}`;
     socialButton.dataset.provider = provider;
 
-    const icon = document.createElement("span");
-    icon.className = "syncshopper-social-login-icon";
-    icon.textContent = config.icon;
+    const icon = config.iconType === "image" ? document.createElement("img") : document.createElement("i");
+    icon.className = config.iconType === "fontawesome"
+      ? `syncshopper-social-login-icon ${config.iconClass}`
+      : "syncshopper-social-login-icon";
+    if (config.iconType === "image") {
+      icon.src = config.iconSrc;
+      icon.alt = config.iconAlt || "";
+    }
     icon.setAttribute("aria-hidden", "true");
 
     const label = document.createElement("span");

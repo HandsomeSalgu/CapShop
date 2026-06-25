@@ -1,7 +1,9 @@
 console.log("[SyncShopper] background service worker loaded");
 
-const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
-const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+// previous: const DEFAULT_BACKEND_BASE_URL = "http://70.12.60.52:8080";
+// previous: const DEFAULT_FRONTEND_BASE_URL = "http://70.12.60.52:5173";
+const DEFAULT_BACKEND_BASE_URL = "http://localhost:8080";
+const DEFAULT_FRONTEND_BASE_URL = "http://localhost:5173";
 const OAUTH_CALLBACK_URL = `${DEFAULT_FRONTEND_BASE_URL}/oauth/callback`;
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -48,6 +50,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "SYNC_SHOPPER_OPEN_SOCIAL_LOGIN") {
     chrome.tabs.create({ url: message.url || `${DEFAULT_BACKEND_BASE_URL}/oauth2/authorization/google` });
+    return false;
+  }
+
+  if (message.type === "SYNC_SHOPPER_OPEN_FRONTEND_PAGE") {
+    chrome.tabs.create({ url: message.url || DEFAULT_FRONTEND_BASE_URL });
     return false;
   }
 

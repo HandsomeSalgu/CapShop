@@ -6,6 +6,7 @@ import AppBanner from '@/components/common/AppBanner.vue'
 import { commerceApi } from '@/api/commerce'
 
 const route = useRoute()
+const router = useRouter()
 
 // State for active category selections
 const selectedMainCategory = ref(categories[0])
@@ -108,12 +109,33 @@ const selectKeyword = (keyword) => {
 const handleCustomSearch = (e) => {
   const val = e.target.value.trim()
   if (!val) return
-  
+
+  if (route.query.q !== val) {
+    router.push({
+      name: 'category',
+      query: { q: val }
+    })
+    return
+  }
+
   customSearchQuery.value = val
   selectedMainCategory.value = null
   selectedSubCategory.value = null
   selectedKeyword.value = null
   resetAndFetch()
+}
+
+const applyRouteSearchQuery = (rawQuery) => {
+  const query = Array.isArray(rawQuery) ? rawQuery[0] : rawQuery
+  const normalizedQuery = typeof query === 'string' ? query.trim() : ''
+
+  if (!normalizedQuery) return false
+
+  customSearchQuery.value = normalizedQuery
+  selectedMainCategory.value = null
+  selectedSubCategory.value = null
+  selectedKeyword.value = null
+  return true
 }
 
 // Watchers
@@ -122,22 +144,13 @@ watch(sortOption, () => {
 })
 
 watch(() => route.query.q, (newQ) => {
-  if (newQ) {
-    customSearchQuery.value = newQ
-    selectedMainCategory.value = null
-    selectedSubCategory.value = null
-    selectedKeyword.value = null
+  if (applyRouteSearchQuery(newQ)) {
     resetAndFetch()
   }
 })
 
 onMounted(() => {
-  if (route.query.q) {
-    customSearchQuery.value = route.query.q
-    selectedMainCategory.value = null
-    selectedSubCategory.value = null
-    selectedKeyword.value = null
-  }
+  applyRouteSearchQuery(route.query.q)
 
   // 초기 로드 시 상품 가져오기
   resetAndFetch()
@@ -163,7 +176,6 @@ const formatPrice = (price) => {
   return price.toLocaleString('ko-KR') + '원'
 }
 
-const router = useRouter()
 const goToDetail = (product) => {
   const productId = product.externalProductId || product.productId
   if (!productId) return

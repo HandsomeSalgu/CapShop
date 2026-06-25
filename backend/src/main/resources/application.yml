@@ -25,7 +25,8 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
-            redirect-uri: ${OAUTH2_GOOGLE_REDIRECT_URI:http://70.12.60.52:8080/login/oauth2/code/google}
+            # previous: http://70.12.60.52:8080/login/oauth2/code/google
+            redirect-uri: ${OAUTH2_GOOGLE_REDIRECT_URI:http://localhost:8080/login/oauth2/code/google}
             scope:
               - email
               - profile
@@ -34,7 +35,8 @@ spring:
             client-secret: ${KAKAO_CLIENT_SECRET}
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
-            redirect-uri: ${OAUTH2_KAKAO_REDIRECT_URI:http://70.12.60.52:8080/login/oauth2/code/kakao}
+            # previous: http://70.12.60.52:8080/login/oauth2/code/kakao
+            redirect-uri: ${OAUTH2_KAKAO_REDIRECT_URI:http://localhost:8080/login/oauth2/code/kakao}
             scope:
               - profile_nickname
               - profile_image
@@ -74,8 +76,10 @@ app:
     secret: ${JWT_SECRET:syncshopper-local-dev-secret-key-syncshopper-local-dev-secret-key}
     access-token-expiration: 3600000
   oauth2:
-    authorized-redirect-uri: ${OAUTH2_REDIRECT_URI:http://70.12.60.52:5173/oauth/callback}
-    signup-redirect-uri: ${OAUTH2_SIGNUP_REDIRECT_URI:http://70.12.60.52:5173/signup}
+    # previous: http://70.12.60.52:5173/oauth/callback
+    authorized-redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:5173/oauth/callback}
+    # previous: http://70.12.60.52:5173/signup
+    signup-redirect-uri: ${OAUTH2_SIGNUP_REDIRECT_URI:http://localhost:5173/signup}
   ai:
     mock-enabled: false
     fastapi-base-url: http://localhost:8000
