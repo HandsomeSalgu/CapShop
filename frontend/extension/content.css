@@ -59,7 +59,7 @@
   position: fixed;
   inset: 0;
   z-index: 999998;
-  background: rgba(0, 0, 0, 0.28);
+  background: transparent;
   cursor: crosshair;
 }
 
@@ -67,7 +67,8 @@
   position: fixed;
   z-index: 999999;
   border: 2px solid #22c55e;
-  background: rgba(34, 197, 94, 0.16);
+  background: transparent;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.48);
   box-sizing: border-box;
   pointer-events: none;
 }
@@ -414,6 +415,10 @@
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.22);
 }
 
+.syncshopper-hint-input {
+  margin-top: -4px;
+}
+
 .syncshopper-query-search-button {
   padding: 0 10px;
   border: none;
@@ -640,4 +645,110 @@
   color: #fecaca;
   font-size: 12px;
   line-height: 1.4;
+}
+
+.syncshopper-draggable-panel {
+  cursor: grab;
+}
+
+.syncshopper-draggable-panel button,
+.syncshopper-draggable-panel input,
+.syncshopper-draggable-panel a,
+.syncshopper-draggable-panel img,
+.syncshopper-draggable-panel .syncshopper-product-card {
+  cursor: auto;
+}
+
+.syncshopper-draggable-panel button,
+.syncshopper-draggable-panel a,
+.syncshopper-draggable-panel .syncshopper-product-card {
+  cursor: pointer;
+}
+
+.syncshopper-panel-dragging {
+  cursor: grabbing;
+}
+
+#capshop-pet-root {
+  position: fixed;
+  left: auto;
+  top: auto;
+  right: 24px;
+  bottom: 28px;
+  z-index: 1000004;
+  width: var(--cs-pet-size, 104px);
+  height: var(--cs-pet-size, 104px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+#capshop-pet-root:active {
+  cursor: grabbing;
+}
+
+#capshop-pet-root:focus-visible {
+  outline: 3px solid rgba(34, 197, 94, 0.55);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
+#capshop-pet-sprite {
+  display: block;
+  width: var(--cs-pet-size, 104px);
+  height: var(--cs-pet-size, 104px);
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  image-rendering: auto;
+  transform-origin: 50% 72%;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28));
+}
+
+#capshop-pet-sprite[data-direction="left"] {
+  transform: scaleX(-1);
+}
+
+#capshop-pet-bubble {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 10px);
+  transform: translateX(-50%);
+  min-width: 86px;
+  max-width: 190px;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border: 1px solid rgba(187, 247, 208, 0.6);
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.96);
+  color: #ffffff;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+
+#capshop-pet-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 10px;
+  height: 10px;
+  border-right: 1px solid rgba(187, 247, 208, 0.6);
+  border-bottom: 1px solid rgba(187, 247, 208, 0.6);
+  background: rgba(17, 24, 39, 0.96);
+  transform: translate(-50%, -5px) rotate(45deg);
+}
+
+#capshop-pet-bubble[hidden] {
+  display: none;
 }

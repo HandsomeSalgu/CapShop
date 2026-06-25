@@ -1,51 +1,111 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 import ProductCard from '@/components/product/ProductCard.vue'
 
 const hotProducts = ref([])
+const scrollContainer = ref(null)
+const isAtStart = ref(true)
+const isAtEnd = ref(false)
+const router = useRouter()
+
+const goToDetail = (product) => {
+  const targetId = product.externalProductId || product.productId
+  if (!targetId) return
+  router.push({
+    path: `/product/${targetId}`,
+    state: {
+      productData: JSON.stringify(product),
+      sourcePage: 'MAIN_HOT_ITEMS'
+    }
+  })
+}
+
+const checkScroll = () => {
+  if (!scrollContainer.value) return
+  const { scrollLeft, scrollWidth, clientWidth } = scrollContainer.value
+  isAtStart.value = scrollLeft <= 0
+  // Allow 1px margin of error for fractional pixels in layout
+  isAtEnd.value = scrollLeft + clientWidth >= scrollWidth - 1
+}
+
+const scrollLeftBtn = () => {
+  if (scrollContainer.value) {
+    const cardWidth = scrollContainer.value.querySelector('.hot-item-wrapper').offsetWidth + 20
+    scrollContainer.value.scrollBy({ left: -cardWidth, behavior: 'smooth' })
+  }
+}
+
+const scrollRightBtn = () => {
+  if (scrollContainer.value) {
+    const cardWidth = scrollContainer.value.querySelector('.hot-item-wrapper').offsetWidth + 20
+    scrollContainer.value.scrollBy({ left: cardWidth, behavior: 'smooth' })
+  }
+}
 
 onMounted(async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/products/hot?limit=4')
-    if (response.data.status === 'SUCCESS') {
+    const response = await axios.get('http://localhost:8080/api/products/best?limit=10')
+    if (response.data.success) {
       hotProducts.value = response.data.data
+      
+      // Delay to allow DOM to render before checking scroll bounds
+      setTimeout(checkScroll, 100)
+      window.addEventListener('resize', checkScroll)
     }
   } catch (error) {
     console.error('Failed to fetch hot products:', error)
   }
 })
 
-const hotProduct1 = computed(() => hotProducts.value[0] || null)
-const otherHotProducts = computed(() => hotProducts.value.slice(1, 4))
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', checkScroll)
+})
 </script>
 
 <template>
   <section class="section">
     <div class="section-header">
-      <h2>현재 제일 핫한 상품 리스트</h2>
-      <p>조회수와 저장수를 반영한 핫한 랭킹 상품 노출</p>
-      <a href="/products?sort=popular" class="more-btn">더보기</a>
+      <h2>HOT ITEMS TOP 10</h2>
+      <p>전체 유저들의 조회를 반영한 핫한 랭킹 상품 노출</p>
+      <a href="/best" class="more-btn">더보기</a>
     </div>
-    <div class="grid-hot" v-if="hotProducts.length > 0">
-      <div class="hot-left" v-if="hotProduct1">
-        <ProductCard
-          class="first-card"
-          :name="hotProduct1.title"
-          :price="hotProduct1.price"
-          :imageUrl="hotProduct1.imageUrl"
-        />
-      </div>
-      <div class="hot-right">
-        <ProductCard
-          class="other-card"
-          v-for="item in otherHotProducts"
+    
+    <div class="carousel-container" v-if="hotProducts.length > 0">
+      <button 
+        class="nav-btn prev-btn" 
+        @click="scrollLeftBtn" 
+        v-show="!isAtStart"
+        aria-label="이전"
+      >
+        &#10094;
+      </button>
+
+      <div class="horizontal-scroll" ref="scrollContainer" @scroll="checkScroll">
+        <div 
+          class="hot-item-wrapper" 
+          v-for="(item, index) in hotProducts" 
           :key="item.productId"
-          :name="item.title"
-          :price="item.price"
-          :imageUrl="item.imageUrl"
-        />
+          @click="goToDetail(item)"
+        >
+          <div class="rank-badge">BEST {{ index + 1 }}</div>
+          <ProductCard
+            :name="item.title"
+            :price="item.price"
+            :imageUrl="item.imageUrl"
+          />
+        </div>
       </div>
+
+      <button 
+        class="nav-btn next-btn" 
+        @click="scrollRightBtn" 
+        v-show="!isAtEnd"
+        aria-label="다음"
+      >
+        &#10095;
+      </button>
     </div>
   </section>
 </template>
@@ -84,35 +144,99 @@ const otherHotProducts = computed(() => hotProducts.value.slice(1, 4))
   padding-bottom: 2px;
 }
 
-.grid-hot {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
-}
-
-.hot-left {
+.carousel-container {
+  position: relative;
   display: flex;
-  flex-direction: column;
+  align-items: center;
 }
 
-:deep(.first-card) {
-  flex-grow: 1;
+.nav-btn {
+  position: absolute;
+  top: 40%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  font-size: 18px;
+  color: #333;
+  cursor: pointer;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
 }
 
-:deep(.first-card .img-placeholder) {
-  flex-grow: 1;
-  min-height: 500px;
-  margin-bottom: 20px;
+.nav-btn:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
 }
 
-.hot-right {
-  display: grid;
-  grid-template-rows: repeat(3, 1fr);
-  gap: 30px;
+.prev-btn {
+  left: -22px;
 }
 
-:deep(.other-card .img-placeholder) {
-  aspect-ratio: 2/1;
-  margin-bottom: 15px;
+.next-btn {
+  right: -22px;
+}
+
+.horizontal-scroll {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding-bottom: 20px;
+  padding-top: 5px;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  /* Hide scrollbar */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.hot-item-wrapper {
+  position: relative;
+  flex: 0 0 calc(33.333% - 13.4px);
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.hot-item-wrapper:hover {
+  transform: translateY(-2px);
+}
+
+:deep(.horizontal-scroll .img-placeholder), :deep(.horizontal-scroll .img-wrapper) {
+  aspect-ratio: 1;
+}
+
+.rank-badge {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 14px;
+  z-index: 10;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+@media (max-width: 768px) {
+  .hot-item-wrapper {
+    flex: 0 0 calc(80%);
+  }
+  .nav-btn {
+    display: none; /* Hide buttons on mobile, let them swipe */
+  }
 }
 </style>

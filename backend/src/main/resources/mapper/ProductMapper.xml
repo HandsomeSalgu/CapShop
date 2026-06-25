@@ -170,11 +170,31 @@
     </update>
 
     <select id="findBestProducts" resultMap="ProductResultMap">
-        SELECT
-        <include refid="ProductColumns"/>
-        FROM products
-        WHERE visible_yn = 'Y'
-        ORDER BY rating DESC, review_count DESC, product_id DESC
+        SELECT p.*
+        FROM products p
+        LEFT JOIN (
+            SELECT
+                product_id,
+                SUM(
+                    CASE event_type
+                        WHEN 'PRODUCT_DETAIL_VIEW' THEN 3
+                        WHEN 'PRODUCT_CLICK' THEN 5
+                        WHEN 'WISHLIST_ADD' THEN 8
+                        WHEN 'AFFILIATE_CLICK' THEN 10
+                        ELSE 0
+                    END
+                ) AS weight
+            FROM user_events
+            WHERE event_type IN ('PRODUCT_DETAIL_VIEW', 'PRODUCT_CLICK', 'WISHLIST_ADD', 'AFFILIATE_CLICK')
+              AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY product_id
+        ) global_signal ON p.product_id = global_signal.product_id
+        WHERE p.visible_yn = 'Y'
+        ORDER BY (
+            COALESCE(p.rating, 0) * 10
+            + COALESCE(p.review_count, 0) * 0.05
+            + COALESCE(global_signal.weight, 0)
+        ) DESC, p.review_count DESC, p.rating DESC, p.product_id DESC
         LIMIT #{limit}
     </select>
 

@@ -22,13 +22,14 @@ Rules:
 7. Ignore YouTube UI, captions UI, buttons, comments, side recommendation thumbnails, player controls, browser UI, and unrelated text.
 8. Do not identify people or infer personal identity.
 9. If a brand or model is visible or strongly implied, include it.
-10. If brand or model is unknown, return null for that field.
-11. If the object is unclear or not purchase-relevant, return Unknown product with low confidence.
-12. Extract the dominant product color when visible.
-13. Extract the product shape, silhouette, or form factor when useful.
-14. Extract visible brand/logo text if present, otherwise return null.
-15. key_features must list 2 to 6 concise visual details useful for shopping search, such as material, pattern, texture, color placement, buttons, straps, screen shape, sole shape, or container shape.
-16. confidence must be a number between 0.0 and 1.0.
+10. If user_hint is provided, treat it as an important clue about the target product, but do not copy it blindly when it conflicts with the image.
+11. If brand or model is unknown, return null for that field.
+12. If the object is unclear or not purchase-relevant, return Unknown product with low confidence.
+13. Extract the dominant product color when visible.
+14. Extract the product shape, silhouette, or form factor when useful.
+15. Extract visible brand/logo text if present, otherwise return null.
+16. key_features must list 2 to 6 concise visual details useful for shopping search, such as material, pattern, texture, color placement, buttons, straps, screen shape, sole shape, or container shape.
+17. confidence must be a number between 0.0 and 1.0.
 
 Return JSON with exactly these keys:
 {
@@ -48,16 +49,18 @@ Return JSON with exactly these keys:
 
 def _build_user_prompt(request: AnalyzeFrameRequest) -> str:
     subtitle_text = request.subtitle_text or ""
+    user_hint = request.user_hint or ""
 
     return f"""
-Analyze this captured YouTube frame area.
+Look at this captured YouTube frame area and answer: what purchasable product is this?
 
 Context:
 - video_id: {request.video_id}
 - timestamp_sec: {request.timestamp_sec}
+- user_hint: {user_hint}
 - subtitle_text: {subtitle_text}
 
-Find the single most purchase-relevant product in the image.
+Identify the single most purchase-relevant product in the image as directly and specifically as possible.
 Return only valid JSON.
 """.strip()
 

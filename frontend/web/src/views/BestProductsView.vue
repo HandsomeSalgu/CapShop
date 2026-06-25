@@ -1,20 +1,18 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { categories } from '@/data/categories'
 import AppBanner from '@/components/common/AppBanner.vue'
-import { commerceApi } from '@/api/commerce'
+import axios from 'axios'
 
 const router = useRouter()
 
 // State
-const top3Products = ref([])
-const top10Products = ref([])
-const activeCategory = ref(categories[0])
-const isLoadingTop3 = ref(false)
-const isLoadingTop10 = ref(false)
-const errorTop3 = ref(null)
-const errorTop10 = ref(null)
+const bestProducts = ref([])
+const isLoading = ref(false)
+const error = ref(null)
+
+const top3Products = computed(() => bestProducts.value.slice(0, 3))
+const rankingProducts = computed(() => bestProducts.value.slice(3, 20))
 
 // Handlers
 const formatPrice = (price) => {
@@ -35,71 +33,46 @@ const goToDetail = (product) => {
   })
 }
 
-const fetchTop3Products = async () => {
-  isLoadingTop3.value = true
-  errorTop3.value = null
+const fetchBestProducts = async () => {
+  isLoading.value = true
+  error.value = null
   try {
-    // 핫한 제품을 임시로 '노트북' 키워드로 3개 검색 (네이버 쇼핑 API 연동)
-    const result = await commerceApi.searchProducts('노트북', 3, 1, 'sim')
-    top3Products.value = result
+    const response = await axios.get('http://localhost:8080/api/products/best?limit=20')
+    if (response.data.success) {
+      bestProducts.value = response.data.data
+    }
   } catch (err) {
     console.error(err)
-    errorTop3.value = '이달의 핫한 제품을 불러오는데 실패했습니다.'
+    error.value = '베스트 상품을 불러오는데 실패했습니다.'
   } finally {
-    isLoadingTop3.value = false
+    isLoading.value = false
   }
-}
-
-const fetchTop10Products = async () => {
-  if (!activeCategory.value) return
-  
-  isLoadingTop10.value = true
-  errorTop10.value = null
-  top10Products.value = []
-  
-  try {
-    // 선택된 카테고리 이름으로 10개 검색 (네이버 쇼핑 API 연동)
-    const result = await commerceApi.searchProducts(`${activeCategory.value.name} 인기`, 10, 1, 'sim')
-    top10Products.value = result
-  } catch (err) {
-    console.error(err)
-    errorTop10.value = '카테고리별 핫한 제품을 불러오는데 실패했습니다.'
-  } finally {
-    isLoadingTop10.value = false
-  }
-}
-
-const selectCategory = (category) => {
-  if (activeCategory.value.id === category.id) return
-  activeCategory.value = category
-  fetchTop10Products()
 }
 
 onMounted(() => {
-  fetchTop3Products()
-  fetchTop10Products()
+  fetchBestProducts()
 })
 
 </script>
 
 <template>
   <main class="best-products-page">
-    <AppBanner title="베스트" subtitle="지금 가장 사랑받는 상품들을 만나보세요" bgImage="https://picsum.photos/1200/250?random=10" />
+    <AppBanner title="베스트" subtitle="지금 가장 사랑받는 핫한 상품들을 만나보세요" bgImage="https://picsum.photos/1200/250?random=10" />
 
     <div class="container">
       <!-- 이달의 제일 핫한 제품 TOP 3 -->
       <section class="top3-section">
         <h2 class="section-title">
-          이달의 제일 핫한 제품 TOP 3
+          이달의 핫한 제품 TOP 3
         </h2>
         
-        <div v-if="isLoadingTop3" class="loading-state">
+        <div v-if="isLoading" class="loading-state">
           <div class="spinner"></div>
           <p>이달의 핫한 제품을 불러오는 중입니다...</p>
         </div>
         
-        <div v-else-if="errorTop3" class="error-state">
-          {{ errorTop3 }}
+        <div v-else-if="error" class="error-state">
+          {{ error }}
         </div>
         
         <div v-else class="top3-grid">
@@ -110,54 +83,38 @@ onMounted(() => {
             </div>
             <div class="product-info">
               <div class="brand">{{ product.brand || product.mallName || '쇼핑몰' }}</div>
-              <h4 class="title">{{ product.title }}</h4>
+              <h4 class="title" v-html="product.title"></h4>
               <div class="price">{{ formatPrice(product.price) }}</div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- 카테고리 별 핫한 제품 영역 -->
-      <section class="category-tabs-section">
-        <h2 class="section-title">
-          카테고리 별 핫한 제품 TOP 10
-        </h2>
-        
-        <div class="tabs-container">
-          <button 
-            v-for="cat in categories" 
-            :key="cat.id"
-            class="tab-btn"
-            :class="{ active: activeCategory?.id === cat.id }"
-            @click="selectCategory(cat)"
-          >
-            {{ cat.name }}
-          </button>
-        </div>
-      </section>
-
-      <!-- 카테고리 별 핫한 제품 TOP 10 리스트 -->
+      <!-- 순위 리스트 (4위 ~ 20위) -->
       <section class="top10-section">
+        <h2 class="section-title">
+          월간 베스트 랭킹
+        </h2>
         <div class="list-header">
           <div class="col-rank">순위</div>
           <div class="col-info">상품 정보</div>
         </div>
 
-        <div v-if="isLoadingTop10" class="loading-state">
+        <div v-if="isLoading" class="loading-state">
           <div class="spinner"></div>
-          <p>카테고리 인기 상품을 불러오는 중입니다...</p>
+          <p>상품 랭킹을 불러오는 중입니다...</p>
         </div>
         
-        <div v-else-if="errorTop10" class="error-state">
-          {{ errorTop10 }}
+        <div v-else-if="error" class="error-state">
+          {{ error }}
         </div>
         
         <div v-else class="top10-list">
-          <div v-if="top10Products.length === 0" class="empty-state">해당 카테고리의 인기 상품이 없습니다.</div>
+          <div v-if="rankingProducts.length === 0" class="empty-state">해당 상품 랭킹 데이터가 없습니다.</div>
           
-          <div v-for="(product, index) in top10Products" :key="product.externalProductId || product.productId" class="list-row" @click="goToDetail(product)">
+          <div v-for="(product, index) in rankingProducts" :key="product.externalProductId || product.productId" class="list-row" @click="goToDetail(product)">
             <div class="col-rank">
-              <span class="rank-number" :class="{ 'top-rank': index < 3 }">{{ index + 1 }}</span>
+              <span class="rank-number">{{ index + 4 }}</span>
             </div>
             <div class="col-info">
               <div class="list-image-wrapper">
@@ -165,9 +122,9 @@ onMounted(() => {
               </div>
               <div class="list-product-details">
                 <div class="brand">{{ product.brand || product.mallName || '쇼핑몰' }}</div>
-                <h4 class="title">{{ product.title }}</h4>
+                <h4 class="title" v-html="product.title"></h4>
                 <div class="price">{{ formatPrice(product.price) }}</div>
-                <p class="description">{{ product.category1 }} > {{ product.category2 }}</p>
+                <p class="description">{{ product.category1Name }} <span v-if="product.category2Name">> {{ product.category2Name }}</span></p>
               </div>
             </div>
           </div>
@@ -305,41 +262,7 @@ onMounted(() => {
   margin-top: auto;
 }
 
-/* Category Tabs Section */
-.tabs-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 40px;
-}
-
-.tab-btn {
-  padding: 12px 24px;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 30px;
-  font-size: 15px;
-  color: #555;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.tab-btn:hover {
-  border-color: #3498db;
-  color: #3498db;
-}
-
-.tab-btn.active {
-  background: #3498db;
-  border-color: #3498db;
-  color: white;
-  font-weight: bold;
-  box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
-}
-
-/* TOP 10 List Section */
+/* TOP Ranking List Section */
 .list-header {
   display: flex;
   padding: 15px 20px;
@@ -389,11 +312,6 @@ onMounted(() => {
   font-weight: 800;
   color: #999;
   font-style: italic;
-}
-
-.top-rank {
-  color: #e74c3c;
-  font-size: 32px;
 }
 
 .list-image-wrapper {

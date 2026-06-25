@@ -37,6 +37,10 @@ public class DetectionAnalyzeRequest {
     @Schema(description = "Subtitle text around the frame", example = "Introducing today's Nike sneakers.")
     private String subtitleText;
 
+    @Size(max = 160, message = "User hint must be 160 characters or fewer.")
+    @Schema(description = "Optional user-provided clue for the target product", example = "black jacket")
+    private String userHint;
+
     @Pattern(regexp = "fast|precise", message = "Search mode must be fast or precise.")
     @Builder.Default
     @Schema(description = "AI search mode. fast skips visual rerank/judge; precise keeps the full flow.", example = "precise")
