@@ -15,11 +15,21 @@ jobs:
     - name: 1. Checkout Repository
       uses: actions/checkout@v4
 
-    # 1.5 로컬 환경의 .env 파일들을 GitHub Actions 작업 공간으로 복사합니다. (.env는 git에 올라가지 않기 때문)
-    - name: 1.5 Copy .env files
+    # 1.5 깃허브 Secrets에서 값을 읽어와 각 폴더에 .env 파일을 즉석으로 생성합니다.
+    - name: 1.5 Create .env files from GitHub Secrets
+      shell: bash
       run: |
-        Copy-Item -Path "c:\development\project\CapShop\backend\.env" -Destination "backend\.env"
-        Copy-Item -Path "c:\development\project\CapShop\ai-server\.env" -Destination "ai-server\.env"
+        cat << 'EOF' > backend/.env
+        ${{ secrets.BACKEND_ENV_FILE }}
+        EOF
+        
+        cat << 'EOF' > ai-server/.env
+        ${{ secrets.AI_SERVER_ENV_FILE }}
+        EOF
+        
+        cat << 'EOF' > frontend/web/.env
+        ${{ secrets.FRONTEND_ENV_FILE }}
+        EOF
 
     # 2. 다운받은 코드 중 backend 폴더로 들어가서 Maven을 이용해 빌드합니다. (jar 파일 생성)
     - name: 2. Build with Maven
