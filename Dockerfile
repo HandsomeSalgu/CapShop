@@ -1,5 +1,5 @@
-# 1. Base 이미지 지정 (pom.xml의 Java 25 버전에 맞춤)
-FROM eclipse-temurin:25-jdk
+# 1. Base 이미지 지정 (pom.xml의 Java 23 버전에 맞춤)
+FROM eclipse-temurin:23-jdk
 
 # 2. 빌드된 jar 파일의 위치를 변수로 지정 (Gradle -> Maven 경로로 수정, 프로젝트 폴더 반영)
 ARG JAR_FILE=backend/target/*-SNAPSHOT.jar
