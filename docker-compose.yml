@@ -14,6 +14,10 @@ services:
     build:
       context: ./ai-server
       dockerfile: Dockerfile
+    environment:
+      - BACKEND_BASE_URL=http://backend:8080
+      - DB_HOST=mysql
+      - DB_PORT=3306
     ports:
       - "8000:8000"
     depends_on:
@@ -25,6 +29,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/syncshopper?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      - SPRING_DATA_REDIS_HOST=redis
+      - APP_AI_FASTAPI_BASE_URL=http://ai-server:8000
     ports:
       - "8080:8080"
     depends_on:
