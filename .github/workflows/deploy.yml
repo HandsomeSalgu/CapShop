@@ -11,6 +11,10 @@ jobs:
     runs-on: self-hosted
 
     steps:
+    # 0. Git dubious ownership 에러 우회 (runner가 NETWORK SERVICE 계정으로 실행될 때 소유권 불일치 방지)
+    - name: 0. Fix git safe.directory
+      run: git config --global --add safe.directory '*'
+
     # 1. 저장소에서 최신 코드를 데스크톱으로 다운로드 받습니다.
     - name: 1. Checkout Repository
       uses: actions/checkout@v4
