@@ -22,9 +22,10 @@ jobs:
         AI_SERVER_ENV: ${{ secrets.AI_SERVER_ENV_FILE }}
         FRONTEND_ENV: ${{ secrets.FRONTEND_ENV_FILE }}
       run: |
-        $env:BACKEND_ENV | Out-File -FilePath "backend/.env" -Encoding utf8
-        $env:AI_SERVER_ENV | Out-File -FilePath "ai-server/.env" -Encoding utf8
-        $env:FRONTEND_ENV | Out-File -FilePath "frontend/web/.env" -Encoding utf8
+        $Utf8NoBom = New-Object System.Text.UTF8Encoding $False
+        [System.IO.File]::WriteAllText("backend/.env", $env:BACKEND_ENV.Replace("`r`n", "`n"), $Utf8NoBom)
+        [System.IO.File]::WriteAllText("ai-server/.env", $env:AI_SERVER_ENV.Replace("`r`n", "`n"), $Utf8NoBom)
+        [System.IO.File]::WriteAllText("frontend/web/.env", $env:FRONTEND_ENV.Replace("`r`n", "`n"), $Utf8NoBom)
 
     # 2. 다운받은 코드 중 backend 폴더로 들어가서 Maven을 이용해 빌드합니다. (jar 파일 생성)
     - name: 2. Build with Maven

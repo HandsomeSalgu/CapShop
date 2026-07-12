@@ -31,11 +31,11 @@ const handleLogin = async () => {
 }
 
 const loginWithGoogle = () => {
-  window.location.href = `${backendBaseUrl}/oauth2/authorization/google`
+  window.location.href = `/oauth2/authorization/google`
 }
 
 const loginWithKakao = () => {
-  window.location.href = `${backendBaseUrl}/oauth2/authorization/kakao`
+  window.location.href = `/oauth2/authorization/kakao`
 }
 </script>
 
