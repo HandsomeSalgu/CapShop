@@ -1,0 +1,9 @@
+node_modules
+dist
+.vscode
+.git
+.eslintcache
+.vite
+.vue-tsc
+npm-debug.log
+yarn-error.log

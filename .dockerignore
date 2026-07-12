@@ -1,0 +1,8 @@
+.git
+.vscode
+backend/target
+frontend/web/node_modules
+frontend/web/dist
+ai-server/.venv
+ai-server/__pycache__
+database/data
