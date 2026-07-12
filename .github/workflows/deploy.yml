@@ -37,18 +37,6 @@ jobs:
       # Windows PowerShell 환경에서 파라미터 인식 오류를 막기 위해 다시 -DskipTests로 복구합니다. (테스트 코드는 앞서 고쳤으므로 컴파일을 통과합니다!)
       run: ./mvnw.cmd clean package -DskipTests
       
-    # 2.5 Nginx가 처음 실행될 때 SSL 인증서가 없으면 에러가 발생하므로, 포트 점유 없이 임시 인증서를 먼저 생성합니다.
-    - name: 2.5 Init Dummy SSL Certificate
-      run: |
-        if (-not (Test-Path "certbot/conf/live/capshop.cloud/fullchain.pem")) {
-          Write-Host "SSL 인증서가 없습니다. Nginx 실행을 위해 Dummy 인증서를 생성합니다."
-          New-Item -ItemType Directory -Force -Path "certbot/conf/live/capshop.cloud"
-          docker run --rm -v "${PWD}/certbot/conf:/etc/letsencrypt" alpine/openssl req -x509 -nodes -days 1 -newkey rsa:2048 -keyout /etc/letsencrypt/live/capshop.cloud/privkey.pem -out /etc/letsencrypt/live/capshop.cloud/fullchain.pem -subj "/CN=capshop.cloud"
-          Set-Content -Path "certbot/conf/live/capshop.cloud/dummy.txt" -Value "dummy"
-        } else {
-          Write-Host "SSL 인증서가 이미 존재합니다."
-        }
-
     # 3. 도커 컴포즈를 사용하여 전체 컨테이너(프론트, 백, AI, DB)를 빌드하고 백그라운드에서 실행합니다.
     - name: 3. Deploy via Docker Compose (Sequential Build)
       run: |
@@ -56,14 +44,3 @@ jobs:
         docker compose build frontend
         docker compose build ai-server
         docker compose up -d
-
-    # 4. Dummy 인증서가 감지되면, Nginx(포트 80)를 띄워둔 상태에서 Webroot 방식으로 실제 인증서를 발급받습니다.
-    - name: 4. Issue Real Let's Encrypt Certificate
-      run: |
-        if (Test-Path "certbot/conf/live/capshop.cloud/dummy.txt") {
-           Write-Host "Dummy 인증서 감지. 실제 인증서 발급을 시작합니다."
-           Remove-Item -Recurse -Force "certbot/conf/live/capshop.cloud"
-           
-           docker compose run --rm --entrypoint "" certbot certbot certonly --webroot -w /var/www/certbot -d capshop.cloud --non-interactive --agree-tos -m WarsFAC@gmail.com --force-renewal
-           docker compose restart frontend
-        }
