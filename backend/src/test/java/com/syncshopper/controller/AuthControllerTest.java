@@ -22,6 +22,9 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.mock.web.MockMultipartFile;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
@@ -46,24 +49,30 @@ class AuthControllerTest {
 
     @Test
     void signupBindsJsonRequestBody() throws Exception {
-        when(authService.signup(any())).thenReturn(UserResponse.builder().userId(1L).build());
+        MockMultipartFile requestPart = new MockMultipartFile(
+                "request",
+                "",
+                "application/json",
+                """
+                {
+                  "email": "user@example.com",
+                  "password": "password1234",
+                  "nickname": "hwarang",
+                  "phone": "01012345678",
+                  "birthDate": "2000-01-01"
+                }
+                """.getBytes()
+        );
 
-        mockMvc.perform(post("/api/auth/signup")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "email": "user@example.com",
-                                  "password": "password1234",
-                                  "nickname": "hwarang",
-                                  "phone": "01012345678",
-                                  "birthDate": "2000-01-01"
-                                }
-                                """))
+        when(authService.signup(any(), any())).thenReturn(UserResponse.builder().userId(1L).build());
+
+        mockMvc.perform(multipart("/api/auth/signup")
+                        .file(requestPart))
                 .andExpect(status().isOk());
 
         ArgumentCaptor<com.syncshopper.dto.request.SignupRequest> captor =
                 ArgumentCaptor.forClass(com.syncshopper.dto.request.SignupRequest.class);
-        verify(authService).signup(captor.capture());
+        verify(authService).signup(captor.capture(), any());
 
         assertThat(captor.getValue().getEmail()).isEqualTo("user@example.com");
         assertThat(captor.getValue().getPassword()).isEqualTo("password1234");

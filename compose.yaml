@@ -1,0 +1,90 @@
+services:
+  mysql:
+    image: 'mysql:8.0'
+    environment:
+      - 'MYSQL_DATABASE=syncshopper'
+      - 'MYSQL_ROOT_PASSWORD=${DB_PASSWORD}'
+    ports:
+      - '3307:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - capshop-network
+
+  redis:
+    image: 'redis:latest'
+    ports:
+      - '6379:6379'
+    networks:
+      - capshop-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - '8080:8080'
+    env_file:
+      - ./backend/.env
+    environment:
+      # 로컬 .env 값을 읽되, 도커 네트워크 주소로 오버라이드
+      - SPRING_PROFILES_ACTIVE=local
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/syncshopper?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - OAUTH2_REDIRECT_URI=http://localhost:5173/oauth/callback
+      - OAUTH2_SIGNUP_REDIRECT_URI=http://localhost:5173/signup
+      - OAUTH2_GOOGLE_REDIRECT_URI=http://localhost:8080/login/oauth2/code/google
+      - OAUTH2_KAKAO_REDIRECT_URI=http://localhost:8080/login/oauth2/code/kakao
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - capshop-network
+
+  ai-server:
+    build:
+      context: ./ai-server
+      dockerfile: Dockerfile
+    ports:
+      - '8000:8000'
+    env_file:
+      - ./ai-server/.env
+    environment:
+      # 로컬 .env 값을 읽되, 도커 네트워크 주소로 오버라이드
+      - BACKEND_BASE_URL=http://backend:8080
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=syncshopper
+    depends_on:
+      - backend
+      - mysql
+    networks:
+      - capshop-network
+
+  frontend:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+    ports:
+      - '5173:80' # 호스트 5173 포트를 Nginx 80 포트로 연결
+    env_file:
+      - ./frontend/web/.env
+    environment:
+      - VITE_BACKEND_BASE_URL=http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - capshop-network
+
+volumes:
+  mysql_data:
+
+networks:
+  capshop-network:
+    driver: bridge
