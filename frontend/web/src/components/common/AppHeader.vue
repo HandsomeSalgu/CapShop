@@ -124,7 +124,7 @@ const goToAdminPage = () => {
           
           <template v-else>
             <RouterLink to="/login" class="login-link">
-              <i class="fa-regular fa-user"></i> 로그인
+              <i class="fa-regular fa-user"></i> 로그인안할건데?
             </RouterLink>
           </template>
         </div>
