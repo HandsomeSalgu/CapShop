@@ -18,8 +18,8 @@ jobs:
     # 2. 다운받은 코드 중 backend 폴더로 들어가서 Maven을 이용해 빌드합니다. (jar 파일 생성)
     - name: 2. Build with Maven
       working-directory: ./backend
-      # 테스트를 건너뛰고 바로 빌드하는 명령어입니다. (Windows 데스크톱 환경)
-      run: ./mvnw.cmd clean package -DskipTests
+      # 테스트 실행 및 컴파일을 모두 건너뛰고 바로 빌드하는 명령어입니다.
+      run: ./mvnw.cmd clean package -Dmaven.test.skip=true
       
     # 3. 기존에 돌고 있던 동일한 이름의 도커 컨테이너가 있다면 중지하고 삭제합니다.
     - name: 3. Stop and Remove old container (if exists)

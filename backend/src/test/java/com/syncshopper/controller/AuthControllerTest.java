@@ -46,7 +46,7 @@ class AuthControllerTest {
 
     @Test
     void signupBindsJsonRequestBody() throws Exception {
-        when(authService.signup(any())).thenReturn(UserResponse.builder().userId(1L).build());
+        when(authService.signup(any(), any())).thenReturn(UserResponse.builder().userId(1L).build());
 
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,7 +63,7 @@ class AuthControllerTest {
 
         ArgumentCaptor<com.syncshopper.dto.request.SignupRequest> captor =
                 ArgumentCaptor.forClass(com.syncshopper.dto.request.SignupRequest.class);
-        verify(authService).signup(captor.capture());
+        verify(authService).signup(captor.capture(), any());
 
         assertThat(captor.getValue().getEmail()).isEqualTo("user@example.com");
         assertThat(captor.getValue().getPassword()).isEqualTo("password1234");

@@ -47,7 +47,7 @@ class UserProfileServiceTest {
                 .nickname("new-name")
                 .build();
 
-        userProfileService.updateMyProfile(1L, request);
+        userProfileService.updateMyProfile(1L, request, null);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).updateProfile(captor.capture());
@@ -73,7 +73,7 @@ class UserProfileServiceTest {
                 .profileImageUrl("   ")
                 .build();
 
-        userProfileService.updateMyProfile(1L, request);
+        userProfileService.updateMyProfile(1L, request, null);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).updateProfile(captor.capture());
@@ -96,7 +96,7 @@ class UserProfileServiceTest {
                 .confirmNewPassword("newPassword1234")
                 .build();
 
-        userProfileService.updateMyProfile(1L, request);
+        userProfileService.updateMyProfile(1L, request, null);
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).updateProfile(captor.capture());
