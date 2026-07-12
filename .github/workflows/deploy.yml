@@ -15,21 +15,16 @@ jobs:
     - name: 1. Checkout Repository
       uses: actions/checkout@v4
 
-    # 1.5 깃허브 Secrets에서 값을 읽어와 각 폴더에 .env 파일을 즉석으로 생성합니다.
+    # 1.5 깃허브 Secrets에서 값을 환경 변수로 받아 각 폴더에 .env 파일을 즉석으로 생성합니다.
     - name: 1.5 Create .env files from GitHub Secrets
-      shell: bash
+      env:
+        BACKEND_ENV: ${{ secrets.BACKEND_ENV_FILE }}
+        AI_SERVER_ENV: ${{ secrets.AI_SERVER_ENV_FILE }}
+        FRONTEND_ENV: ${{ secrets.FRONTEND_ENV_FILE }}
       run: |
-        cat << 'EOF' > backend/.env
-        ${{ secrets.BACKEND_ENV_FILE }}
-        EOF
-        
-        cat << 'EOF' > ai-server/.env
-        ${{ secrets.AI_SERVER_ENV_FILE }}
-        EOF
-        
-        cat << 'EOF' > frontend/web/.env
-        ${{ secrets.FRONTEND_ENV_FILE }}
-        EOF
+        $env:BACKEND_ENV | Out-File -FilePath "backend/.env" -Encoding utf8
+        $env:AI_SERVER_ENV | Out-File -FilePath "ai-server/.env" -Encoding utf8
+        $env:FRONTEND_ENV | Out-File -FilePath "frontend/web/.env" -Encoding utf8
 
     # 2. 다운받은 코드 중 backend 폴더로 들어가서 Maven을 이용해 빌드합니다. (jar 파일 생성)
     - name: 2. Build with Maven
