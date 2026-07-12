@@ -21,17 +21,7 @@ jobs:
       # Windows PowerShell 환경에서 파라미터 인식 오류를 막기 위해 다시 -DskipTests로 복구합니다. (테스트 코드는 앞서 고쳤으므로 컴파일을 통과합니다!)
       run: ./mvnw.cmd clean package -DskipTests
       
-    # 3. 기존에 돌고 있던 동일한 이름의 도커 컨테이너가 있다면 중지하고 삭제합니다.
-    - name: 3. Stop and Remove old container (if exists)
-      run: |
-        docker stop capshop-server || echo "No running container."
-        docker rm capshop-server || echo "No container to remove."
-      shell: cmd
-
-    # 4. 아까 만들어둔 최상위 경로의 Dockerfile을 읽어서 도커 이미지를 생성합니다.
-    - name: 4. Build Docker Image
-      run: docker build -t capshop-server:latest .
-
-    # 5. 방금 만든 도커 이미지를 컨테이너로 실행합니다. (데스크톱의 8080 포트를 도커 내부의 8080과 연결)
-    - name: 5. Run new Docker Container
-      run: docker run -d --name capshop-server -p 8080:8080 capshop-server:latest
+    # 3. 도커 컴포즈를 사용하여 전체 컨테이너(프론트, 백, AI, DB)를 빌드하고 백그라운드에서 실행합니다.
+    # 기존 컨테이너가 있다면 자동으로 교체되므로 별도의 삭제 스크립트가 필요 없습니다.
+    - name: 3. Deploy via Docker Compose
+      run: docker compose up -d --build
