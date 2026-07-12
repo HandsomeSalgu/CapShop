@@ -23,5 +23,9 @@ jobs:
       
     # 3. 도커 컴포즈를 사용하여 전체 컨테이너(프론트, 백, AI, DB)를 빌드하고 백그라운드에서 실행합니다.
     # 기존 컨테이너가 있다면 자동으로 교체되므로 별도의 삭제 스크립트가 필요 없습니다.
-    - name: 3. Deploy via Docker Compose
-      run: docker compose up -d --build
+    - name: 3. Deploy via Docker Compose (Sequential Build)
+      run: |
+        docker compose build backend
+        docker compose build frontend
+        docker compose build ai-server
+        docker compose up -d
