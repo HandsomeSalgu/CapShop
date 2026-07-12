@@ -15,6 +15,12 @@ jobs:
     - name: 1. Checkout Repository
       uses: actions/checkout@v4
 
+    # 1.5 로컬 환경의 .env 파일들을 GitHub Actions 작업 공간으로 복사합니다. (.env는 git에 올라가지 않기 때문)
+    - name: 1.5 Copy .env files
+      run: |
+        Copy-Item -Path "c:\development\project\CapShop\backend\.env" -Destination "backend\.env"
+        Copy-Item -Path "c:\development\project\CapShop\ai-server\.env" -Destination "ai-server\.env"
+
     # 2. 다운받은 코드 중 backend 폴더로 들어가서 Maven을 이용해 빌드합니다. (jar 파일 생성)
     - name: 2. Build with Maven
       working-directory: ./backend
