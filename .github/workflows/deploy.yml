@@ -26,7 +26,7 @@ jobs:
       run: |
         docker stop capshop-server || echo "No running container."
         docker rm capshop-server || echo "No container to remove."
-      shell: bash
+      shell: cmd
 
     # 4. 아까 만들어둔 최상위 경로의 Dockerfile을 읽어서 도커 이미지를 생성합니다.
     - name: 4. Build Docker Image
