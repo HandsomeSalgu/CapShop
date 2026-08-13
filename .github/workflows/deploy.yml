@@ -9,33 +9,25 @@ jobs:
     runs-on: self-hosted
 
     steps:
-    # 0. Git safe.directory 설정
-    - name: 0. Fix git safe.directory
-      run: git config --global --add safe.directory '*'
-
-    # 1. 코드 다운로드
-    - name: 1. Checkout Repository
+    - name: 0. Checkout Repository
       uses: actions/checkout@v4
 
-    # 1.5 .env 파일 생성 (배치 파일 방식)
-    - name: 1.5 Create .env files from GitHub Secrets
-      shell: cmd
+    - name: 1. Create .env files from GitHub Secrets
+      shell: powershell
       env:
         BACKEND_ENV: ${{ secrets.BACKEND_ENV_FILE }}
         AI_SERVER_ENV: ${{ secrets.AI_SERVER_ENV_FILE }}
         FRONTEND_ENV: ${{ secrets.FRONTEND_ENV_FILE }}
       run: |
-        (echo %BACKEND_ENV%) > backend\.env
-        (echo %AI_SERVER_ENV%) > ai-server\.env
-        (echo %FRONTEND_ENV%) > frontend\web\.env
+        [System.IO.File]::WriteAllText("backend/.env", $env:BACKEND_ENV)
+        [System.IO.File]::WriteAllText("ai-server/.env", $env:AI_SERVER_ENV)
+        [System.IO.File]::WriteAllText("frontend/web/.env", $env:FRONTEND_ENV)
 
-    # 2. Maven 빌드
     - name: 2. Build with Maven
       working-directory: ./backend
       shell: cmd
       run: mvnw.cmd clean package -DskipTests
 
-    # 3. Docker Compose 배포
     - name: 3. Deploy via Docker Compose
       shell: cmd
       run: |
@@ -44,12 +36,10 @@ jobs:
         docker compose build ai-server
         docker compose up -d
 
-    # 3.5 보안: .env 파일 삭제 (배치 파일 방식)
-    - name: "3.5 Cleanup: Remove .env files for security"
+    - name: 4. Cleanup .env files
       if: always()
       shell: cmd
       run: |
-        del /q backend\.env 2>nul
-        del /q ai-server\.env 2>nul
-        del /q frontend\web\.env 2>nul
-        echo .env files cleaned up
+        del /q backend\.env 2>nul || echo.
+        del /q ai-server\.env 2>nul || echo.
+        del /q frontend\web\.env 2>nul || echo.
