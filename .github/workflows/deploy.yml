@@ -35,8 +35,8 @@ jobs:
     # 2. 다운받은 코드 중 backend 폴더로 들어가서 Maven을 이용해 빌드합니다. (jar 파일 생성)
     - name: 2. Build with Maven
       working-directory: ./backend
-      # Windows PowerShell 환경에서 파라미터 인식 오류를 막기 위해 다시 -DskipTests로 복구합니다. (테스트 코드는 앞서 고쳤으므로 컴파일을 통과합니다!)
-      run: ./mvnw.cmd clean package -DskipTests
+      shell: bash
+      run: ./mvnw clean package -DskipTests
       
     # 3. 도커 컴포즈를 사용하여 전체 컨테이너(프론트, 백, AI, DB)를 빌드하고 백그라운드에서 실행합니다.
     - name: 3. Deploy via Docker Compose (Sequential Build)
