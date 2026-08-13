@@ -1,8 +1,10 @@
 name: AWS Deployment Pipeline
 
+# ⚠️ 임시 비활성화: AWS 리소스 준비 후 활성화
+# 현재는 deploy.yml (self-hosted runner)을 사용합니다.
 on:
   push:
-    branches: ["main"]
+    branches: ["main-aws-deployment"]  # main이 아닌 다른 브랜치로 변경
 
 env:
   AWS_REGION: us-east-1  # 본인 리전으로 변경
