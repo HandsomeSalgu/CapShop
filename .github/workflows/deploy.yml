@@ -46,7 +46,7 @@ jobs:
         docker compose up -d
 
     # 3.5 보안: .env 파일 삭제 (배포 후 평문 노출 방지)
-    - name: 3.5 Cleanup: Remove .env files for security
+    - name: "3.5 Cleanup: Remove .env files for security"
       if: always()
       run: |
         rm -f backend/.env
