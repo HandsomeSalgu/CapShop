@@ -9,6 +9,9 @@ jobs:
   build-and-deploy:
     # 어디서 실행할지 지정합니다. (GitHub 서버가 아닌, 사용자님의 '데스크톱'에서 실행하라는 뜻)
     runs-on: self-hosted
+    defaults:
+      run:
+        shell: cmd
 
     steps:
     # 0. Git dubious ownership 에러 우회 (runner가 NETWORK SERVICE 계정으로 실행될 때 소유권 불일치 방지)
