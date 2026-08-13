@@ -12,6 +12,12 @@ jobs:
     - name: 0. Checkout Repository
       uses: actions/checkout@v4
 
+    - name: 0.5 Setup Java 23
+      uses: actions/setup-java@v4
+      with:
+        java-version: '23'
+        distribution: 'temurin'
+
     - name: 1. Create .env files from GitHub Secrets
       shell: powershell
       env:
