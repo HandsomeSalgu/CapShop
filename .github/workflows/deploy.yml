@@ -21,15 +21,15 @@ jobs:
 
     # 1.5 깃허브 Secrets에서 값을 환경 변수로 받아 각 폴더에 .env 파일을 즉석으로 생성합니다.
     - name: 1.5 Create .env files from GitHub Secrets
+      shell: bash
       env:
         BACKEND_ENV: ${{ secrets.BACKEND_ENV_FILE }}
         AI_SERVER_ENV: ${{ secrets.AI_SERVER_ENV_FILE }}
         FRONTEND_ENV: ${{ secrets.FRONTEND_ENV_FILE }}
       run: |
-        $Utf8NoBom = New-Object System.Text.UTF8Encoding $False
-        [System.IO.File]::WriteAllText("backend/.env", $env:BACKEND_ENV.Replace("`r`n", "`n"), $Utf8NoBom)
-        [System.IO.File]::WriteAllText("ai-server/.env", $env:AI_SERVER_ENV.Replace("`r`n", "`n"), $Utf8NoBom)
-        [System.IO.File]::WriteAllText("frontend/web/.env", $env:FRONTEND_ENV.Replace("`r`n", "`n"), $Utf8NoBom)
+        echo "$BACKEND_ENV" > backend/.env
+        echo "$AI_SERVER_ENV" > ai-server/.env
+        echo "$FRONTEND_ENV" > frontend/web/.env
 
     # 2. 다운받은 코드 중 backend 폴더로 들어가서 Maven을 이용해 빌드합니다. (jar 파일 생성)
     - name: 2. Build with Maven
@@ -48,6 +48,7 @@ jobs:
     # 3.5 보안: .env 파일 삭제 (배포 후 평문 노출 방지)
     - name: "3.5 Cleanup: Remove .env files for security"
       if: always()
+      shell: bash
       run: |
         rm -f backend/.env
         rm -f ai-server/.env
