@@ -1,0 +1,15 @@
+# AWS S3 배포용 빌드 전용 Docker (Nginx 불필요)
+# CI/CD에서 dist/ 폴더만 추출해 S3로 업로드하므로, 이 Dockerfile은 빌드 타겟으로만 사용
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+# .env.production 로드되어 빌드됨
+RUN npm run build
+
+# 빌드 결과물만 남김 (dist/)

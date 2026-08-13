@@ -1,0 +1,118 @@
+# ===== AWS 배포용 Docker Compose (프로덕션) =====
+# 사용 방법: docker compose -f docker-compose.prod.yml up -d
+# 또는 docker-compose.yml과 이 파일을 오버라이드: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+name: capshop
+
+services:
+  # Frontend는 S3 + CloudFront로 배포되므로 제거
+  # (필요 시 로컬 개발용 docker-compose.yml에서만 포함)
+
+  ai-server:
+    build:
+      context: ./ai-server
+      dockerfile: Dockerfile
+    env_file:
+      - ./ai-server/.env
+    environment:
+      # EC2 내 MySQL 유지 시:
+      - BACKEND_BASE_URL=http://backend:8080
+      - DB_HOST=mysql
+      - DB_PORT=3306
+
+      # RDS + ElastiCache로 마이그레이션 시 (환경변수로 오버라이드):
+      # - DB_HOST=${RDS_ENDPOINT}
+      # - DB_PORT=3306
+    ports:
+      - "8000:8000"
+    depends_on:
+      - backend
+      - mysql
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      # EC2 내 MySQL 유지 시:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/syncshopper?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      - SPRING_DATA_REDIS_HOST=redis
+
+      # RDS로 마이그레이션 시:
+      # - SPRING_DATASOURCE_URL=${DB_URL}  # .env에서 참조
+
+      - APP_AI_FASTAPI_BASE_URL=http://ai-server:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # === 데이터베이스 ===
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=syncshopper
+      - MYSQL_ROOT_PASSWORD=potato  # 프로덕션에서는 강력한 비밀번호로 교체
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mysql_data:
+    driver: local
+
+# ===== RDS/ElastiCache 사용 시 =====
+# docker-compose를 EC2에서 실행할 때 이 파일의 mysql/redis 서비스를 주석 처리하고,
+# 백엔드/AI 환경변수를 RDS/ElastiCache 엔드포인트로 교체합니다.
+#
+# 예:
+# docker compose \
+#   -f docker-compose.prod.yml \
+#   -e RDS_ENDPOINT=your-rds.rds.amazonaws.com \
+#   -e REDIS_HOST=your-elasticache.ng8zc9.ng.0001.apn2.cache.amazonaws.com \
+#   up -d

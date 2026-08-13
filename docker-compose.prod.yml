@@ -1,0 +1,93 @@
+name: capshop-prod
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      # ========== AWS 배포 환경 변수 (로컬과 다른 부분) ==========
+      # RDS 사용 시: AWS RDS 엔드포인트로 변경 (예: capshop-db.xxxx.us-east-1.rds.amazonaws.com)
+      # EC2 내부 MySQL 사용 시: localhost:3306 또는 mysql:3306 (docker compose 내)
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/syncshopper?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+
+      # ElastiCache 사용 시: ElastiCache 엔드포인트로 변경
+      # EC2 내부 Redis 사용 시: redis:6379 유지
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+
+      # AI 서버 (EC2 내 docker-compose)
+      - APP_AI_FASTAPI_BASE_URL=http://ai-server:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+    networks:
+      - capshop-network
+
+  ai-server:
+    build:
+      context: ./ai-server
+      dockerfile: Dockerfile
+    env_file:
+      - ./ai-server/.env
+    environment:
+      # 로컬과 동일하게 유지 (EC2 내부 통신)
+      - BACKEND_BASE_URL=http://backend:8080
+      - DB_HOST=mysql
+      - DB_PORT=3306
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+    networks:
+      - capshop-network
+
+  # ========== MySQL ==========
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=syncshopper
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    restart: unless-stopped
+    networks:
+      - capshop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # ========== Redis ==========
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - capshop-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 3s
+      retries: 5
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  capshop-network:
+    driver: bridge

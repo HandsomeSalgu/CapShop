@@ -6,8 +6,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/syncshopper?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: root
-    password: potato
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:potato}
 
   jackson:
     time-zone: Asia/Seoul
