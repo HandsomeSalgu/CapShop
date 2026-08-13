@@ -13,7 +13,6 @@ jobs:
     steps:
     # 0. Git dubious ownership 에러 우회 (runner가 NETWORK SERVICE 계정으로 실행될 때 소유권 불일치 방지)
     - name: 0. Fix git safe.directory
-      shell: bash
       run: git config --global --add safe.directory '*'
 
     # 1. 저장소에서 최신 코드를 데스크톱으로 다운로드 받습니다.
@@ -22,22 +21,20 @@ jobs:
 
     # 1.5 깃허브 Secrets에서 값을 환경 변수로 받아 각 폴더에 .env 파일을 즉석으로 생성합니다.
     - name: 1.5 Create .env files from GitHub Secrets
-      shell: bash
       env:
         BACKEND_ENV: ${{ secrets.BACKEND_ENV_FILE }}
         AI_SERVER_ENV: ${{ secrets.AI_SERVER_ENV_FILE }}
         FRONTEND_ENV: ${{ secrets.FRONTEND_ENV_FILE }}
       run: |
-        echo "$BACKEND_ENV" > backend/.env
-        echo "$AI_SERVER_ENV" > ai-server/.env
-        echo "$FRONTEND_ENV" > frontend/web/.env
+        [System.IO.File]::WriteAllText("backend/.env", $env:BACKEND_ENV, [System.Text.UTF8Encoding]::new($false))
+        [System.IO.File]::WriteAllText("ai-server/.env", $env:AI_SERVER_ENV, [System.Text.UTF8Encoding]::new($false))
+        [System.IO.File]::WriteAllText("frontend/web/.env", $env:FRONTEND_ENV, [System.Text.UTF8Encoding]::new($false))
 
     # 2. 다운받은 코드 중 backend 폴더로 들어가서 Maven을 이용해 빌드합니다. (jar 파일 생성)
     - name: 2. Build with Maven
       working-directory: ./backend
-      shell: bash
-      run: ./mvnw clean package -DskipTests
-      
+      run: .\mvnw.cmd clean package -DskipTests
+
     # 3. 도커 컴포즈를 사용하여 전체 컨테이너(프론트, 백, AI, DB)를 빌드하고 백그라운드에서 실행합니다.
     - name: 3. Deploy via Docker Compose (Sequential Build)
       run: |
@@ -49,9 +46,8 @@ jobs:
     # 3.5 보안: .env 파일 삭제 (배포 후 평문 노출 방지)
     - name: "3.5 Cleanup: Remove .env files for security"
       if: always()
-      shell: bash
       run: |
-        rm -f backend/.env
-        rm -f ai-server/.env
-        rm -f frontend/web/.env
-        echo "✅ .env files cleaned up"
+        Remove-Item -Path "backend/.env" -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path "ai-server/.env" -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path "frontend/web/.env" -Force -ErrorAction SilentlyContinue
+        Write-Output "✅ .env files cleaned up"
