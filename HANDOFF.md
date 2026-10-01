@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-01 (Codex — SSH 수정 로컬 커밋, Step B~C 완료 확인, Step D 대기)
+최종 갱신: 2026-10-01 (Codex — Step B~D 완료 확인, Step F 대기)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -12,7 +12,7 @@
 
 ### 0-1. 지금 상태 한 줄 요약
 
-Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. 인계 직후 첫 할 일은 Step B였고, **현재 Step B~C 완료 확인 후 다음은 Step D**다. B~F 완료 확인 전 push 금지. main 배포의 실제 제공 실패 로그는 `Setup SSH` exit code 1이었고, Secrets 부재로 단정하지 않는다. SSH 단일 IP 제한에 대응한 워크플로 수정은 로컬 커밋 `c08ac83`에만 있다. 사람이 Actions용 IAM 추가 정책 저장, EC2 역할 부착, SSH(내 IP) 및 8080 인바운드 설정, Docker·Compose·STS 필수 검증 3개 통과를 확인했다. CloudFront·OAuth·Secrets 전체 등록 및 실제 재배포 결과는 아직 미검증이다.
+Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. 인계 직후 첫 할 일은 Step B였고, **현재 Step B~D 완료 확인 후 다음은 Step F, 이후 Step E**다(사람이 지정한 B→C→D→F 순서). B~F 완료 확인 전 push 금지. main 배포의 실제 제공 실패 로그는 `Setup SSH` exit code 1이었고, Secrets 부재로 단정하지 않는다. SSH 단일 IP 제한에 대응한 워크플로 수정은 로컬 커밋 `c08ac83`에만 있다. 사람이 Actions용 IAM 추가 정책 저장, EC2 역할 부착, SSH(내 IP) 및 8080 인바운드 설정, Docker·Compose·STS 필수 검증 3개 통과를 확인했다. CloudFront의 EC2 원본, 네 경로, 403/404 오류 페이지 설정도 완료를 확인했다. OAuth·Secrets 전체 등록 및 실제 재배포 결과는 아직 미검증이다.
 
 ### 0-2. 에이전트가 직접 해도 되는 일
 
@@ -91,7 +91,7 @@ git push (main)
 
 브라우저 ─HTTPS─▶ CloudFront (d141l5y1f86nit.cloudfront.net)
                   ├─ /*                                  → S3 (정적 Vue)
-                  └─ /api/* /oauth2/* /login/* /uploads/* → EC2:8080 (HTTP origin)   ← ★ 아직 미설정
+                  └─ /api/* /oauth2/* /login/* /uploads/* → EC2:8080 (HTTP origin)   ← 설정 완료 확인, 실제 배포 검증 전
 EC2 (docker compose, 프로젝트명 capshop-prod)
   backend:8080 (외부 공개) ─ ai-server:8000 (127.0.0.1만) ─ mysql:3306 (127.0.0.1만) ─ redis:6379 (127.0.0.1만)
 ```
@@ -128,7 +128,7 @@ EC2 (docker compose, 프로젝트명 capshop-prod)
 |---|---|---|
 | IAM 사용자 (GitHub Actions용) | ✅ | `capshop-github-actions` — S3/CloudFront/ECR 권한 부여됨. 액세스 키 발급됨 |
 | S3 버킷 | ✅ | `capshop-frontend` — 수동 업로드로 Vue 앱 뜨는 것 확인함 |
-| CloudFront | ✅ (추가 설정 필요) | `d141l5y1f86nit.cloudfront.net` — S3 origin만 있음. **API behavior 미설정** |
+| CloudFront | ✅ Step D 설정 완료 확인 | `d141l5y1f86nit.cloudfront.net` — 프론트 기본 동작은 S3, `/api/*`, `/oauth2/*`, `/login/*`, `/uploads/*`는 `capshop-ec2`. 403/404→`/index.html`, 응답 200 저장을 사람이 확인. 실제 통신·SPA 새로고침은 배포 후 검증 |
 | ECR 저장소 | ✅ | `capshop-backend`, `capshop-ai-server` (서울 리전 확인됨) |
 | EC2 인스턴스 | ✅ 초기 설정·검증 완료 | `15.164.50.114`, `ec2-15-164-50-114.ap-northeast-2.compute.amazonaws.com`, Amazon Linux 2023 / `ec2-user`. 키페어: `C:\develop\project\key\capshop-key.pem`. 실제 IAM 역할 `CapShopEC2Role` 부착. Docker·Compose·STS 필수 검증 3개 통과. 컨테이너는 아직 없음 |
 | AWS 계정 ID | — | `256600409763` |
@@ -158,7 +158,7 @@ EC2 (docker compose, 프로젝트명 capshop-prod)
 
 **GitHub Actions SSH 접근 추가 설정 (Codex 수정분 push 전에 필요)**
 
-- 사람이 확인한 보안 그룹: `sg-0d5d069bfcaac365f` (`launch-wizard-2`). 현재 스크린샷에는 22(단일 IP)와 80만 있다. **8080 규칙은 별도로 추가·확인해야 한다.**
+- 사람이 확인한 보안 그룹: `sg-0d5d069bfcaac365f` (`launch-wizard-2`). 인계 당시 스크린샷은 22(단일 IP)와 80만 있었으나, 사람이 **8080 허용 및 SSH 22(내 IP) 규칙 저장**을 완료했다.
 - 기본 SSH 규칙은 내 IP로 유지한다. 워크플로는 배포 러너의 IPv4 하나(`/32`)에 TCP 22를 임시 허용하고, 마지막 `always()` 단계에서 자신이 만든 규칙 ID만 제거한다. 배포 job은 동시에 실행되지 않도록 직렬화한다.
 - IAM → Users → `capshop-github-actions` → Permissions → Add permissions → Create inline policy → JSON에 아래 정책을 추가한다. 기존 S3/CloudFront/ECR 권한은 유지한다. 정책 이름 예: `CapShopDeployTemporarySSH`.
 
@@ -232,6 +232,8 @@ CloudFront는 HTTPS인데 `http://<EC2-IP>:8080`을 브라우저에서 직접 �
 **D-3. SPA 라우팅용 Error pages** (Vue history 모드 — `/oauth/callback`, `/signup` 같은 딥링크가 S3에서 403 나는 것 방지)
 - 403 → `/index.html`, response code 200
 - 404 → `/index.html`, response code 200
+
+✅ Step D 완료 확인: 사람이 EC2 원본 생성(HTTP only / 8080 / `X-Forwarded-Proto=https`)을 완료했다고 답했다. `/api/*`가 S3 원본 `capshop-backend`를 가리키던 상태를 발견해 `capshop-ec2`와 `AllViewer`로 수정했다. 이후 동작 목록 스크린샷으로 네 경로가 모두 `capshop-ec2`에 연결되고 기본 동작은 프론트 S3인 것을 확인했다. 나머지 동작도 안내된 정책으로 저장했다고 답했으며, 403/404 오류 페이지 두 개 저장을 확인받았다. 실시간 전파 상태와 실제 통신·로그인·새로고침은 배포 후 검증한다.
 
 ### Step E. GitHub Secrets 등록 — 사람이 GitHub에서
 
@@ -418,3 +420,4 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-01 | 사람 (Claude Code 이후) | Step A를 `97b9b32`로 커밋, PR #1을 main에 merge(`9218239`), 첫 main 배포 실행 | 실패 run 1회 존재. 당초 Secrets 부재로 예상했으나 실제 제공 로그는 `Setup SSH` exit code 1이므로 원인을 재확인함 |
 | 2026-10-01 | Codex | HANDOFF 전체 읽기, 로컬 main 동기화 및 병합된 작업 브랜치 삭제. 사람이 EC2_HOST 갱신을 확인했고 SSH 단일 IP 제한 및 보안 그룹 ID를 제공함. 러너 IP `/32` 임시 허용·규칙 ID로 정리·SSH 재시도 추가, 문서 최신화 | YAML·IAM JSON 파싱, 전체 13개 Bash 구문 검사, mock으로 `/32` 생성·잘못된 IP 거절·AWS 실패 시 출력 없음·해당 규칙 ID만 제거 확인. AWS 호출 없이 로컬 검증함. 로컬 커밋까지만 진행, push 없음. Actions용 IAM 권한 추가 및 B~F/배포/헬스체크/OAuth 검증 완료 확인은 아직 없음 |
 | 2026-10-01 | Codex + 사람 | SSH 수정·문서 로컬 커밋 `c08ac83`. 사람이 Actions용 IAM 추가 정책 저장, Step B 역할 부착, Step C SSH/8080 규칙과 Windows 키 ACL 수정, EC2 초기 설정을 수행 | 사람이 보낸 출력으로 Docker 권한·Compose v5.5.1·STS 계정 `256600409763` 및 `CapShopEC2Role` 확인. Step B~C 완료, 다음 Step D. push·재실행 없음, 최종 검증 미완료 |
+| 2026-10-01 | Codex + 사람 | Step D EC2 원본 추가, `/api/*`의 S3 원본 연결을 EC2로 수정, 4개 동작과 SPA 오류 페이지 설정 안내 | 네 경로의 `capshop-ec2` 연결을 스크린샷으로 확인, 403/404→`/index.html`, 응답 200 저장 확인을 받음. 다음 Step F→E. push·재실행 없음, 최종 검증 미완료 |
