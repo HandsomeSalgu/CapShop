@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-01 (Codex — main 동기화 및 GitHub Actions SSH 접속 수정, 로컬 커밋용)
+최종 갱신: 2026-10-01 (Codex — SSH 수정 로컬 커밋, Step B~C 완료 확인, Step D 대기)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -12,7 +12,7 @@
 
 ### 0-1. 지금 상태 한 줄 요약
 
-Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. **첫 할 일은 Step B**이며, B~F 완료 확인 전 push 금지. main에서 배포가 1회 실행되었고, 사람이 제공한 실패 로그는 `Setup SSH`의 exit code 1이었다. Secrets 부재로 단정하지 않는다. EC2_HOST는 사람이 갱신했고, SSH를 단일 IP만 허용하는 보안 그룹 때문에 GitHub 러너 접속이 차단되는 것으로 보인다. 이번 SSH 수정은 로컬에서만 준비하며 AWS 설정·실제 배포 결과는 아직 미검증이다.
+Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. 인계 직후 첫 할 일은 Step B였고, **현재 Step B~C 완료 확인 후 다음은 Step D**다. B~F 완료 확인 전 push 금지. main 배포의 실제 제공 실패 로그는 `Setup SSH` exit code 1이었고, Secrets 부재로 단정하지 않는다. SSH 단일 IP 제한에 대응한 워크플로 수정은 로컬 커밋 `c08ac83`에만 있다. 사람이 Actions용 IAM 추가 정책 저장, EC2 역할 부착, SSH(내 IP) 및 8080 인바운드 설정, Docker·Compose·STS 필수 검증 3개 통과를 확인했다. CloudFront·OAuth·Secrets 전체 등록 및 실제 재배포 결과는 아직 미검증이다.
 
 ### 0-2. 에이전트가 직접 해도 되는 일
 
@@ -130,7 +130,7 @@ EC2 (docker compose, 프로젝트명 capshop-prod)
 | S3 버킷 | ✅ | `capshop-frontend` — 수동 업로드로 Vue 앱 뜨는 것 확인함 |
 | CloudFront | ✅ (추가 설정 필요) | `d141l5y1f86nit.cloudfront.net` — S3 origin만 있음. **API behavior 미설정** |
 | ECR 저장소 | ✅ | `capshop-backend`, `capshop-ai-server` (서울 리전 확인됨) |
-| EC2 인스턴스 | ✅ 생성만 | 키페어: `C:\develop\project\key\capshop-key.pem` (2026-08-14 생성). 퍼블릭 IP / AMI 종류는 EC2 콘솔에서 확인. **IAM Role 부착·내부 설치 미완료** |
+| EC2 인스턴스 | ✅ 초기 설정·검증 완료 | `15.164.50.114`, `ec2-15-164-50-114.ap-northeast-2.compute.amazonaws.com`, Amazon Linux 2023 / `ec2-user`. 키페어: `C:\develop\project\key\capshop-key.pem`. 실제 IAM 역할 `CapShopEC2Role` 부착. Docker·Compose·STS 필수 검증 3개 통과. 컨테이너는 아직 없음 |
 | AWS 계정 ID | — | `256600409763` |
 
 ---
@@ -147,6 +147,8 @@ EC2 (docker compose, 프로젝트명 capshop-prod)
 2. 정책: `AmazonEC2ContainerRegistryReadOnly`
 3. 이름 `capshop-ec2-role` → 생성
 4. EC2 → 인스턴스 선택 → Actions → Security → **Modify IAM role** → 부착
+
+✅ 사람의 완료 확인을 받았다. 이후 STS 출력으로 확인한 실제 역할명은 `CapShopEC2Role`이다(권장 이름과 달라도 같은 권한이면 사용 가능).
 
 이걸 해야 EC2에 액세스 키를 두지 않고 `aws ecr get-login-password`가 동작한다. (파이프라인 `deploy-to-ec2` job이 이 명령을 쓴다.)
 
@@ -208,6 +210,8 @@ docker ps                      # 권한 에러 없이 빈 목록
 docker compose version
 aws sts get-caller-identity    # IAM Role 덕분에 키 설정 없이 계정 정보(256600409763)가 나와야 함
 ```
+
+✅ 사람이 전달한 실제 결과: `docker ps` 권한 오류 없이 빈 목록, `Docker Compose version v5.5.1`, STS 계정 `256600409763` 및 `assumed-role/CapShopEC2Role/i-03078ba13191a7b1a`. 초기 설치·필수 검증 완료. ECR pull 및 실제 배포는 아직 미검증.
 
 ### Step D. CloudFront 설정 추가 (★ 빼먹으면 프론트가 API를 못 부른다) — 사람이 AWS 콘솔에서
 
@@ -413,3 +417,4 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-01 | Claude Code 세션 2 | 미커밋 파일 5개를 열어 문서 3-2절과 대조 검증, `/api/health` 엔드포인트 실존 확인, `mvnw` 100755 확인, 로컬 `.env` 3개 존재 확인. 이 문서에 0장(에이전트 규칙)·11장(세션 이력) 추가 및 세부 보강 | **코드·인프라 변경 없음.** 커밋도 하지 않음 → Step A부터 시작하면 됨 |
 | 2026-10-01 | 사람 (Claude Code 이후) | Step A를 `97b9b32`로 커밋, PR #1을 main에 merge(`9218239`), 첫 main 배포 실행 | 실패 run 1회 존재. 당초 Secrets 부재로 예상했으나 실제 제공 로그는 `Setup SSH` exit code 1이므로 원인을 재확인함 |
 | 2026-10-01 | Codex | HANDOFF 전체 읽기, 로컬 main 동기화 및 병합된 작업 브랜치 삭제. 사람이 EC2_HOST 갱신을 확인했고 SSH 단일 IP 제한 및 보안 그룹 ID를 제공함. 러너 IP `/32` 임시 허용·규칙 ID로 정리·SSH 재시도 추가, 문서 최신화 | YAML·IAM JSON 파싱, 전체 13개 Bash 구문 검사, mock으로 `/32` 생성·잘못된 IP 거절·AWS 실패 시 출력 없음·해당 규칙 ID만 제거 확인. AWS 호출 없이 로컬 검증함. 로컬 커밋까지만 진행, push 없음. Actions용 IAM 권한 추가 및 B~F/배포/헬스체크/OAuth 검증 완료 확인은 아직 없음 |
+| 2026-10-01 | Codex + 사람 | SSH 수정·문서 로컬 커밋 `c08ac83`. 사람이 Actions용 IAM 추가 정책 저장, Step B 역할 부착, Step C SSH/8080 규칙과 Windows 키 ACL 수정, EC2 초기 설정을 수행 | 사람이 보낸 출력으로 Docker 권한·Compose v5.5.1·STS 계정 `256600409763` 및 `CapShopEC2Role` 확인. Step B~C 완료, 다음 Step D. push·재실행 없음, 최종 검증 미완료 |
