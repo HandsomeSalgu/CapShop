@@ -237,6 +237,8 @@ CloudFront는 HTTPS인데 `http://<EC2-IP>:8080`을 브라우저에서 직접 �
 
 ### Step E. GitHub Secrets 등록 — 사람이 GitHub에서
 
+**현재 확인 필요:** Google 콘솔에서 URI를 등록한 클라이언트와 로컬 환경 파일의 클라이언트 ID가 다르다. 로컬에 설정된 클라이언트에도 운영 URI가 등록되어 있는지 먼저 확인한다.
+
 Repository → Settings → Secrets and variables → Actions. 전체 목록은 5장. 값은 로컬 `backend/.env`, `ai-server/.env`에서 가져오되 **운영용으로 바뀌는 항목**이 있다 (5장 표의 비고). 에이전트는 로컬 `.env`를 읽어 5장 템플릿의 `<...>` 자리를 채운 완성본을 **채팅으로만** 보여줄 수 있다 (파일/문서에 쓰지 말 것).
 
 ### Step F. OAuth 제공자 콘솔에 Redirect URI 등록 — 사람이
@@ -421,3 +423,5 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-01 | Codex | HANDOFF 전체 읽기, 로컬 main 동기화 및 병합된 작업 브랜치 삭제. 사람이 EC2_HOST 갱신을 확인했고 SSH 단일 IP 제한 및 보안 그룹 ID를 제공함. 러너 IP `/32` 임시 허용·규칙 ID로 정리·SSH 재시도 추가, 문서 최신화 | YAML·IAM JSON 파싱, 전체 13개 Bash 구문 검사, mock으로 `/32` 생성·잘못된 IP 거절·AWS 실패 시 출력 없음·해당 규칙 ID만 제거 확인. AWS 호출 없이 로컬 검증함. 로컬 커밋까지만 진행, push 없음. Actions용 IAM 권한 추가 및 B~F/배포/헬스체크/OAuth 검증 완료 확인은 아직 없음 |
 | 2026-10-01 | Codex + 사람 | SSH 수정·문서 로컬 커밋 `c08ac83`. 사람이 Actions용 IAM 추가 정책 저장, Step B 역할 부착, Step C SSH/8080 규칙과 Windows 키 ACL 수정, EC2 초기 설정을 수행 | 사람이 보낸 출력으로 Docker 권한·Compose v5.5.1·STS 계정 `256600409763` 및 `CapShopEC2Role` 확인. Step B~C 완료, 다음 Step D. push·재실행 없음, 최종 검증 미완료 |
 | 2026-10-01 | Codex + 사람 | Step D EC2 원본 추가, `/api/*`의 S3 원본 연결을 EC2로 수정, 4개 동작과 SPA 오류 페이지 설정 안내 | 네 경로의 `capshop-ec2` 연결을 스크린샷으로 확인, 403/404→`/index.html`, 응답 200 저장 확인을 받음. 다음 Step F→E. push·재실행 없음, 최종 검증 미완료 |
+
+| 2026-10-01 | Codex + 사람 | Google 콘솔에 운영 Redirect URI가 이미 있음을 확인해 중복 항목 제거 후 저장, Kakao 운영 URI도 기존 등록 확인. Step E용 로컬 환경 파일과 운영 설정 검토 | Google 콘솔에서 선택한 클라이언트와 로컬 환경 파일의 클라이언트 ID 불일치 발견. 동일 클라이언트의 Redirect URI 확인 전 Google 설정을 완료로 간주하지 않음. Secrets 완성본은 아직 제공하지 않았으며 비밀값을 파일에 저장하지 않음. push 없음 |
