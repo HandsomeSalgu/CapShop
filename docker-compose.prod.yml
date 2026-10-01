@@ -2,9 +2,8 @@ name: capshop-prod
 
 services:
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # ECR에서 이미지 pull (GitHub Actions에서 빌드 후 푸시)
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/capshop-backend:latest
     env_file:
       - ./backend/.env
     environment:
@@ -23,16 +22,17 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - capshop-network
 
   ai-server:
-    build:
-      context: ./ai-server
-      dockerfile: Dockerfile
+    # ECR에서 이미지 pull (GitHub Actions에서 빌드 후 푸시)
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/capshop-ai-server:latest
     env_file:
       - ./ai-server/.env
     environment:
@@ -41,10 +41,13 @@ services:
       - DB_HOST=mysql
       - DB_PORT=3306
     ports:
-      - "8000:8000"
+      # AI 서버는 backend가 도커 내부 네트워크로 호출하므로 외부 노출 불필요 (디버깅용 localhost만)
+      - "127.0.0.1:8000:8000"
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - capshop-network
@@ -54,9 +57,13 @@ services:
     image: mysql:8.0
     environment:
       - MYSQL_DATABASE=syncshopper
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+      # 애플리케이션 전용 계정 (syncshopper DB 권한만 부여됨)
+      - MYSQL_USER=capshop
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      # 외부 노출 금지 — EC2 내부에서 디버깅할 때만 localhost로 접근
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -73,7 +80,8 @@ services:
     image: redis:7-alpine
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      # 외부 노출 금지
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped

@@ -1,8 +1,8 @@
 name: CI/CD Deploy Pipeline
 
 on:
-  push:
-    branches: [ "main" ]
+  # AWS 배포로 전환됨 - 이 워크플로는 수동 실행 전용 (deploy-aws.yml이 메인)
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -34,13 +34,19 @@ jobs:
       shell: cmd
       run: mvnw.cmd clean package -DskipTests
 
-    - name: 3. Deploy via Docker Compose
+    # Docker Desktop이 설치되지 않았으므로 스킵
+    # AWS 배포 시 Docker Compose 사용 (deploy-aws.yml)
+    # - name: 3. Deploy via Docker Compose
+    #   shell: cmd
+    #   run: |
+    #     docker compose build backend
+    #     docker compose build frontend
+    #     docker compose build ai-server
+    #     docker compose up -d
+
+    - name: 3. Build Success (Docker Deploy Skipped)
       shell: cmd
-      run: |
-        docker compose build backend
-        docker compose build frontend
-        docker compose build ai-server
-        docker compose up -d
+      run: echo "Maven build successful. Docker deployment skipped (AWS only)."
 
     - name: 4. Cleanup .env files
       if: always()

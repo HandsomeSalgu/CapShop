@@ -1,16 +1,14 @@
 name: AWS Deployment Pipeline
 
-# ⚠️ 임시 비활성화: AWS 리소스 준비 후 활성화
-# 현재는 deploy.yml (self-hosted runner)을 사용합니다.
 on:
   push:
-    branches: ["main-aws-deployment"]  # main이 아닌 다른 브랜치로 변경
+    branches: ["main"]
 
 env:
-  AWS_REGION: us-east-1  # 본인 리전으로 변경
+  AWS_REGION: ap-northeast-2
 
 jobs:
-  # ======================== PHASE 1: Frontend (S3 + CloudFront) ========================
+  # ================= PHASE 1: Frontend (S3 + CloudFront) =================
   deploy-frontend:
     runs-on: ubuntu-latest
 
@@ -18,9 +16,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Frontend 빌드
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -36,101 +33,147 @@ jobs:
           VITE_BACKEND_BASE_URL: ${{ secrets.VITE_BACKEND_BASE_URL }}
         run: npm run build
 
-      # S3에 배포
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Deploy to S3
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          aws s3 sync frontend/web/dist s3://${{ secrets.AWS_S3_BUCKET_NAME }} \
-            --region $AWS_REGION \
+          aws s3 sync frontend/web/dist "s3://${{ secrets.AWS_S3_BUCKET_NAME }}" \
             --delete \
             --cache-control "max-age=31536000" \
             --exclude "index.html"
 
-          # index.html은 캐시하지 않음 (매번 최신 버전 로드)
-          aws s3 cp frontend/web/dist/index.html s3://${{ secrets.AWS_S3_BUCKET_NAME }}/index.html \
-            --region $AWS_REGION \
+          # index.html은 캐시하지 않음 (배포 즉시 반영)
+          aws s3 cp frontend/web/dist/index.html "s3://${{ secrets.AWS_S3_BUCKET_NAME }}/index.html" \
             --cache-control "no-cache, no-store, must-revalidate"
 
-      # CloudFront 캐시 무효화
       - name: Invalidate CloudFront Cache
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*" \
-            --region $AWS_REGION
+            --distribution-id "${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
 
-  # ======================== PHASE 2: Backend + AI (EC2 Docker Compose) ========================
-  deploy-backend:
-    needs: deploy-frontend
+  # ================= PHASE 2: Build & Push Docker Images to ECR =================
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # EC2에 SSH 연결 후 배포
-      - name: Deploy to EC2
+      - name: Setup Java 23
+        uses: actions/setup-java@v4
+        with:
+          java-version: '23'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build Backend with Maven
+        working-directory: ./backend
+        run: chmod +x ./mvnw && ./mvnw clean package -DskipTests
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Backend Image
         env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -t "$ECR_REGISTRY/${{ secrets.AWS_ECR_BACKEND_REPO }}:latest" .
+          docker push "$ECR_REGISTRY/${{ secrets.AWS_ECR_BACKEND_REPO }}:latest"
+
+      - name: Build and Push AI Server Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -t "$ECR_REGISTRY/${{ secrets.AWS_ECR_AI_REPO }}:latest" ./ai-server
+          docker push "$ECR_REGISTRY/${{ secrets.AWS_ECR_AI_REPO }}:latest"
+
+  # ================= PHASE 3: EC2 - Pull & Run only =================
+  deploy-to-ec2:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # EC2에 필요한 파일 묶음 생성: compose 파일 + .env 파일들 + DB 초기화 스크립트
+      - name: Prepare deploy bundle
+        env:
           BACKEND_ENV: ${{ secrets.BACKEND_ENV_FILE }}
           AI_SERVER_ENV: ${{ secrets.AI_SERVER_ENV_FILE }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: |
-          # SSH 키 설정
+          mkdir -p bundle/backend bundle/ai-server bundle/database
+          printf '%s\n' "$BACKEND_ENV"   > bundle/backend/.env
+          printf '%s\n' "$AI_SERVER_ENV" > bundle/ai-server/.env
+          cp docker-compose.prod.yml bundle/
+          cp database/schema.sql bundle/database/
+
+          # docker compose 변수 치환용 루트 .env (compose가 자동으로 읽음)
+          {
+            echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
+            echo "AWS_REGION=$AWS_REGION"
+            echo "MYSQL_PASSWORD=$MYSQL_PASSWORD"
+          } > bundle/.env
+
+      - name: Setup SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
           mkdir -p ~/.ssh
           echo "$EC2_SSH_KEY" > ~/.ssh/capshop-key.pem
           chmod 600 ~/.ssh/capshop-key.pem
-
-          # SSH 호스트 키 스캔 자동 승인
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-          # EC2에 코드 배포
-          ssh -i ~/.ssh/capshop-key.pem "$EC2_USER@$EC2_HOST" << 'EOF'
+      - name: Copy bundle to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          tar -czf - -C bundle . | \
+            ssh -i ~/.ssh/capshop-key.pem "$EC2_USER@$EC2_HOST" \
+              "mkdir -p ~/capshop && tar -xzf - -C ~/capshop && chmod 600 ~/capshop/.env ~/capshop/backend/.env ~/capshop/ai-server/.env"
+
+      - name: Pull images & restart containers on EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/capshop-key.pem "$EC2_USER@$EC2_HOST" bash -s <<'EOF'
+          set -e
           cd ~/capshop
 
-          # 최신 코드 다운로드
-          git fetch origin main
-          git checkout origin/main
+          # compose 루트 .env에서 계정/리전 읽기
+          set -a
+          source .env
+          set +a
 
-          # .env 파일 생성 (GitHub Secrets에서)
-          cat > backend/.env << 'ENV_END'
-          $BACKEND_ENV
-          ENV_END
+          # ECR 로그인 (EC2에 붙은 IAM Role 권한 사용)
+          aws ecr get-login-password --region "$AWS_REGION" | \
+            docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
-          cat > ai-server/.env << 'ENV_END'
-          $AI_SERVER_ENV
-          ENV_END
+          # 새 이미지 pull 후 컨테이너 교체
+          docker compose -f docker-compose.prod.yml pull backend ai-server
+          docker compose -f docker-compose.prod.yml up -d
 
-          # Docker Compose 실행 (프로덕션 설정)
-          docker-compose -f docker-compose.prod.yml down
-          docker-compose -f docker-compose.prod.yml build --no-cache
-          docker-compose -f docker-compose.prod.yml up -d
+          # 오래된 이미지 정리
+          docker image prune -f
 
-          # 컨테이너 상태 확인
-          docker-compose -f docker-compose.prod.yml ps
-
-          # 보안: .env 파일 삭제 (배포 완료 후 평문 노출 방지)
-          rm -f backend/.env ai-server/.env
-          echo "✅ .env files cleaned up on EC2"
+          docker compose -f docker-compose.prod.yml ps
           EOF
-
-      - name: Notify Deployment Success
-        run: echo "Backend and AI Server deployed successfully to EC2"
-
-# ======================== 선택사항: 배포 실패 시 알림 ========================
-  notify-failure:
-    runs-on: ubuntu-latest
-    needs: [deploy-frontend, deploy-backend]
-    if: failure()
-
-    steps:
-      - name: Send Failure Notification
-        run: |
-          echo "Deployment failed! Check GitHub Actions logs."
-          # Slack/Discord 알림 추가 가능
