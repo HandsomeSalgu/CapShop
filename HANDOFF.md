@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-01 (Claude Code 세션 2 — 검증 및 Codex 인계용 재정리)
+최종 갱신: 2026-10-01 (Codex — main 동기화 및 GitHub Actions SSH 접속 수정, 로컬 커밋용)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -12,18 +12,18 @@
 
 ### 0-1. 지금 상태 한 줄 요약
 
-코드는 끝났고 로컬 작업트리에 **미커밋** 상태다. AWS 리소스는 EC2 인스턴스 생성까지 끝났고, EC2 내부 설정·CloudFront API 라우팅·GitHub Secrets 등록이 남았다. **첫 할 일은 Step A(로컬 커밋, push 금지)**.
+Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. **첫 할 일은 Step B**이며, B~F 완료 확인 전 push 금지. main에서 배포가 1회 실행되었고, 사람이 제공한 실패 로그는 `Setup SSH`의 exit code 1이었다. Secrets 부재로 단정하지 않는다. EC2_HOST는 사람이 갱신했고, SSH를 단일 IP만 허용하는 보안 그룹 때문에 GitHub 러너 접속이 차단되는 것으로 보인다. 이번 SSH 수정은 로컬에서만 준비하며 AWS 설정·실제 배포 결과는 아직 미검증이다.
 
 ### 0-2. 에이전트가 직접 해도 되는 일
 
-- Step A: 미커밋 변경을 **로컬 커밋** (`git commit`까지만)
+- 승인된 코드·문서 수정을 **로컬 커밋** (`git commit`까지만; Step A는 완료)
 - 파이프라인(`deploy-aws.yml`), compose(`docker-compose.prod.yml`) 파일 읽기·리뷰·버그 수정
 - 이 문서(`HANDOFF.md`) 갱신 — 작업 진행 시 섹션 11 "세션 이력"에 한 줄씩 추가할 것
 - 로컬 `.env` 파일을 **읽어서** Secrets 값 템플릿을 사람에게 보여주는 것 (5장)
 
 ### 0-3. 반드시 사람에게 확인받고 할 일
 
-- **`git push origin main`** — push 즉시 `deploy-aws.yml`이 실행된다. Step B~F가 끝나기 전에 push하면 Secrets 부재로 실패한다. Step G에서만, 사람이 "Secrets 다 넣었다"고 확인한 뒤 push.
+- **`git push origin main` 또는 Actions 재실행** — Step G에서만, 사람이 **"B~F 전부 끝났다"**고 명시적으로 확인한 뒤 실행한다. 이번 로컬 수정은 push해야 반영되므로 이전 실패 run을 재실행하는 것만으로 SSH 수정이 적용되지는 않는다.
 - AWS 콘솔 / GitHub Secrets / Google·Kakao 콘솔 작업(Step B~F)은 에이전트가 할 수 없다. 이 문서의 해당 절을 사람에게 **그대로 안내**하고, 끝났다는 답을 받은 뒤 다음 단계로 넘어간다.
 - EC2에 ssh 접속해서 명령 실행 (Step C) — 키 파일 `C:\develop\project\key\capshop-key.pem`이 로컬에 있으므로 기술적으로는 가능하지만, 사람이 명시적으로 시킬 때만.
 
@@ -37,7 +37,7 @@
 ### 0-5. 자주 쓰는 확인 명령
 
 ```bash
-git status --short                 # 미커밋 파일 확인 (Step A 전엔 5개 + HANDOFF.md 가 떠야 정상)
+git status --short                 # 로컬 수정 확인; 로컬 커밋 후에는 깨끗해야 함
 git log --oneline -5
 git diff .github/workflows/deploy-aws.yml docker-compose.prod.yml
 ```
@@ -107,11 +107,11 @@ EC2 (docker compose, 프로젝트명 capshop-prod)
 - `application-local.yml`, `docker-compose.yml`: DB 비밀번호 환경변수화 (기본값은 로컬용 `potato` 유지).
 - `backend/.env.example`, `ai-server/.env.example` 작성.
 - `docs/` 하위 4개 문서 (상단 주의사항 참고).
-- 최근 커밋: `c2a0d22 fix: Java 23 설정 추가` (HEAD)
+- 원격 main 기준 최근 커밋: `9218239 Merge pull request #1` (Step A 커밋 `97b9b32` 포함)
 
-### 3-2. 코드 — **미커밋** (로컬 작업트리에만 있음)
+### 3-2. 코드 — Step A 완료, PR #1 merge됨
 
-> ✅ **2026-10-01 세션 2에서 아래 5개 파일을 실제로 열어 이 표의 설명과 일치함을 재검증했다.** 추가 수정 없이 그대로 커밋해도 된다.
+> 아래 변경은 `97b9b32`로 커밋되어 PR #1을 통해 main에 반영되었다(`9218239`). 표는 당시 변경 기록이다. 이후 Codex의 SSH 접속 수정은 로컬 커밋으로 준비하며, B~F 완료 확인 전 push하지 않는다.
 
 | 파일 | 내용 |
 |---|---|
@@ -120,7 +120,7 @@ EC2 (docker compose, 프로젝트명 capshop-prod)
 | `.github/workflows/deploy.yml` | 트리거를 `workflow_dispatch`(수동)로 변경, Docker 단계 주석 처리. AWS 파이프라인과 충돌 방지. |
 | `frontend/web/package-lock.json` | `npm install` 부산물. 그대로 커밋해도 됨. |
 | `backend/mvnw` (index mode) | `git update-index --chmod=+x` 로 실행권한 기록됨 (`git ls-files -s` → `100755`). Linux 러너에서 `Permission denied` 방지. |
-| `HANDOFF.md` | 이 문서 (untracked). 같이 커밋. |
+| `HANDOFF.md` | 이 문서도 Step A 커밋에 포함됨. |
 
 ### 3-3. AWS 인프라 (리전: ap-northeast-2 서울)
 
@@ -137,14 +137,9 @@ EC2 (docker compose, 프로젝트명 capshop-prod)
 
 ## 4. 남은 작업 (이 순서대로)
 
-### Step A. 미커밋 변경 보존 (지금 바로 — 에이전트가 직접 실행 가능)
+### Step A. 변경 보존 — 완료
 
-```bash
-git add .github/workflows/deploy-aws.yml .github/workflows/deploy.yml docker-compose.prod.yml frontend/web/package-lock.json backend/mvnw HANDOFF.md
-git commit -m "feat: ECR 기반 AWS 배포 파이프라인 완성 및 핸드오프 문서 추가"
-git status --short     # 아무것도 안 떠야 정상
-# ⚠️ 아직 push 하지 말 것 — push 하면 deploy-aws.yml 이 즉시 실행되고 Secrets 가 없어 실패한다. Step G 에서 push.
-```
+`97b9b32`로 커밋 후 PR #1 merge(`9218239`) 완료. Codex가 `git checkout main`, `git pull origin main`, `git branch -d feat/aws-ecr-deploy`를 실행했고 정리 직후 작업 트리가 깨끗함을 확인했다. main 배포는 1회 실패했다. 실제 제공 로그는 SSH 준비 단계 실패이며 Secrets 부재 여부는 확정되지 않았다. 코드 수정 필요 여부는 실패 원인을 확인해 판단한다.
 
 ### Step B. EC2에 IAM Role 부착 (ECR pull 권한) — 사람이 AWS 콘솔에서
 
@@ -158,6 +153,30 @@ git status --short     # 아무것도 안 떠야 정상
 ### Step C. EC2 초기 설치 (최초 1회) — 사람이 ssh로 (또는 명시적 지시 시 에이전트)
 
 보안그룹 인바운드: **22 (내 IP), 8080 (0.0.0.0/0)** 만. 3306/6379/8000은 열지 않는다 (compose가 127.0.0.1로 묶어둠).
+
+**GitHub Actions SSH 접근 추가 설정 (Codex 수정분 push 전에 필요)**
+
+- 사람이 확인한 보안 그룹: `sg-0d5d069bfcaac365f` (`launch-wizard-2`). 현재 스크린샷에는 22(단일 IP)와 80만 있다. **8080 규칙은 별도로 추가·확인해야 한다.**
+- 기본 SSH 규칙은 내 IP로 유지한다. 워크플로는 배포 러너의 IPv4 하나(`/32`)에 TCP 22를 임시 허용하고, 마지막 `always()` 단계에서 자신이 만든 규칙 ID만 제거한다. 배포 job은 동시에 실행되지 않도록 직렬화한다.
+- IAM → Users → `capshop-github-actions` → Permissions → Add permissions → Create inline policy → JSON에 아래 정책을 추가한다. 기존 S3/CloudFront/ECR 권한은 유지한다. 정책 이름 예: `CapShopDeployTemporarySSH`.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RevokeSecurityGroupIngress"
+      ],
+      "Resource": "arn:aws:ec2:ap-northeast-2:256600409763:security-group/sg-0d5d069bfcaac365f"
+    }
+  ]
+}
+```
+
+- 정리 단계 실패나 러너 강제 종료로 임시 규칙이 남으면, 인바운드 규칙에서 `CapShop-Actions-<run id>-<attempt>` 설명의 규칙만 사람이 제거한다. 내 IP 규칙은 제거하지 않는다. 실제 AWS에서의 생성·제거 동작은 첫 배포 때 확인한다.
 
 ```bash
 ssh -i C:\develop\project\key\capshop-key.pem <USER>@<EC2_PUBLIC_IP>     # Amazon Linux: ec2-user / Ubuntu: ubuntu
@@ -222,12 +241,14 @@ Repository → Settings → Secrets and variables → Actions. 전체 목록은 
   `https://d141l5y1f86nit.cloudfront.net/login/oauth2/code/kakao`
 - 기존 로컬용 URI(`http://localhost:8080/...`)는 지우지 말고 **추가**만 한다.
 
-### Step G. push → 배포 → 검증 (B~F 완료를 사람에게 확인받은 뒤)
+### Step G. 재배포 → 검증 (B~F 완료를 사람에게 확인받은 뒤)
+
+원래 권장 트리거는 Actions에서 실패한 run의 **Re-run all jobs**다. 단, 이번 문서·SSH 수정은 로컬 커밋에 있으므로 **수정 적용에는 사람 확인 후 아래 push가 필요하다.** 이 push가 재배포 트리거를 겸하므로 빈 커밋은 불필요하다. B~F와 Actions용 IAM 추가 권한 설정이 완료되었다는 확인 전에는 push하거나 재실행하지 않는다.
 
 ```bash
 git push origin main
 ```
-Actions 탭에서 `AWS Deployment Pipeline`의 3개 job이 모두 성공하는지 확인. 검증은 8장. 실패 시 9장 "함정" 목록부터 대조.
+Actions 탭에서 `AWS Deployment Pipeline`의 3개 job(`deploy-frontend`, `build-and-push`, `deploy-to-ec2`)이 모두 성공하는지 사람에게 확인받는다. 임시 SSH 규칙 제거 단계 성공도 확인한다. 검증은 8장. 실패 시 7장 "알려진 함정" 12개부터 대조.
 
 ---
 
@@ -323,7 +344,7 @@ DB_NAME=syncshopper
 
 1. **로컬 `.env`와 GitHub Secret 값은 달라야 한다.** 로컬은 `root/potato` + localhost URL, 운영은 `capshop/capshop` + CloudFront URL. 로컬 파일을 그대로 Secret에 복사하면 운영이 깨진다.
 2. **MySQL 계정 생성은 볼륨이 비어 있는 첫 실행에만** 일어난다. 나중에 비밀번호를 바꾸려면 EC2에서 `docker compose -f docker-compose.prod.yml down -v` (데이터 삭제됨) 후 재배포.
-3. **`.env` 파일은 EC2에 남는다** (`~/capshop/.env`, `~/capshop/backend/.env`, `~/capshop/ai-server/.env`, chmod 600). compose가 매번 읽어야 하므로 삭제하지 않는다. EC2 셸 접근 = 시크릿 접근이므로 22번 포트는 내 IP로 제한.
+3. **`.env` 파일은 EC2에 남는다** (`~/capshop/.env`, `~/capshop/backend/.env`, `~/capshop/ai-server/.env`, chmod 600). compose가 매번 읽어야 하므로 삭제하지 않는다. EC2 셸 접근 = 시크릿 접근이므로 기본 22번 포트는 내 IP로 제한한다. CI는 러너 IP 하나만 임시 허용하며 배포 후 그 규칙을 제거한다(Step C 추가 설정).
 4. **Secrets의 멀티라인 값**(`BACKEND_ENV_FILE` 등)은 GitHub Secret 입력창에 그대로 여러 줄 붙여넣으면 된다. 워크플로가 `printf '%s\n'`으로 파일에 쓴다.
 5. **mixed content**: Step D를 안 하면 CloudFront(https) 페이지에서 EC2(http) 호출이 브라우저에서 차단된다. 콘솔 F12 → Network에 `blocked:mixed-content`가 보이면 이 문제.
 6. **OAuth `redirect_uri_mismatch`**: Step F 누락이거나, Secret의 `OAUTH2_*_REDIRECT_URI`와 콘솔 등록값이 글자 하나라도 다를 때.
@@ -390,4 +411,5 @@ cd frontend/web && npm run dev # http://localhost:5173
 | ~2026-08-13 | 사람 + 노트북 self-hosted 러너 | `deploy.yml`로 로컬 러너 배포 시도 | PowerShell 정책·Docker Desktop 부재로 실패 → 포기 (커밋 `c49e096`~`c2a0d22`) |
 | 2026-10-01 | Claude Code 세션 1 | 코드 환경변수화, `deploy-aws.yml` 재작성, `docker-compose.prod.yml` ECR화, AWS 리소스 생성(IAM/S3/CloudFront/ECR/EC2), `HANDOFF.md` 초안 작성 | 코드는 미커밋 상태로 남김 |
 | 2026-10-01 | Claude Code 세션 2 | 미커밋 파일 5개를 열어 문서 3-2절과 대조 검증, `/api/health` 엔드포인트 실존 확인, `mvnw` 100755 확인, 로컬 `.env` 3개 존재 확인. 이 문서에 0장(에이전트 규칙)·11장(세션 이력) 추가 및 세부 보강 | **코드·인프라 변경 없음.** 커밋도 하지 않음 → Step A부터 시작하면 됨 |
-| | Codex | ← 여기부터 | |
+| 2026-10-01 | 사람 (Claude Code 이후) | Step A를 `97b9b32`로 커밋, PR #1을 main에 merge(`9218239`), 첫 main 배포 실행 | 실패 run 1회 존재. 당초 Secrets 부재로 예상했으나 실제 제공 로그는 `Setup SSH` exit code 1이므로 원인을 재확인함 |
+| 2026-10-01 | Codex | HANDOFF 전체 읽기, 로컬 main 동기화 및 병합된 작업 브랜치 삭제. 사람이 EC2_HOST 갱신을 확인했고 SSH 단일 IP 제한 및 보안 그룹 ID를 제공함. 러너 IP `/32` 임시 허용·규칙 ID로 정리·SSH 재시도 추가, 문서 최신화 | YAML·IAM JSON 파싱, 전체 13개 Bash 구문 검사, mock으로 `/32` 생성·잘못된 IP 거절·AWS 실패 시 출력 없음·해당 규칙 ID만 제거 확인. AWS 호출 없이 로컬 검증함. 로컬 커밋까지만 진행, push 없음. Actions용 IAM 권한 추가 및 B~F/배포/헬스체크/OAuth 검증 완료 확인은 아직 없음 |

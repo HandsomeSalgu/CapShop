@@ -105,6 +105,12 @@ jobs:
   deploy-to-ec2:
     needs: build-and-push
     runs-on: ubuntu-latest
+    # 같은 보안 그룹을 사용하는 배포가 겹치지 않도록 직렬화한다.
+    concurrency:
+      group: capshop-ec2-deploy
+      cancel-in-progress: false
+    env:
+      EC2_SECURITY_GROUP_ID: sg-0d5d069bfcaac365f
 
     steps:
       - name: Checkout Repository
@@ -131,15 +137,50 @@ jobs:
             echo "MYSQL_PASSWORD=$MYSQL_PASSWORD"
           } > bundle/.env
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Allow runner SSH temporarily
+        id: ssh-access
+        run: |
+          RUNNER_IP=$(curl -4 --fail --silent --show-error --retry 3 --connect-timeout 5 --max-time 15 https://checkip.amazonaws.com)
+          python3 -c 'import ipaddress, sys; ipaddress.IPv4Address(sys.argv[1])' "$RUNNER_IP"
+          RULE_ID=$(aws ec2 authorize-security-group-ingress \
+            --group-id "$EC2_SECURITY_GROUP_ID" \
+            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$RUNNER_IP/32,Description=CapShop-Actions-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT}]" \
+            --query 'SecurityGroupRules[0].SecurityGroupRuleId' --output text)
+          echo "rule_id=$RULE_ID" >> "$GITHUB_OUTPUT"
+
       - name: Setup SSH
         env:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
+          if [ -z "$EC2_HOST" ] || [ -z "$EC2_SSH_KEY" ]; then
+            echo "::error::EC2_HOST and EC2_SSH_KEY must be configured."
+            exit 1
+          fi
           mkdir -p ~/.ssh
-          echo "$EC2_SSH_KEY" > ~/.ssh/capshop-key.pem
+          chmod 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/capshop-key.pem
           chmod 600 ~/.ssh/capshop-key.pem
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          ssh-keygen -y -P '' -f ~/.ssh/capshop-key.pem > /dev/null
+          # 보안 그룹 변경 전파를 기다리며 재시도한다.
+          for attempt in 1 2 3 4 5; do
+            if ssh-keyscan -T 5 -H "$EC2_HOST" > ~/.ssh/capshop-hostkeys.tmp; then
+              cat ~/.ssh/capshop-hostkeys.tmp >> ~/.ssh/known_hosts
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error::SSH host key scan failed. Check EC2_HOST, instance status, and TCP 22 connectivity."
+              exit 1
+            fi
+            sleep 2
+          done
 
       - name: Copy bundle to EC2
         env:
@@ -177,3 +218,12 @@ jobs:
 
           docker compose -f docker-compose.prod.yml ps
           EOF
+
+      - name: Remove temporary runner SSH rule
+        if: ${{ always() && steps.ssh-access.outputs.rule_id != '' }}
+        env:
+          SSH_RULE_ID: ${{ steps.ssh-access.outputs.rule_id }}
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$EC2_SECURITY_GROUP_ID" \
+            --security-group-rule-ids "$SSH_RULE_ID"
