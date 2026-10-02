@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-02 (Codex — 운영 Google 클라이언트 선택 완료, Step E 등록 진행)
+최종 갱신: 2026-10-02 (Codex — Secrets 14개 저장 확인, Step G 사람의 명시적 확인 대기)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -12,7 +12,7 @@
 
 ### 0-1. 지금 상태 한 줄 요약
 
-Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. 인계 직후 첫 할 일은 Step B였고, **현재 Step B~D와 Step F 완료 확인 후 다음은 Step E**다(사람이 지정한 B→C→D→F 순서). B~F 완료 확인 전 push 금지. main 배포의 실제 제공 실패 로그는 `Setup SSH` exit code 1이었고, Secrets 부재로 단정하지 않는다. SSH 단일 IP 제한에 대응한 워크플로 수정은 로컬 커밋 `c08ac83`에만 있다. 사람이 Actions용 IAM 추가 정책 저장, EC2 역할 부착, SSH(내 IP) 및 8080 인바운드 설정, Docker·Compose·STS 필수 검증 3개 통과를 확인했다. CloudFront의 EC2 원본, 네 경로, 403/404 오류 페이지 설정도 완료를 확인했다. OAuth·Secrets 전체 등록 및 실제 재배포 결과는 아직 미검증이다.
+Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. 인계 직후 첫 할 일은 Step B였고, **현재 Step B~F 각 항목의 완료 확인을 모두 받았고, 다음은 Step G의 명시적 완료·push 확인**이다(사람이 지정한 B→C→D→F→E 순서). B~F 완료 확인 전 push 금지. main 배포의 실제 제공 실패 로그는 `Setup SSH` exit code 1이었고, Secrets 부재로 단정하지 않는다. SSH 단일 IP 제한에 대응한 워크플로 수정은 로컬 커밋 `c08ac83`에만 있다. 사람이 Actions용 IAM 추가 정책 저장, EC2 역할 부착, SSH(내 IP) 및 8080 인바운드 설정, Docker·Compose·STS 필수 검증 3개 통과를 확인했다. CloudFront의 EC2 원본, 네 경로, 403/404 오류 페이지 설정도 완료를 확인했다. OAuth 운영 URI 및 Secrets 14개 저장 확인도 받았다. 아직 push하지 않았고, 실제 재배포·API·DB·브라우저 로그인 결과는 미검증이다.
 
 ### 0-2. 에이전트가 직접 해도 되는 일
 
@@ -241,6 +241,25 @@ CloudFront는 HTTPS인데 `http://<EC2-IP>:8080`을 브라우저에서 직접 �
 
 Repository → Settings → Secrets and variables → Actions. 전체 목록은 5장. 값은 로컬 `backend/.env`, `ai-server/.env`에서 가져오되 **운영용으로 바뀌는 항목**이 있다 (5장 표의 비고). 에이전트는 로컬 `.env`를 읽어 5장 템플릿의 `<...>` 자리를 채운 완성본을 **채팅으로만** 보여줄 수 있다 (파일/문서에 쓰지 말 것).
 
+✅ 2026-10-02 사람이 Secrets 14개 저장을 하나씩 확인했다. 실제 값은 이 문서에 기록하지 않는다.
+
+- [x] BACKEND_ENV_FILE
+- [x] AI_SERVER_ENV_FILE
+- [x] AWS_ACCESS_KEY_ID
+- [x] AWS_SECRET_ACCESS_KEY
+- [x] AWS_ACCOUNT_ID
+- [x] AWS_ECR_BACKEND_REPO
+- [x] AWS_ECR_AI_REPO
+- [x] AWS_S3_BUCKET_NAME
+- [x] AWS_CLOUDFRONT_DISTRIBUTION_ID
+- [x] VITE_BACKEND_BASE_URL
+- [x] EC2_HOST
+- [x] EC2_USER
+- [x] EC2_SSH_KEY
+- [x] MYSQL_PASSWORD
+
+AWS 키는 로컬 CLI의 동일한 키 ID와 비밀키 존재를 확인하고, 읽기 전용 STS 호출로 계정과 `capshop-github-actions` 사용자 인증 성공을 확인했다. 비밀키와 SSH 키는 사람이 로컬 PowerShell에서 클립보드로 복사해 GitHub에 저장했고 채팅에 표시하지 않았다. 기존 `MYSQL_ROOT_PASSWORD` Secret은 이번 워크플로에서 사용하지 않으며, 필수 이름 `MYSQL_PASSWORD`를 별도로 추가했다.
+
 ### Step F. OAuth 제공자 콘솔에 Redirect URI 등록 — 사람이
 
 - Google Cloud Console → Credentials → OAuth 2.0 Client → Authorized redirect URIs에 추가:
@@ -427,3 +446,5 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-01 | Codex + 사람 | Google 콘솔에 운영 Redirect URI가 이미 있음을 확인해 중복 항목 제거 후 저장, Kakao 운영 URI도 기존 등록 확인. Step E용 로컬 환경 파일과 운영 설정 검토 | Google 콘솔에서 선택한 클라이언트와 로컬 환경 파일의 클라이언트 ID 불일치 발견. 동일 클라이언트의 Redirect URI 확인 전 Google 설정을 완료로 간주하지 않음. Secrets 완성본은 아직 제공하지 않았으며 비밀값을 파일에 저장하지 않음. push 없음 |
 
 | 2026-10-02 | Codex + 사람 | 현재 계정에서 로컬 Google 클라이언트를 찾지 못해, 사람 지시에 따라 기존 CapShop OAuth 클라이언트를 운영용으로 선택. 사람이 새 시크릿을 추가하고 ID·Secret을 제공. 로컬 환경 파일을 읽어 운영 템플릿 검토 | Step F 운영 URI 확인 완료. Google 값 교체, 새 JWT 생성, 운영 프로필·CloudFront URL·DB 계정 검토를 마치고 BACKEND_ENV_FILE을 채팅으로만 제공하는 단계. Secrets 저장 완료는 아직 확인 전. 비밀값 파일 저장·로컬 환경 파일 수정·push 없음 |
+
+| 2026-10-02 | Codex + 사람 | 운영용 BACKEND_ENV_FILE·AI_SERVER_ENV_FILE을 채팅으로만 준비하고 사람이 저장. 나머지 12개 Secret도 순서대로 저장 확인. 로컬 AWS 키 ID 일치 확인과 STS 인증 검증 | Secrets 총 14개 저장 확인 완료. B~F 개별 항목 확인 완료, 사람이 전체 완료 및 push를 명시적으로 확인하기를 기다림. SSH 수정 및 문서 변경은 로컬 커밋에만 있음. 비밀값 파일 저장·로컬 환경 파일 수정·push 없음, 배포 및 최종 검증 미완료 |
