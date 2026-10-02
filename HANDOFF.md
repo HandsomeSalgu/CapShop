@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-02 (Codex — Actions 3개 job 및 API·DB 헬스체크 성공, 브라우저 검증 대기)
+최종 갱신: 2026-10-02 (Codex — capshop.cloud DNS·HTTPS·API·DB 확인, OAuth 및 운영 URL 전환 대기)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -452,3 +452,15 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-02 | Codex + 사람 | 사람이 지금까지 안내한 모든 준비를 완료했다고 명시적으로 확인. git status와 두 변경 파일 범위 검토 후 git push origin main 실행 | 원격 main이 9218239에서 5e9ea7a로 갱신됨. SSH 수정 및 준비 기록 6개 커밋 push 성공. 최신 AWS Deployment Pipeline 3개 job 결과와 임시 SSH 규칙 제거 성공을 사람에게 확인받는 단계. API·DB·브라우저 로그인 검증 미완료. 이 진행 기록은 로컬에서만 갱신하며 중복 배포를 위해 다시 push하지 않음 |
 
 | 2026-10-02 | Codex + 사람 | 사람이 제공한 스크린샷으로 deploy-frontend·build-and-push·deploy-to-ec2 모두 성공 확인. CloudFront 경유 API·DB 헬스체크를 직접 실행 | /api/health 및 /api/health/db 모두 HTTP 200, application/json, success=true 확인. 각각 status=UP 및 db=UP/result=1 반환. 브라우저 Google·Kakao 로그인과 새로고침은 다음 단계이며 미검증. 임시 SSH 규칙 제거 단계의 개별 로그는 미확인. 진행 기록은 로컬에서만 보존하고 추가 push하지 않음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 회원가입 성공과 이후 Google 로그인·새로고침 정상 동작을 확인. 가비아에서 구매한 capshop.cloud로 운영 주소 변경 요청 | Google 브라우저 검증 완료, Kakao는 아직 별도 확인 전. 사용자 도메인 연결 작업 시작: CloudFront용 ACM 인증서(us-east-1) → DNS 검증·연결 → OAuth URI 및 운영 Secrets 변경 → 재배포·검증 예정. 콘솔 변경이나 추가 push는 아직 없음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 capshop.cloud용 ACM 인증서를 요청하고 DNS 검증용 CNAME 화면 제공. 가비아 DNS 화면에서 네임서버 alla.ns.cloudflare.com 확인 | 등록 업체는 가비아이지만 현재 DNS 관리 업체는 Cloudflare임. 가비아 레코드 등록 안내를 정정하고 Cloudflare의 capshop.cloud DNS 레코드 화면 확인 단계로 진행. 인증서 발급·도메인 연결·운영 주소 변경은 아직 완료 전 |
+
+| 2026-10-02 | Codex + 사람 | 기존 capshop.cloud·api.capshop.cloud·ai.capshop.cloud가 집의 desktop-server Cloudflare 터널에 연결된 것을 사람이 확인. 인증용 CNAME을 처음 가비아에 저장했으나 이후 실제 DNS 관리 업체인 Cloudflare에 등록 | 공개 DNS HTTPS 조회로 ACM 검증 CNAME의 이름·대상 일치 확인(Status=0). 다음은 ACM 인증서 발급 상태 확인. 기존 터널 레코드는 아직 유지하며 루트 도메인의 CloudFront 연결은 인증서 발급 후 변경 예정. 운영 Secrets·OAuth URI 변경 및 추가 배포는 아직 없음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 capshop.cloud ACM 인증서 상태가 발급됨(Issued)으로 변경됐다고 확인 | 다음은 기존 d141l5y1f86nit.cloudfront.net 배포에 대체 도메인 capshop.cloud와 발급된 us-east-1 인증서 연결. 루트 DNS는 아직 집의 desktop-server 터널에 연결돼 있으며 CloudFront 변경 완료 후 전환 예정. OAuth 및 Secrets는 아직 기존 CloudFront 주소 기준 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 기존 CloudFront에 대체 도메인 capshop.cloud 및 ACM 인증서 연결 완료 화면 제공 | 인증서 ARN arn:aws:acm:us-east-1:256600409763:certificate/534acaa5-fb8a-4487-b4aa-fa3f8579bf2b 확인. curl --connect-to로 공개 DNS를 우회하여 capshop.cloud SNI·Host로 CloudFront 접속: 인증서 검증 통과, /api/health HTTP 200 및 status=UP 확인. 공개 루트 DNS는 아직 전환 전이며 다음은 Cloudflare의 기존 루트 터널 레코드 편집 화면 확인 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 Cloudflare의 루트 capshop.cloud CNAME 대상을 d141l5y1f86nit.cloudfront.net으로 변경하고 프록시를 DNS 전용으로 저장 | 공개 DNS는 CloudFront 주소 반환. DNS 우회 없이 https://capshop.cloud 프론트 HTTP 200, /api/health 및 /api/health/db HTTP 200·JSON success=true·UP 확인. 다음은 기존 Google·Kakao OAuth 클라이언트에 새 도메인 Redirect URI 추가, BACKEND_ENV_FILE의 OAuth·CORS URL 및 VITE_BACKEND_BASE_URL 변경 후 확인받아 재배포. 기존 api/ai 서브도메인 터널은 변경하지 않았으며 신규 도메인 브라우저 로그인은 아직 미검증 |
