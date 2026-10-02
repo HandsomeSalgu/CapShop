@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-02 (Codex — capshop.cloud DNS·HTTPS·OAuth 등록·운영 Secrets 변경 완료, 재배포 대기)
+최종 갱신: 2026-10-02 (Codex — Google 브라우저 검증 완료, Kakao 앱 키 교체·재배포 확인, Kakao 브라우저 검증 대기)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -470,3 +470,11 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-02 | Codex + 사람 | 사람이 기존 Kakao REST API 키에 https://capshop.cloud/login/oauth2/code/kakao 추가 및 VITE_BACKEND_BASE_URL을 https://capshop.cloud로 저장 확인 | 다음은 BACKEND_ENV_FILE의 운영 OAuth·CORS URL 5개를 신규 도메인으로 바꾼 완성본을 채팅으로만 제공하고 저장 확인. 기존 Google 클라이언트 쌍·JWT·DB 및 기타 인증값 유지, 로컬 환경 파일 변경 없음. 재배포는 아직 실행하지 않음 |
 
 | 2026-10-02 | Codex + 사람 | 신규 도메인 기준 BACKEND_ENV_FILE 완성본을 채팅으로만 제공하고 사람이 저장 확인 | OAUTH2_REDIRECT_URI=https://capshop.cloud/oauth/callback, OAUTH2_SIGNUP_REDIRECT_URI=https://capshop.cloud/signup, OAUTH2_GOOGLE_REDIRECT_URI=https://capshop.cloud/login/oauth2/code/google, OAUTH2_KAKAO_REDIRECT_URI=https://capshop.cloud/login/oauth2/code/kakao, CORS_ALLOWED_ORIGINS=https://capshop.cloud 및 프론트 base URL 저장 확인 완료. 실제 인증 키·JWT·비밀번호는 이 문서에 기록하지 않음. 다음은 기존 성공 Actions run의 Re-run all jobs 및 새 도메인 로그인 검증. 추가 push·재배포는 아직 없음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 재실행한 Actions 화면으로 3개 job 모두 성공 확인. 신규 도메인의 API·DB 및 OAuth 로그인 시작 응답 직접 확인 | /api/health와 /api/health/db 모두 HTTP 200·JSON success=true·UP. Google·Kakao 시작 경로는 302이고 redirect_uri가 각각 https://capshop.cloud/login/oauth2/code/google 및 /kakao로 적용됨. 배포된 LoginView JS에도 두 상대 로그인 경로 확인(현재 도메인을 사용). 다음은 capshop.cloud 브라우저에서 Google·Kakao 로그인과 새로고침 검증. 별도 push 없이 Actions 재실행으로 반영 완료 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 신규 도메인에서 Google 로그인·새로고침 정상 동작 확인. 이후 Kakao 로그인 테스트에서 KOE006 앱 관리자 설정 오류 및 SyncShopper 앱명 화면 제공 | 7장 함정 6번 OAuth 리디렉션 등록 불일치부터 대조. 실제 요청 redirect_uri는 https://capshop.cloud/login/oauth2/code/kakao로 정상이며 요청 client_id에 해당하는 REST API 키의 URI 목록 확인 필요. 다른 앱·키에 등록했거나 URI 불일치 가능성은 아직 확인 전. Kakao 로그인 미완료이므로 전체 완료로 처리하지 않음. 코드 변경·추가 재배포 없음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 현재 계정의 Capshop 앱(ID 1552647)과 플랫폼 키 화면 제공. 로컬에서 복사한 기존 운영 Kakao 키가 다른 SyncShopper 앱의 값임을 확인. Capshop 앱의 REST API 키와 활성화된 카카오 로그인 시크릿을 사람이 제공 | 현재 사용하려는 Capshop 앱에 등록한 URI와 서버의 기존 키가 달라 KOE006 발생. Capshop의 키 쌍으로 BACKEND_ENV_FILE 수정본을 채팅으로만 제공하는 단계이며 실제 키·시크릿은 문서나 파일에 저장하지 않음. 기존 Google·JWT·DB·운영 URL은 유지. 저장·재배포·Kakao 로그인 성공은 아직 확인 전 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 Capshop 앱의 Kakao 키 쌍으로 BACKEND_ENV_FILE 저장 후 Actions 재실행, 3개 job 모두 성공 화면 제공 | 로그인 시작 응답 직접 확인: 302, client_id가 의도한 Capshop 앱 키와 일치, redirect_uri=https://capshop.cloud/login/oauth2/code/kakao. 시크릿 적용의 토큰 교환 검증 및 브라우저 Kakao 로그인·새로고침은 아직 확인 전. 기존 오류 URL을 재사용하지 않고 capshop.cloud에서 새 로그인 요청으로 시험하도록 안내. 추가 push·로컬 환경 파일 변경·비밀값 파일 저장 없음 |
