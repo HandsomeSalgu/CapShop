@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-02 (Codex — Secrets 14개 저장 확인, Step G 사람의 명시적 확인 대기)
+최종 갱신: 2026-10-02 (Codex — main push 완료, Actions 결과 확인 대기)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -12,7 +12,7 @@
 
 ### 0-1. 지금 상태 한 줄 요약
 
-Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. 인계 직후 첫 할 일은 Step B였고, **현재 Step B~F 각 항목의 완료 확인을 모두 받았고, 다음은 Step G의 명시적 완료·push 확인**이다(사람이 지정한 B→C→D→F→E 순서). B~F 완료 확인 전 push 금지. main 배포의 실제 제공 실패 로그는 `Setup SSH` exit code 1이었고, Secrets 부재로 단정하지 않는다. SSH 단일 IP 제한에 대응한 워크플로 수정은 로컬 커밋 `c08ac83`에만 있다. 사람이 Actions용 IAM 추가 정책 저장, EC2 역할 부착, SSH(내 IP) 및 8080 인바운드 설정, Docker·Compose·STS 필수 검증 3개 통과를 확인했다. CloudFront의 EC2 원본, 네 경로, 403/404 오류 페이지 설정도 완료를 확인했다. OAuth 운영 URI 및 Secrets 14개 저장 확인도 받았다. 아직 push하지 않았고, 실제 재배포·API·DB·브라우저 로그인 결과는 미검증이다.
+Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. 인계 직후 첫 할 일은 Step B였고, **현재 Step B~F 전체 완료 확인을 받고 main push를 완료했으며, 다음은 Step G의 Actions 결과 확인**이다(사람이 지정한 B→C→D→F→E 순서). B~F 완료 확인 전 push 금지. main 배포의 실제 제공 실패 로그는 `Setup SSH` exit code 1이었고, Secrets 부재로 단정하지 않는다. SSH 단일 IP 제한에 대응한 워크플로 수정 `c08ac83`은 원격 main에 반영되었다. 사람이 Actions용 IAM 추가 정책 저장, EC2 역할 부착, SSH(내 IP) 및 8080 인바운드 설정, Docker·Compose·STS 필수 검증 3개 통과를 확인했다. CloudFront의 EC2 원본, 네 경로, 403/404 오류 페이지 설정도 완료를 확인했다. OAuth 운영 URI 및 Secrets 14개 저장 확인도 받았다. 사람이 전체 준비 완료를 확인한 뒤 `5e9ea7a`까지 main push했다. Actions 배포 결과·API·DB·브라우저 로그인 결과는 아직 미검증이다.
 
 ### 0-2. 에이전트가 직접 해도 되는 일
 
@@ -448,3 +448,5 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-02 | Codex + 사람 | 현재 계정에서 로컬 Google 클라이언트를 찾지 못해, 사람 지시에 따라 기존 CapShop OAuth 클라이언트를 운영용으로 선택. 사람이 새 시크릿을 추가하고 ID·Secret을 제공. 로컬 환경 파일을 읽어 운영 템플릿 검토 | Step F 운영 URI 확인 완료. Google 값 교체, 새 JWT 생성, 운영 프로필·CloudFront URL·DB 계정 검토를 마치고 BACKEND_ENV_FILE을 채팅으로만 제공하는 단계. Secrets 저장 완료는 아직 확인 전. 비밀값 파일 저장·로컬 환경 파일 수정·push 없음 |
 
 | 2026-10-02 | Codex + 사람 | 운영용 BACKEND_ENV_FILE·AI_SERVER_ENV_FILE을 채팅으로만 준비하고 사람이 저장. 나머지 12개 Secret도 순서대로 저장 확인. 로컬 AWS 키 ID 일치 확인과 STS 인증 검증 | Secrets 총 14개 저장 확인 완료. B~F 개별 항목 확인 완료, 사람이 전체 완료 및 push를 명시적으로 확인하기를 기다림. SSH 수정 및 문서 변경은 로컬 커밋에만 있음. 비밀값 파일 저장·로컬 환경 파일 수정·push 없음, 배포 및 최종 검증 미완료 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 지금까지 안내한 모든 준비를 완료했다고 명시적으로 확인. git status와 두 변경 파일 범위 검토 후 git push origin main 실행 | 원격 main이 9218239에서 5e9ea7a로 갱신됨. SSH 수정 및 준비 기록 6개 커밋 push 성공. 최신 AWS Deployment Pipeline 3개 job 결과와 임시 SSH 규칙 제거 성공을 사람에게 확인받는 단계. API·DB·브라우저 로그인 검증 미완료. 이 진행 기록은 로컬에서만 갱신하며 중복 배포를 위해 다시 push하지 않음 |
