@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-02 (Codex — main push 완료, Actions 결과 확인 대기)
+최종 갱신: 2026-10-02 (Codex — Actions 3개 job 및 API·DB 헬스체크 성공, 브라우저 검증 대기)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -450,3 +450,5 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-02 | Codex + 사람 | 운영용 BACKEND_ENV_FILE·AI_SERVER_ENV_FILE을 채팅으로만 준비하고 사람이 저장. 나머지 12개 Secret도 순서대로 저장 확인. 로컬 AWS 키 ID 일치 확인과 STS 인증 검증 | Secrets 총 14개 저장 확인 완료. B~F 개별 항목 확인 완료, 사람이 전체 완료 및 push를 명시적으로 확인하기를 기다림. SSH 수정 및 문서 변경은 로컬 커밋에만 있음. 비밀값 파일 저장·로컬 환경 파일 수정·push 없음, 배포 및 최종 검증 미완료 |
 
 | 2026-10-02 | Codex + 사람 | 사람이 지금까지 안내한 모든 준비를 완료했다고 명시적으로 확인. git status와 두 변경 파일 범위 검토 후 git push origin main 실행 | 원격 main이 9218239에서 5e9ea7a로 갱신됨. SSH 수정 및 준비 기록 6개 커밋 push 성공. 최신 AWS Deployment Pipeline 3개 job 결과와 임시 SSH 규칙 제거 성공을 사람에게 확인받는 단계. API·DB·브라우저 로그인 검증 미완료. 이 진행 기록은 로컬에서만 갱신하며 중복 배포를 위해 다시 push하지 않음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 제공한 스크린샷으로 deploy-frontend·build-and-push·deploy-to-ec2 모두 성공 확인. CloudFront 경유 API·DB 헬스체크를 직접 실행 | /api/health 및 /api/health/db 모두 HTTP 200, application/json, success=true 확인. 각각 status=UP 및 db=UP/result=1 반환. 브라우저 Google·Kakao 로그인과 새로고침은 다음 단계이며 미검증. 임시 SSH 규칙 제거 단계의 개별 로그는 미확인. 진행 기록은 로컬에서만 보존하고 추가 push하지 않음 |
