@@ -1,7 +1,7 @@
 # CapShop AWS 배포 핸드오프
 
 최초 작성: 2026-10-01 (Claude Code 세션 1)
-최종 갱신: 2026-10-02 (Codex — Secrets 14개 저장 확인, Step G 사람의 명시적 확인 대기)
+최종 갱신: 2026-10-02 (Codex — Google 브라우저 검증 완료, Kakao 앱 키 교체·재배포 확인, Kakao 브라우저 검증 대기)
 대상: 이 저장소에서 배포 작업을 이어받는 사람 또는 에이전트 (**Codex 앱에서 실행 예정**)
 
 이 문서가 `docs/AWS_DEPLOYMENT.md`, `docs/DEPLOYMENT_CHECKLIST.md`보다 우선한다. 그 두 문서는 초기 설계 단계에 쓴 것이라 리전(us-east-1), EC2에서 git clone 하는 방식, `MYSQL_ROOT_PASSWORD` 등 **지금 설계와 다른 내용**이 들어 있다. 충돌하면 이 문서를 따른다.
@@ -12,7 +12,7 @@
 
 ### 0-1. 지금 상태 한 줄 요약
 
-Step A는 `97b9b32`로 커밋되었고 PR #1이 main에 merge되었다(`9218239`). 로컬 main 동기화와 작업 브랜치 삭제도 완료했다. 인계 직후 첫 할 일은 Step B였고, **현재 Step B~F 각 항목의 완료 확인을 모두 받았고, 다음은 Step G의 명시적 완료·push 확인**이다(사람이 지정한 B→C→D→F→E 순서). B~F 완료 확인 전 push 금지. main 배포의 실제 제공 실패 로그는 `Setup SSH` exit code 1이었고, Secrets 부재로 단정하지 않는다. SSH 단일 IP 제한에 대응한 워크플로 수정은 로컬 커밋 `c08ac83`에만 있다. 사람이 Actions용 IAM 추가 정책 저장, EC2 역할 부착, SSH(내 IP) 및 8080 인바운드 설정, Docker·Compose·STS 필수 검증 3개 통과를 확인했다. CloudFront의 EC2 원본, 네 경로, 403/404 오류 페이지 설정도 완료를 확인했다. OAuth 운영 URI 및 Secrets 14개 저장 확인도 받았다. 아직 push하지 않았고, 실제 재배포·API·DB·브라우저 로그인 결과는 미검증이다.
+Step A는 `97b9b32`로 커밋되어 PR #1로 main에 merge되었다(`9218239`). 인계 직후 첫 할 일은 Step B였으며 로컬 정리와 B~F 준비를 완료했다. 사람이 전체 완료를 확인한 뒤 SSH 접근 수정 `c08ac83`을 포함해 `5e9ea7a`까지 push했고 Actions 3개 job이 모두 성공했다. 기존 CloudFront 주소에서 API·DB HTTP 200 및 Google 회원가입·로그인·새로고침을 확인했다. 이후 사람 요청으로 **capshop.cloud를 CloudFront에 연결하고 HTTPS·프론트·API·DB 정상 응답을 확인했다. Google·Kakao 신규 Redirect URI 추가와 VITE_BACKEND_BASE_URL·BACKEND_ENV_FILE의 새 도메인 URL 저장 확인까지 받았으며, 다음은 기존 성공 run의 Re-run all jobs로 변경된 Secrets를 적용하는 재배포**다. 신규 도메인 브라우저 Google·Kakao 로그인·새로고침과 임시 SSH 규칙 제거 단계의 개별 로그는 아직 미검증이다. 재배포 전 확인 없이 추가 push하지 않으며 실제 비밀값은 파일에 기록하지 않는다. 5장 템플릿은 최초 CloudFront 배포 기준이며 새 도메인 변경값은 아래 11장 이력에 기록한다.
 
 ### 0-2. 에이전트가 직접 해도 되는 일
 
@@ -448,3 +448,33 @@ cd frontend/web && npm run dev # http://localhost:5173
 | 2026-10-02 | Codex + 사람 | 현재 계정에서 로컬 Google 클라이언트를 찾지 못해, 사람 지시에 따라 기존 CapShop OAuth 클라이언트를 운영용으로 선택. 사람이 새 시크릿을 추가하고 ID·Secret을 제공. 로컬 환경 파일을 읽어 운영 템플릿 검토 | Step F 운영 URI 확인 완료. Google 값 교체, 새 JWT 생성, 운영 프로필·CloudFront URL·DB 계정 검토를 마치고 BACKEND_ENV_FILE을 채팅으로만 제공하는 단계. Secrets 저장 완료는 아직 확인 전. 비밀값 파일 저장·로컬 환경 파일 수정·push 없음 |
 
 | 2026-10-02 | Codex + 사람 | 운영용 BACKEND_ENV_FILE·AI_SERVER_ENV_FILE을 채팅으로만 준비하고 사람이 저장. 나머지 12개 Secret도 순서대로 저장 확인. 로컬 AWS 키 ID 일치 확인과 STS 인증 검증 | Secrets 총 14개 저장 확인 완료. B~F 개별 항목 확인 완료, 사람이 전체 완료 및 push를 명시적으로 확인하기를 기다림. SSH 수정 및 문서 변경은 로컬 커밋에만 있음. 비밀값 파일 저장·로컬 환경 파일 수정·push 없음, 배포 및 최종 검증 미완료 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 지금까지 안내한 모든 준비를 완료했다고 명시적으로 확인. git status와 두 변경 파일 범위 검토 후 git push origin main 실행 | 원격 main이 9218239에서 5e9ea7a로 갱신됨. SSH 수정 및 준비 기록 6개 커밋 push 성공. 최신 AWS Deployment Pipeline 3개 job 결과와 임시 SSH 규칙 제거 성공을 사람에게 확인받는 단계. API·DB·브라우저 로그인 검증 미완료. 이 진행 기록은 로컬에서만 갱신하며 중복 배포를 위해 다시 push하지 않음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 제공한 스크린샷으로 deploy-frontend·build-and-push·deploy-to-ec2 모두 성공 확인. CloudFront 경유 API·DB 헬스체크를 직접 실행 | /api/health 및 /api/health/db 모두 HTTP 200, application/json, success=true 확인. 각각 status=UP 및 db=UP/result=1 반환. 브라우저 Google·Kakao 로그인과 새로고침은 다음 단계이며 미검증. 임시 SSH 규칙 제거 단계의 개별 로그는 미확인. 진행 기록은 로컬에서만 보존하고 추가 push하지 않음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 회원가입 성공과 이후 Google 로그인·새로고침 정상 동작을 확인. 가비아에서 구매한 capshop.cloud로 운영 주소 변경 요청 | Google 브라우저 검증 완료, Kakao는 아직 별도 확인 전. 사용자 도메인 연결 작업 시작: CloudFront용 ACM 인증서(us-east-1) → DNS 검증·연결 → OAuth URI 및 운영 Secrets 변경 → 재배포·검증 예정. 콘솔 변경이나 추가 push는 아직 없음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 capshop.cloud용 ACM 인증서를 요청하고 DNS 검증용 CNAME 화면 제공. 가비아 DNS 화면에서 네임서버 alla.ns.cloudflare.com 확인 | 등록 업체는 가비아이지만 현재 DNS 관리 업체는 Cloudflare임. 가비아 레코드 등록 안내를 정정하고 Cloudflare의 capshop.cloud DNS 레코드 화면 확인 단계로 진행. 인증서 발급·도메인 연결·운영 주소 변경은 아직 완료 전 |
+
+| 2026-10-02 | Codex + 사람 | 기존 capshop.cloud·api.capshop.cloud·ai.capshop.cloud가 집의 desktop-server Cloudflare 터널에 연결된 것을 사람이 확인. 인증용 CNAME을 처음 가비아에 저장했으나 이후 실제 DNS 관리 업체인 Cloudflare에 등록 | 공개 DNS HTTPS 조회로 ACM 검증 CNAME의 이름·대상 일치 확인(Status=0). 다음은 ACM 인증서 발급 상태 확인. 기존 터널 레코드는 아직 유지하며 루트 도메인의 CloudFront 연결은 인증서 발급 후 변경 예정. 운영 Secrets·OAuth URI 변경 및 추가 배포는 아직 없음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 capshop.cloud ACM 인증서 상태가 발급됨(Issued)으로 변경됐다고 확인 | 다음은 기존 d141l5y1f86nit.cloudfront.net 배포에 대체 도메인 capshop.cloud와 발급된 us-east-1 인증서 연결. 루트 DNS는 아직 집의 desktop-server 터널에 연결돼 있으며 CloudFront 변경 완료 후 전환 예정. OAuth 및 Secrets는 아직 기존 CloudFront 주소 기준 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 기존 CloudFront에 대체 도메인 capshop.cloud 및 ACM 인증서 연결 완료 화면 제공 | 인증서 ARN arn:aws:acm:us-east-1:256600409763:certificate/534acaa5-fb8a-4487-b4aa-fa3f8579bf2b 확인. curl --connect-to로 공개 DNS를 우회하여 capshop.cloud SNI·Host로 CloudFront 접속: 인증서 검증 통과, /api/health HTTP 200 및 status=UP 확인. 공개 루트 DNS는 아직 전환 전이며 다음은 Cloudflare의 기존 루트 터널 레코드 편집 화면 확인 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 Cloudflare의 루트 capshop.cloud CNAME 대상을 d141l5y1f86nit.cloudfront.net으로 변경하고 프록시를 DNS 전용으로 저장 | 공개 DNS는 CloudFront 주소 반환. DNS 우회 없이 https://capshop.cloud 프론트 HTTP 200, /api/health 및 /api/health/db HTTP 200·JSON success=true·UP 확인. 다음은 기존 Google·Kakao OAuth 클라이언트에 새 도메인 Redirect URI 추가, BACKEND_ENV_FILE의 OAuth·CORS URL 및 VITE_BACKEND_BASE_URL 변경 후 확인받아 재배포. 기존 api/ai 서브도메인 터널은 변경하지 않았으며 신규 도메인 브라우저 로그인은 아직 미검증 |
+
+| 2026-10-02 | Codex + 사람 | 기존 CapShop Google OAuth 클라이언트에 https://capshop.cloud/login/oauth2/code/google 추가. 사람이 이전 URI를 삭제했으나 현재 서버는 아직 이전 URI를 사용하므로 기존 CloudFront Google 콜백 URI를 다시 추가하도록 안내하고 저장 확인 | Google에 신규 도메인 및 기존 CloudFront 콜백 URI 등록 완료 확인. 다음 Kakao 신규 URI 추가. 운영 Secrets 변경·추가 재배포·새 도메인 브라우저 로그인은 아직 미완료 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 기존 Kakao REST API 키에 https://capshop.cloud/login/oauth2/code/kakao 추가 및 VITE_BACKEND_BASE_URL을 https://capshop.cloud로 저장 확인 | 다음은 BACKEND_ENV_FILE의 운영 OAuth·CORS URL 5개를 신규 도메인으로 바꾼 완성본을 채팅으로만 제공하고 저장 확인. 기존 Google 클라이언트 쌍·JWT·DB 및 기타 인증값 유지, 로컬 환경 파일 변경 없음. 재배포는 아직 실행하지 않음 |
+
+| 2026-10-02 | Codex + 사람 | 신규 도메인 기준 BACKEND_ENV_FILE 완성본을 채팅으로만 제공하고 사람이 저장 확인 | OAUTH2_REDIRECT_URI=https://capshop.cloud/oauth/callback, OAUTH2_SIGNUP_REDIRECT_URI=https://capshop.cloud/signup, OAUTH2_GOOGLE_REDIRECT_URI=https://capshop.cloud/login/oauth2/code/google, OAUTH2_KAKAO_REDIRECT_URI=https://capshop.cloud/login/oauth2/code/kakao, CORS_ALLOWED_ORIGINS=https://capshop.cloud 및 프론트 base URL 저장 확인 완료. 실제 인증 키·JWT·비밀번호는 이 문서에 기록하지 않음. 다음은 기존 성공 Actions run의 Re-run all jobs 및 새 도메인 로그인 검증. 추가 push·재배포는 아직 없음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 재실행한 Actions 화면으로 3개 job 모두 성공 확인. 신규 도메인의 API·DB 및 OAuth 로그인 시작 응답 직접 확인 | /api/health와 /api/health/db 모두 HTTP 200·JSON success=true·UP. Google·Kakao 시작 경로는 302이고 redirect_uri가 각각 https://capshop.cloud/login/oauth2/code/google 및 /kakao로 적용됨. 배포된 LoginView JS에도 두 상대 로그인 경로 확인(현재 도메인을 사용). 다음은 capshop.cloud 브라우저에서 Google·Kakao 로그인과 새로고침 검증. 별도 push 없이 Actions 재실행으로 반영 완료 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 신규 도메인에서 Google 로그인·새로고침 정상 동작 확인. 이후 Kakao 로그인 테스트에서 KOE006 앱 관리자 설정 오류 및 SyncShopper 앱명 화면 제공 | 7장 함정 6번 OAuth 리디렉션 등록 불일치부터 대조. 실제 요청 redirect_uri는 https://capshop.cloud/login/oauth2/code/kakao로 정상이며 요청 client_id에 해당하는 REST API 키의 URI 목록 확인 필요. 다른 앱·키에 등록했거나 URI 불일치 가능성은 아직 확인 전. Kakao 로그인 미완료이므로 전체 완료로 처리하지 않음. 코드 변경·추가 재배포 없음 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 현재 계정의 Capshop 앱(ID 1552647)과 플랫폼 키 화면 제공. 로컬에서 복사한 기존 운영 Kakao 키가 다른 SyncShopper 앱의 값임을 확인. Capshop 앱의 REST API 키와 활성화된 카카오 로그인 시크릿을 사람이 제공 | 현재 사용하려는 Capshop 앱에 등록한 URI와 서버의 기존 키가 달라 KOE006 발생. Capshop의 키 쌍으로 BACKEND_ENV_FILE 수정본을 채팅으로만 제공하는 단계이며 실제 키·시크릿은 문서나 파일에 저장하지 않음. 기존 Google·JWT·DB·운영 URL은 유지. 저장·재배포·Kakao 로그인 성공은 아직 확인 전 |
+
+| 2026-10-02 | Codex + 사람 | 사람이 Capshop 앱의 Kakao 키 쌍으로 BACKEND_ENV_FILE 저장 후 Actions 재실행, 3개 job 모두 성공 화면 제공 | 로그인 시작 응답 직접 확인: 302, client_id가 의도한 Capshop 앱 키와 일치, redirect_uri=https://capshop.cloud/login/oauth2/code/kakao. 시크릿 적용의 토큰 교환 검증 및 브라우저 Kakao 로그인·새로고침은 아직 확인 전. 기존 오류 URL을 재사용하지 않고 capshop.cloud에서 새 로그인 요청으로 시험하도록 안내. 추가 push·로컬 환경 파일 변경·비밀값 파일 저장 없음 |
